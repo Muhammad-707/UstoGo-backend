@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# generated API contract is committed; generated Prisma client is not
+node_modules/.prisma/
+
+# environment — only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# test artefacts
+coverage/
+*.lcov
+.jest-cache/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# local volumes created by docker compose
+.docker-data/

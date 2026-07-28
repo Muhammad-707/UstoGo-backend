@@ -17,11 +17,11 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 
 ---
 
-## Phase 1 — Platform Foundation ⬜
+## Phase 1 — Platform Foundation 🟨
 
 **Goal:** a running, secured, observable skeleton with working authentication.
 
-- ⬜ Project scaffold: NestJS 11, TypeScript strict, ESLint, Prettier, Husky, commitlint
+- ✅ Project scaffold: NestJS 11, TypeScript strict, ESLint, Prettier, Husky, commitlint
 - ⬜ `docker-compose` with PostgreSQL 16 and MinIO
 - ⬜ `ConfigModule` with boot-time schema validation
 - ⬜ `PrismaModule`: client, soft-delete extension, `TransactionManager`

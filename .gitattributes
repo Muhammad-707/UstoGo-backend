@@ -1,0 +1,13 @@
+# The repository is authored on Windows and runs in Linux containers and CI.
+# Without this, git hooks and shell scripts check out with CRLF and fail with
+# "bad interpreter" on the very machines that gate merges.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+package-lock.json linguist-generated=true -diff

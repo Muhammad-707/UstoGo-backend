@@ -1,0 +1,6 @@
+dist/
+coverage/
+node_modules/
+openapi.json
+prisma/migrations/
+CHANGELOG.md

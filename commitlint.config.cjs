@@ -1,0 +1,48 @@
+// Conventional Commits, per docs/NAMING_CONVENTIONS.md §10 and DEVELOPMENT_WORKFLOW.md §4.
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      ['feat', 'fix', 'refactor', 'perf', 'test', 'docs', 'chore', 'build', 'ci', 'revert'],
+    ],
+    // Scopes are module names. A commit that does not belong to one module omits the scope.
+    'scope-enum': [
+      2,
+      'always',
+      [
+        'auth',
+        'users',
+        'files',
+        'categories',
+        'masters',
+        'services',
+        'schedule',
+        'search',
+        'bookings',
+        'reviews',
+        'notifications',
+        'chat',
+        'banners',
+        'audit',
+        'admin',
+        'common',
+        'config',
+        'db',
+        'health',
+        'jobs',
+        'shared',
+        'cli',
+        'repo',
+        'deps',
+        'docs',
+        'test',
+      ],
+    ],
+    'subject-case': [2, 'always', 'lower-case'],
+    'subject-full-stop': [2, 'never', '.'],
+    'header-max-length': [2, 'always', 72],
+    'body-leading-blank': [2, 'always'],
+  },
+};

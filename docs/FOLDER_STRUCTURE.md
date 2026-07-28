@@ -23,22 +23,29 @@ ustogo-backend/
 │   ├── e2e/
 │   ├── fixtures/
 │   └── helpers/
+├── .editorconfig
 ├── .env.example
-├── .eslintrc.cjs
+├── .gitattributes              # pins LF so hooks survive Windows → Linux CI
+├── .gitignore
 ├── .prettierrc
+├── .prettierignore
 ├── commitlint.config.cjs
 ├── docker-compose.yml
 ├── Dockerfile
+├── eslint.config.mjs           # ESLint 9 flat config
 ├── jest.config.ts
 ├── nest-cli.json
 ├── openapi.json                # generated, committed, diffed in CI
 ├── package.json
 ├── tsconfig.json
+├── tsconfig.build.json         # build scope: src/ only, tests excluded
 ├── CLAUDE.md                   # agent operating instructions
 └── README.md
 ```
 
 `docs/` is committed at the root, not inside `src/`, because it is read by people and agents before any code exists.
+
+ESLint configuration lives in `eslint.config.mjs`, not the `.eslintrc.cjs` this document originally specified. ESLint 9 makes flat config the default and ESLint 10 removes `.eslintrc` support entirely; pinning to a format with a scheduled removal date would have bought one familiar filename at the cost of a forced migration. The rule set in `CODING_STANDARDS.md` §12 is unchanged — only the file that carries it.
 
 ---
 
@@ -179,17 +186,17 @@ modules/bookings/
 
 ### What belongs where
 
-| Directory | Contains | Does not contain |
-| --- | --- | --- |
-| `controllers/` | Routing, Swagger annotations, delegation | Business rules, Prisma, `if (role === …)` |
-| `services/` | Business rules, orchestration, transactions | HTTP decorators, `Request`/`Response` objects |
-| `domain/` | Pure logic: state machines, policies, calculators | Any import from `@nestjs/*` or Prisma |
-| `repositories/` | Query composition, Prisma calls | Business rules |
-| `dto/requests/` | Input shape + validation + `@ApiProperty` | Logic, database access |
-| `dto/responses/` | Output shape + field-level exposure policy | Logic |
-| `events/` | Immutable event payload classes | Handlers (those live in the consuming module) |
-| `exceptions/` | Named domain exceptions extending `AppException` | Generic `Error` |
-| `constants/` | Frozen literals, limits, defaults | Configuration read from the environment |
+| Directory        | Contains                                          | Does not contain                              |
+| ---------------- | ------------------------------------------------- | --------------------------------------------- |
+| `controllers/`   | Routing, Swagger annotations, delegation          | Business rules, Prisma, `if (role === …)`     |
+| `services/`      | Business rules, orchestration, transactions       | HTTP decorators, `Request`/`Response` objects |
+| `domain/`        | Pure logic: state machines, policies, calculators | Any import from `@nestjs/*` or Prisma         |
+| `repositories/`  | Query composition, Prisma calls                   | Business rules                                |
+| `dto/requests/`  | Input shape + validation + `@ApiProperty`         | Logic, database access                        |
+| `dto/responses/` | Output shape + field-level exposure policy        | Logic                                         |
+| `events/`        | Immutable event payload classes                   | Handlers (those live in the consuming module) |
+| `exceptions/`    | Named domain exceptions extending `AppException`  | Generic `Error`                               |
+| `constants/`     | Frozen literals, limits, defaults                 | Configuration read from the environment       |
 
 ---
 
@@ -216,21 +223,21 @@ Unit tests are colocated so a module is self-contained and moving it moves its t
 
 ## 5. Naming of Files
 
-| Kind | Pattern | Example |
-| --- | --- | --- |
-| Module | `<feature>.module.ts` | `bookings.module.ts` |
-| Controller | `<scope>.controller.ts` | `admin-bookings.controller.ts` |
-| Service | `<purpose>.service.ts` | `booking-transition.service.ts` |
-| Repository | `<entity>.prisma.repository.ts` | `bookings.prisma.repository.ts` |
-| Interface | `<name>.interface.ts` | `bookings.repository.interface.ts` |
-| Request DTO | `<verb>-<entity>.dto.ts` | `create-booking.dto.ts` |
-| Response DTO | `<entity>.response.dto.ts` | `booking.response.dto.ts` |
-| Guard | `<name>.guard.ts` | `master-approved.guard.ts` |
-| Event | `<entity>-<past-tense>.event.ts` | `booking-accepted.event.ts` |
-| Exception | `<condition>.exception.ts` | `slot-not-available.exception.ts` |
-| Job | `<action>.job.ts` | `expire-pending-bookings.job.ts` |
-| Unit test | `<subject>.spec.ts` | `booking-state-machine.spec.ts` |
-| E2E test | `<feature>.e2e-spec.ts` | `bookings.e2e-spec.ts` |
+| Kind         | Pattern                          | Example                            |
+| ------------ | -------------------------------- | ---------------------------------- |
+| Module       | `<feature>.module.ts`            | `bookings.module.ts`               |
+| Controller   | `<scope>.controller.ts`          | `admin-bookings.controller.ts`     |
+| Service      | `<purpose>.service.ts`           | `booking-transition.service.ts`    |
+| Repository   | `<entity>.prisma.repository.ts`  | `bookings.prisma.repository.ts`    |
+| Interface    | `<name>.interface.ts`            | `bookings.repository.interface.ts` |
+| Request DTO  | `<verb>-<entity>.dto.ts`         | `create-booking.dto.ts`            |
+| Response DTO | `<entity>.response.dto.ts`       | `booking.response.dto.ts`          |
+| Guard        | `<name>.guard.ts`                | `master-approved.guard.ts`         |
+| Event        | `<entity>-<past-tense>.event.ts` | `booking-accepted.event.ts`        |
+| Exception    | `<condition>.exception.ts`       | `slot-not-available.exception.ts`  |
+| Job          | `<action>.job.ts`                | `expire-pending-bookings.job.ts`   |
+| Unit test    | `<subject>.spec.ts`              | `booking-state-machine.spec.ts`    |
+| E2E test     | `<feature>.e2e-spec.ts`          | `bookings.e2e-spec.ts`             |
 
 Full conventions: `NAMING_CONVENTIONS.md`.
 
@@ -243,11 +250,11 @@ Path aliases are configured in `tsconfig.json`:
 ```json
 {
   "paths": {
-    "@/*":        ["src/*"],
-    "@common/*":  ["src/common/*"],
-    "@config/*":  ["src/config/*"],
+    "@/*": ["src/*"],
+    "@common/*": ["src/common/*"],
+    "@config/*": ["src/config/*"],
     "@modules/*": ["src/modules/*"],
-    "@shared/*":  ["src/shared/*"],
+    "@shared/*": ["src/shared/*"],
     "@prisma-lib/*": ["src/prisma/*"]
   }
 }

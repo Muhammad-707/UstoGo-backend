@@ -11,6 +11,15 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ## [Unreleased]
 
+### Added
+- NestJS 11 application scaffold on TypeScript strict mode. `npm run start:dev` boots an API on `http://localhost:3000/api/v1` with graceful shutdown hooks enabled.
+- Toolchain enforcing the gates in `PROJECT_RULES.md` §4: ESLint 9 (flat config) carrying the full rule set from `CODING_STANDARDS.md` §12, Prettier, `.editorconfig`, Jest, and the six `tsconfig` path aliases.
+- Git hooks via Husky — pre-commit runs lint-staged and `tsc --noEmit`, pre-push runs unit tests, commit-msg runs commitlint against the Conventional Commits type and scope lists in `NAMING_CONVENTIONS.md` §10.
+- `.env.example` covering every variable in `DEPLOYMENT.md` §3, with local defaults and no real secrets.
+
+### Changed
+- ESLint configuration is `eslint.config.mjs` (flat config) rather than the `.eslintrc.cjs` originally specified: ESLint 9 defaults to flat config and ESLint 10 drops `.eslintrc` entirely. `FOLDER_STRUCTURE.md` §1 and `CODING_STANDARDS.md` §12 updated to match; the rule set itself is unchanged.
+
 ### Docs
 - Complete documentation baseline (32 documents) covering requirements, architecture, data model, API, security and process.
 - Frozen v1 scope decisions: payments off-platform, S3-compatible storage, chat designed now / built in Phase 5, REST-only API.

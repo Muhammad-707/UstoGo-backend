@@ -10,27 +10,31 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 ## 🔴 Now — Phase 1: Platform Foundation
 
 ### 1.1 Repository scaffold
-- [ ] `nest new` with pnpm/npm, TypeScript strict per `CODING_STANDARDS.md` §1
-- [ ] Directory tree per `FOLDER_STRUCTURE.md`
-- [ ] ESLint with the rule set in `CODING_STANDARDS.md` §12 (including `import/no-cycle`, `max-lines`)
-- [ ] Prettier + `.editorconfig`
-- [ ] Husky: pre-commit (lint-staged, `tsc --noEmit`), pre-push (unit tests), commit-msg (commitlint)
-- [ ] `tsconfig` path aliases (`@common/*`, `@modules/*`, …)
-- [ ] `.env.example` with every variable, no real values
-- [ ] `README.md` pointing at `docs/`
+
+- [x] `nest new` with pnpm/npm, TypeScript strict per `CODING_STANDARDS.md` §1
+- [x] Directory tree per `FOLDER_STRUCTURE.md`
+- [x] ESLint with the rule set in `CODING_STANDARDS.md` §12 (including `import/no-cycle`, `max-lines`)
+- [x] Prettier + `.editorconfig`
+- [x] Husky: pre-commit (lint-staged, `tsc --noEmit`), pre-push (unit tests), commit-msg (commitlint)
+- [x] `tsconfig` path aliases (`@common/*`, `@modules/*`, …)
+- [x] `.env.example` with every variable, no real values
+- [x] `README.md` pointing at `docs/`
 
 ### 1.2 Local environment
+
 - [ ] `docker-compose.yml`: PostgreSQL 16, MinIO, Redis, Mailpit
 - [ ] Multi-stage `Dockerfile`, non-root user, no dev dependencies in the runtime layer
 - [ ] `npm run dev` brings up the full stack from a clean clone in ≤ 15 minutes (NFR-OP-5)
 
 ### 1.3 Configuration
+
 - [ ] `env.schema.ts` (Zod) covering app, database, JWT, storage, mail, throttle
 - [ ] `AppConfigService` with typed getters
 - [ ] Boot fails loudly on invalid or missing configuration
 - [ ] Unit tests: missing secret, short secret, invalid URL
 
 ### 1.4 Prisma foundation
+
 - [ ] `schema.prisma` — enums + identity + sessions + cities, per `DATABASE.md` §2–4
 - [ ] Extensions migration: `citext`, `btree_gist`, `pg_trgm`
 - [ ] `PrismaService` with lifecycle hooks and query logging
@@ -39,6 +43,7 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [ ] Seed script skeleton
 
 ### 1.5 Common layer
+
 - [ ] `AppException` base + generic subclasses
 - [ ] `GlobalExceptionFilter` with the single envelope + Prisma error mapper
 - [ ] `ValidationPipe` configured per `VALIDATION.md` §1
@@ -50,6 +55,7 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [ ] `LoggingInterceptor`, `TimeoutInterceptor`
 
 ### 1.6 Health & Swagger
+
 - [ ] `/health` liveness
 - [ ] `/health/ready` checking PostgreSQL and object storage
 - [ ] Swagger bootstrap with tags, bearer auth, servers
@@ -57,6 +63,7 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [ ] `SWAGGER_ENABLED` gate for production
 
 ### 1.7 F-01 Authentication
+
 - [ ] `User`, `RefreshToken`, `PasswordResetToken` models + migration
 - [ ] `POST /auth/register/client`
 - [ ] `POST /auth/register/master` (creates `MasterProfile` as `PENDING`)
@@ -71,6 +78,7 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [ ] **100% branch coverage** — full case list in `AUTHENTICATION.md` §12
 
 ### 1.8 F-02 Users
+
 - [ ] `ClientProfile`, `City` models + seed
 - [ ] `GET /users/me`, `PATCH /users/me`
 - [ ] `DELETE /users/me` (soft delete + revoke all sessions)
@@ -79,6 +87,7 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [ ] Repository projections that exclude `passwordHash` structurally
 
 ### 1.9 F-13 Files
+
 - [ ] `File` model + migration
 - [ ] `StorageProvider` interface + S3 implementation (MinIO locally)
 - [ ] `POST /files/presign` with MIME and size constraints
@@ -87,12 +96,14 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [ ] `CleanupUnconfirmedFilesJob`
 
 ### 1.10 CLI & CI
+
 - [ ] `npm run cli -- admin:create` with an interactive password prompt (never argv)
 - [ ] GitHub Actions: lint → typecheck → unit → integration → e2e → coverage → audit → gitleaks
 - [ ] Testcontainers harness, `test-app.factory.ts`, `auth.helper.ts`, `authz-matrix.helper.ts`
 - [ ] Coverage thresholds enforced in `jest.config.ts`
 
 ### 1.11 Phase 1 exit
+
 - [ ] All Phase 1 exit criteria in `ROADMAP.md` met
 - [ ] `STATUS.md`, `CHANGELOG.md` updated
 - [ ] Tag `v0.1.0`

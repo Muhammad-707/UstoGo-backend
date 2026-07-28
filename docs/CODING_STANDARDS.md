@@ -18,11 +18,12 @@ Every rule here exists because its absence caused a real class of bug. Where a r
   "noImplicitOverride": true,
   "noFallthroughCasesInSwitch": true,
   "exactOptionalPropertyTypes": true,
-  "forceConsistentCasingInFileNames": true
+  "forceConsistentCasingInFileNames": true,
 }
 ```
 
 Rules
+
 - `any` is banned. Use `unknown` and narrow. The only exception is third-party declaration merging, and it requires an inline justification comment.
 - Every exported function has an explicit return type. Inference inside a function body is fine; inference across a module boundary is a silent API change waiting to happen.
 - Prefer `type` for unions and object shapes, `interface` for contracts that classes implement.
@@ -32,7 +33,9 @@ Rules
 
 ```ts
 // ❌
-function parse(input: any) { return input.value; }
+function parse(input: any) {
+  return input.value;
+}
 
 // ✅
 function parse(input: unknown): string {
@@ -186,7 +189,9 @@ async findOverlapping(masterId: string, from: Date, to: Date, tx?: PrismaTx): Pr
 
 ```ts
 // ❌ N+1
-for (const id of masterIds) { results.push(await this.repo.findById(id)); }
+for (const id of masterIds) {
+  results.push(await this.repo.findById(id));
+}
 
 // ✅ one query
 const masters = await this.repo.findManyByIds(masterIds);
@@ -256,28 +261,28 @@ Enforced by `eslint-plugin-import/order`. Cross-module relative imports are an e
 
 ## 11. Prohibited
 
-| Practice | Why |
-| --- | --- |
-| `any` | Erases the entire benefit of TypeScript |
-| `console.log` | Bypasses structured logging and redaction |
-| Magic numbers/strings in business code | Unreadable and un-greppable |
-| Business logic in a controller | Untestable, unreusable |
-| Prisma in a controller | No transaction seam, no test seam |
-| Returning an entity from a controller | Bypasses field-level authorization |
-| `catch {}` | Hides failures |
-| Placeholder/stub implementations | Looks done, is not (`PROJECT_RULES.md`) |
-| Commented-out code | That is what git is for |
-| `process.env` outside `ConfigModule` | Untyped, unvalidated |
-| `$queryRawUnsafe` | Injection surface |
-| Cross-module circular imports | Build failure |
-| Files > 300 lines | The abstraction is wrong |
+| Practice                               | Why                                       |
+| -------------------------------------- | ----------------------------------------- |
+| `any`                                  | Erases the entire benefit of TypeScript   |
+| `console.log`                          | Bypasses structured logging and redaction |
+| Magic numbers/strings in business code | Unreadable and un-greppable               |
+| Business logic in a controller         | Untestable, unreusable                    |
+| Prisma in a controller                 | No transaction seam, no test seam         |
+| Returning an entity from a controller  | Bypasses field-level authorization        |
+| `catch {}`                             | Hides failures                            |
+| Placeholder/stub implementations       | Looks done, is not (`PROJECT_RULES.md`)   |
+| Commented-out code                     | That is what git is for                   |
+| `process.env` outside `ConfigModule`   | Untyped, unvalidated                      |
+| `$queryRawUnsafe`                      | Injection surface                         |
+| Cross-module circular imports          | Build failure                             |
+| Files > 300 lines                      | The abstraction is wrong                  |
 
 ---
 
 ## 12. Automated Enforcement
 
 ```jsonc
-// .eslintrc.cjs — the rules that matter
+// eslint.config.mjs — the rules that matter
 {
   "@typescript-eslint/no-explicit-any": "error",
   "@typescript-eslint/no-floating-promises": "error",
@@ -291,8 +296,11 @@ Enforced by `eslint-plugin-import/order`. Cross-module relative imports are an e
   "no-console": "error",
   "no-restricted-syntax": [
     "error",
-    { "selector": "CallExpression[callee.property.name='$queryRawUnsafe']", "message": "Use Prisma.sql tagged templates." }
-  ]
+    {
+      "selector": "CallExpression[callee.property.name='$queryRawUnsafe']",
+      "message": "Use Prisma.sql tagged templates.",
+    },
+  ],
 }
 ```
 
