@@ -130,10 +130,18 @@ export default tseslint.config(
     rules: { 'no-restricted-properties': 'off' },
   },
 
-  // The CLI writes to the terminal by definition; that is its transport, not stray logging.
+  // The CLI and the seed scripts write to the terminal by definition; that is their
+  // transport, not stray logging.
   {
-    files: ['src/cli/**/*.ts'],
+    files: ['src/cli/**/*.ts', 'prisma/seed/**/*.ts'],
     rules: { 'no-console': 'off' },
+  },
+
+  // Seeding is inherently sequential: each upsert must settle before the next, and
+  // batching reference data would trade readability for milliseconds run once.
+  {
+    files: ['prisma/seed/**/*.ts'],
+    rules: { 'no-await-in-loop': 'off' },
   },
 
   // Tests describe behaviour in long table-driven blocks. Length limits there would

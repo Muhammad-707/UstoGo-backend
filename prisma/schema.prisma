@@ -1,0 +1,296 @@
+// Authoritative model: docs/DATABASE.md. Any divergence between this file and that
+// document is a defect (DATABASE.md, preamble).
+//
+// This migration covers §2 Enumerations, §3 Identity and §4 Sessions. Models whose
+// dependencies have not landed are deliberately absent rather than stubbed:
+//   - File (§11) arrives in TODO §1.9, and with it the avatarFileId columns on both
+//     profiles and the Certificate model (§3.4), as an additive migration.
+//   - MasterProfile.searchVector (§3.3) is a generated tsvector for full-text search
+//     and arrives with F-08 in Phase 3.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext, btree_gist, pg_trgm]
+}
+
+// ---------------------------------------------------------------------------
+// §2 Enumerations
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  CLIENT
+  MASTER
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+
+  @@map("user_status")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("approval_status")
+}
+
+enum PriceType {
+  FIXED
+  HOURLY
+  FROM
+
+  @@map("price_type")
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  EXPIRED
+  CANCELLED_BY_CLIENT
+  CANCELLED_BY_MASTER
+  CANCELLED_BY_ADMIN
+
+  @@map("booking_status")
+}
+
+enum ActorType {
+  CLIENT
+  MASTER
+  ADMIN
+  SYSTEM
+
+  @@map("actor_type")
+}
+
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_ACCEPTED
+  BOOKING_REJECTED
+  BOOKING_STARTED
+  BOOKING_COMPLETED
+  BOOKING_CANCELLED
+  BOOKING_EXPIRED
+  MASTER_APPROVED
+  MASTER_REJECTED
+  MASTER_DEACTIVATED
+  REVIEW_RECEIVED
+  REVIEW_REPLIED
+  REVIEW_INVITATION
+  MESSAGE_RECEIVED
+  SYSTEM_ANNOUNCEMENT
+
+  @@map("notification_type")
+}
+
+enum ReviewStatus {
+  VISIBLE
+  HIDDEN
+
+  @@map("review_status")
+}
+
+enum BannerPosition {
+  HOME_TOP
+  HOME_MIDDLE
+  CATEGORY_TOP
+
+  @@map("banner_position")
+}
+
+enum FilePurpose {
+  AVATAR
+  CERTIFICATE
+  BANNER
+  MESSAGE_ATTACHMENT
+  CATEGORY_ICON
+
+  @@map("file_purpose")
+}
+
+enum AuditAction {
+  MASTER_APPROVED
+  MASTER_REJECTED
+  MASTER_ACTIVATED
+  MASTER_DEACTIVATED
+  USER_BLOCKED
+  USER_UNBLOCKED
+  CATEGORY_CREATED
+  CATEGORY_UPDATED
+  CATEGORY_DEACTIVATED
+  SERVICE_DEACTIVATED
+  BOOKING_FORCE_CANCELLED
+  REVIEW_HIDDEN
+  REVIEW_UNHIDDEN
+  BANNER_CREATED
+  BANNER_UPDATED
+  BANNER_DELETED
+  NOTIFICATION_BROADCAST
+  CONVERSATION_ACCESSED
+
+  @@map("audit_action")
+}
+
+// ---------------------------------------------------------------------------
+// §3 Identity
+// ---------------------------------------------------------------------------
+
+/// §3.1. Uniqueness on email and phone is a *partial* unique index scoped to live
+/// rows, so a soft-deleted account releases its address. Prisma cannot express a
+/// partial unique index, so both are created as raw SQL in the migration and are
+/// deliberately not declared @unique here.
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  email           String     @db.Citext
+  phone           String?    @db.VarChar(20)
+  passwordHash    String     @map("password_hash") @db.VarChar(72)
+  role            UserRole
+  status          UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(3)
+  lastLoginAt     DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?  @map("deleted_at") @db.Timestamptz(3)
+
+  clientProfile       ClientProfile?
+  masterProfile       MasterProfile?
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  approvedMasters     MasterProfile[]      @relation("MasterApprovedBy")
+
+  @@index([role, status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+/// §3.2
+model ClientProfile {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @unique @map("user_id") @db.Uuid
+  firstName      String    @map("first_name") @db.VarChar(100)
+  lastName       String    @map("last_name") @db.VarChar(100)
+  cityId         String?   @map("city_id") @db.Uuid
+  defaultAddress String?   @map("default_address") @db.VarChar(500)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City? @relation(fields: [cityId], references: [id], onDelete: Restrict)
+
+  @@index([cityId])
+  @@map("client_profiles")
+}
+
+/// §3.3. ratingAverage, ratingCount and completedBookingsCount are denormalised and
+/// written only inside the transaction that causes the change; a nightly job
+/// reconciles them and logs drift as an error.
+model MasterProfile {
+  id                     String         @id @default(uuid()) @db.Uuid
+  userId                 String         @unique @map("user_id") @db.Uuid
+  firstName              String         @map("first_name") @db.VarChar(100)
+  lastName               String         @map("last_name") @db.VarChar(100)
+  displayName            String         @map("display_name") @db.VarChar(150)
+  bio                    String?
+  yearsOfExperience      Int            @default(0) @map("years_of_experience") @db.SmallInt
+  cityId                 String         @map("city_id") @db.Uuid
+  serviceRadiusKm        Int            @default(15) @map("service_radius_km") @db.SmallInt
+  timezone               String         @db.VarChar(64)
+  approvalStatus         ApprovalStatus @default(PENDING) @map("approval_status")
+  rejectionReason        String?        @map("rejection_reason") @db.VarChar(500)
+  approvedAt             DateTime?      @map("approved_at") @db.Timestamptz(3)
+  approvedByUserId       String?        @map("approved_by_user_id") @db.Uuid
+  isActive               Boolean        @default(false) @map("is_active")
+  ratingAverage          Decimal        @default(0.00) @map("rating_average") @db.Decimal(3, 2)
+  ratingCount            Int            @default(0) @map("rating_count")
+  completedBookingsCount Int            @default(0) @map("completed_bookings_count")
+  createdAt              DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt              DateTime?      @map("deleted_at") @db.Timestamptz(3)
+
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city       City  @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  approvedBy User? @relation("MasterApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([approvalStatus, isActive])
+  @@index([cityId])
+  @@index([ratingAverage(sort: Desc)])
+  @@map("master_profiles")
+}
+
+/// §3.5. Seeded reference data — no soft delete; withdraw a city with isActive.
+model City {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(150)
+  slug      String   @unique @db.VarChar(150)
+  region    String?  @db.VarChar(150)
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  clientProfiles ClientProfile[]
+  masterProfiles MasterProfile[]
+
+  @@map("cities")
+}
+
+// ---------------------------------------------------------------------------
+// §4 Sessions and Tokens
+// ---------------------------------------------------------------------------
+
+/// §4.1. Only the SHA-256 hash of a token is stored. Rows are hard-deleted by a
+/// nightly job once expiresAt is more than 30 days past.
+model RefreshToken {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tokenHash     String    @unique @map("token_hash") @db.VarChar(128)
+  familyId      String    @map("family_id") @db.Uuid
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt        DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason String?   @map("revoked_reason") @db.VarChar(100)
+  deviceId      String?   @map("device_id") @db.VarChar(200)
+  userAgent     String?   @map("user_agent") @db.VarChar(500)
+  ipAddress     String?   @map("ip_address") @db.VarChar(45)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+/// §4.2. The raw token exists only in the outbound email.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}

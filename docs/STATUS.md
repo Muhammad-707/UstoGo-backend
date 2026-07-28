@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-29
 **Current phase:** Phase 1 — Platform Foundation
 **Version:** 0.1.0 (in development)
-**Overall progress:** ▓▓░░░░░░░░ 16% (scaffold, local stack and configuration landed)
+**Overall progress:** ▓▓░░░░░░░░ 20% (scaffold, local stack, configuration and the Prisma foundation landed)
 
 ---
 
@@ -15,10 +15,10 @@
 | Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks     |
 | Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs |
 | Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered  |
-| Database schema     | ⬜ Specified in `DATABASE.md`, not yet in `schema.prisma`         |
+| Database schema     | 🟨 §2–4 migrated and seeded; catalogue and bookings still to come |
 | Authentication      | ⬜ Not started                                                    |
 | Business features   | ⬜ Not started                                                    |
-| Tests               | 🟨 34 unit tests on the config layer; no integration or e2e yet   |
+| Tests               | 🟨 69 unit tests (config, soft delete, transactions); no e2e yet  |
 | CI/CD               | ⬜ Not started                                                    |
 | Deployment          | ⬜ Not started                                                    |
 
@@ -38,7 +38,7 @@ Nothing yet connects to PostgreSQL, MinIO, Redis or Mailpit — their settings a
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓░░░░░░░ 27%  |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓░░░░░░ 36%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |

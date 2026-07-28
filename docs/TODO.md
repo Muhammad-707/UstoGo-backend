@@ -35,12 +35,12 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.4 Prisma foundation
 
-- [ ] `schema.prisma` — enums + identity + sessions + cities, per `DATABASE.md` §2–4
-- [ ] Extensions migration: `citext`, `btree_gist`, `pg_trgm`
-- [ ] `PrismaService` with lifecycle hooks and query logging
-- [ ] Soft-delete client extension + tests proving deleted rows are invisible by default
-- [ ] `TransactionManager` with retry on `P2034`
-- [ ] Seed script skeleton
+- [x] `schema.prisma` — enums + identity + sessions + cities, per `DATABASE.md` §2–4
+- [x] Extensions migration: `citext`, `btree_gist`, `pg_trgm`
+- [x] `PrismaService` with lifecycle hooks and query logging
+- [x] Soft-delete client extension + tests proving deleted rows are invisible by default
+- [x] `TransactionManager` with retry on `P2034`
+- [x] Seed script skeleton
 
 ### 1.5 Common layer
 

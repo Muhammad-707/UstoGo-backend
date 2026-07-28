@@ -24,8 +24,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ Project scaffold: NestJS 11, TypeScript strict, ESLint, Prettier, Husky, commitlint
 - ✅ `docker-compose` with PostgreSQL 16, MinIO, Redis and Mailpit; multi-stage `Dockerfile`
 - ✅ `ConfigModule` with boot-time schema validation
-- ⬜ `PrismaModule`: client, soft-delete extension, `TransactionManager`
-- ⬜ Initial Prisma schema and migration (identity, sessions, cities)
+- ✅ `PrismaModule`: client, soft-delete extension, `TransactionManager`
+- ✅ Initial Prisma schema and migration (identity, sessions, cities)
 - ⬜ `CommonModule`: validation pipe, exception filter, serialisation, request id, decorators
 - ⬜ Structured logging (Pino) with redaction
 - ⬜ `HealthModule`: `/health`, `/health/ready`
