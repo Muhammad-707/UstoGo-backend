@@ -28,10 +28,10 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.3 Configuration
 
-- [ ] `env.schema.ts` (Zod) covering app, database, JWT, storage, mail, throttle
-- [ ] `AppConfigService` with typed getters
-- [ ] Boot fails loudly on invalid or missing configuration
-- [ ] Unit tests: missing secret, short secret, invalid URL
+- [x] `env.schema.ts` (Zod) covering app, database, JWT, storage, mail, throttle
+- [x] `AppConfigService` with typed getters
+- [x] Boot fails loudly on invalid or missing configuration
+- [x] Unit tests: missing secret, short secret, invalid URL
 
 ### 1.4 Prisma foundation
 

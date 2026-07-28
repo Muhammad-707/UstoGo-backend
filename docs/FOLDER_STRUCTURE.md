@@ -64,8 +64,10 @@ src/
 ├── config/
 │   ├── config.module.ts
 │   ├── app-config.service.ts
-│   ├── env.schema.ts
-│   └── configurations/         # app, database, jwt, storage, mail, throttle
+│   ├── env.schema.ts           # Zod schema + pure parseEnv()
+│   ├── load-env.ts             # .env discovery, memoised; the only process.env read
+│   ├── invalid-environment.exception.ts
+│   └── configurations/         # app, database, jwt, storage, mail, redis, throttle
 │
 ├── common/
 │   ├── common.module.ts

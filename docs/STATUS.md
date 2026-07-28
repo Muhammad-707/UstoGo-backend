@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-29
 **Current phase:** Phase 1 — Platform Foundation
 **Version:** 0.1.0 (in development)
-**Overall progress:** ▓▓░░░░░░░░ 13% (documentation baseline complete, scaffold and local stack landed)
+**Overall progress:** ▓▓░░░░░░░░ 16% (scaffold, local stack and configuration landed)
 
 ---
 
@@ -14,11 +14,11 @@
 | Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                    |
 | Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks     |
 | Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs |
-| Configuration       | ⬜ Not started — no `ConfigModule`; `main.ts` still uses literals |
+| Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered  |
 | Database schema     | ⬜ Specified in `DATABASE.md`, not yet in `schema.prisma`         |
 | Authentication      | ⬜ Not started                                                    |
 | Business features   | ⬜ Not started                                                    |
-| Tests               | ⬜ Harness configured, no tests written                           |
+| Tests               | 🟨 34 unit tests on the config layer; no integration or e2e yet   |
 | CI/CD               | ⬜ Not started                                                    |
 | Deployment          | ⬜ Not started                                                    |
 
@@ -29,6 +29,8 @@ Two known consequences of that, both closing in §1.6 and neither a blocker:
 - The `Dockerfile` `HEALTHCHECK` probes `/health`, so a running container reports **unhealthy**. The directive matches the contract in `DEPLOYMENT.md` §4 and is left in place rather than removed and re-added.
 - `npm run dev` starts the containers and the API but runs no migrations; `prisma migrate dev` joins the script in §1.4.
 
+Nothing yet connects to PostgreSQL, MinIO, Redis or Mailpit — their settings are validated at boot but not used until the modules that consume them land.
+
 ---
 
 ## 2. Phase Progress
@@ -36,7 +38,7 @@ Two known consequences of that, both closing in §1.6 and neither a blocker:
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓░░░░░░░░ 18%  |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓░░░░░░░ 27%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
@@ -110,16 +112,16 @@ Two known consequences of that, both closing in §1.6 and neither a blocker:
 
 ## 5. Metrics
 
-| Metric                               | Target              | Current |
-| ------------------------------------ | ------------------- | ------- |
-| Line coverage                        | ≥ 80%               | —       |
-| Service/guard coverage               | ≥ 90%               | —       |
-| Auth & state machine branch coverage | 100%                | —       |
-| Endpoints implemented                | ~95                 | 0       |
-| Endpoints documented in Swagger      | 100% of implemented | —       |
-| Files over 300 lines                 | 0                   | 0       |
-| `any` occurrences                    | 0                   | 0       |
-| Open high/critical vulnerabilities   | 0                   | —       |
+| Metric                               | Target              | Current                                |
+| ------------------------------------ | ------------------- | -------------------------------------- |
+| Line coverage                        | ≥ 80%               | 100% (config layer is all that exists) |
+| Service/guard coverage               | ≥ 90%               | —                                      |
+| Auth & state machine branch coverage | 100%                | —                                      |
+| Endpoints implemented                | ~95                 | 0                                      |
+| Endpoints documented in Swagger      | 100% of implemented | —                                      |
+| Files over 300 lines                 | 0                   | 0                                      |
+| `any` occurrences                    | 0                   | 0                                      |
+| Open high/critical vulnerabilities   | 0                   | —                                      |
 
 ---
 

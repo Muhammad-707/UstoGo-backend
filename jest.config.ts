@@ -23,7 +23,13 @@ const config: Config = {
     '!src/**/*.module.ts',
     '!src/**/dto/**',
     '!src/**/constants/**',
+    '!src/**/__tests__/**',
     '!src/main.ts',
+    // Boot wiring over the filesystem and process.env. A unit test would have to assert
+    // against whichever .env happens to exist on the machine running it, which is the
+    // definition of a flaky test (TESTING.md §10). Its behaviour is covered by the
+    // startup path instead; the parsing it delegates to is covered exhaustively.
+    '!src/config/load-env.ts',
   ],
   coverageDirectory: '<rootDir>/coverage',
   testEnvironment: 'node',

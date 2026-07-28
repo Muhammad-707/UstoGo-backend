@@ -1,21 +1,44 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
-
-// Configuration moves to AppConfigService in TODO.md §1.3; until the Zod schema
-// exists there is nothing to validate these against, so they stay literals here.
-const DEFAULT_PORT = 3000;
-const API_PREFIX = 'api/v1';
+import { AppConfigService } from './config/app-config.service';
+import { InvalidEnvironmentException } from './config/invalid-environment.exception';
+import { loadEnv } from './config/load-env';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // Validated before Nest is constructed, deliberately. Left to ConfigModule's provider
+  // factory, the failure surfaces inside dependency injection, where Nest's own
+  // ExceptionHandler logs it with a DI stack trace before this file can format it — and
+  // an operator staring at `Injector.instantiateClass` learns nothing about which
+  // variable is wrong. The result is memoised, so ConfigModule reuses this parse.
+  loadEnv();
 
-  app.setGlobalPrefix(API_PREFIX);
+  const app = await NestFactory.create(AppModule);
+  const { app: appConfig } = app.get(AppConfigService);
+
+  app.setGlobalPrefix(appConfig.apiPrefix);
 
   // Readiness must be able to fail before the process stops answering (DEPLOYMENT.md §6).
   app.enableShutdownHooks();
 
-  await app.listen(DEFAULT_PORT);
+  await app.listen(appConfig.port);
+
+  Logger.log(
+    `Listening on http://localhost:${appConfig.port}/${appConfig.apiPrefix} [${appConfig.nodeEnv}]`,
+    'Bootstrap',
+  );
 }
 
-void bootstrap();
+void bootstrap().catch((error: unknown) => {
+  // A configuration failure is an operator error, not a crash: the stack trace tells
+  // them nothing they can act on, whereas the list of bad variables tells them exactly
+  // what to fix. Everything else keeps its stack.
+  if (error instanceof InvalidEnvironmentException) {
+    Logger.error(error.message, undefined, 'Bootstrap');
+  } else {
+    Logger.error('Application failed to start', error, 'Bootstrap');
+  }
+
+  process.exitCode = 1;
+});

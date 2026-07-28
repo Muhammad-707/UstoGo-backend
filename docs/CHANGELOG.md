@@ -18,7 +18,11 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - `.env.example` covering every variable in `DEPLOYMENT.md` §3, with local defaults and no real secrets.
 - Local development stack: `docker-compose.yml` with PostgreSQL 16, MinIO (bucket provisioned on start), Redis and Mailpit, all healthchecked. `npm run dev` brings the stack up and starts the API; `stack:down` and `stack:reset` tear it down. Measured cold start of the containers: ~9 seconds against the 15-minute NFR-OP-5 budget.
 - Every compose host port is overridable via `.env` (`POSTGRES_PORT`, `REDIS_PORT`, `MINIO_PORT`, …), so the stack coexists with a native PostgreSQL or another project's containers without either side being stopped. Documented in `DEPLOYMENT.md` §2.
+- `ConfigModule` (global) with boot-time Zod validation of every variable in `DEPLOYMENT.md` §3, exposing `AppConfigService` with frozen, typed groups — `app`, `database`, `jwt`, `storage`, `mail`, `redis`, `throttle`. Invalid configuration prints every offending variable and exits 1 before a port is bound; values are never echoed. 34 unit tests, 100% coverage of the parsed surface.
 - Multi-stage `Dockerfile` per `DEPLOYMENT.md` §4. The runtime image carries `dist/` and production dependencies only — no source, no dev dependencies — and runs as the non-root `app` user. Dependency install scripts are disabled in both stages.
+
+### Fixed
+- `nest build` emitted an incomplete `dist/`. `incremental: true` wrote its build-info file outside `outDir` while `deleteOutDir` wiped `dist/`, so TypeScript saw an up-to-date project, emitted only the files touched since the previous run, and produced a `dist/` that failed at `require`. The build-info file now lives inside `dist/`.
 
 ### Changed
 - ESLint configuration is `eslint.config.mjs` (flat config) rather than the `.eslintrc.cjs` originally specified: ESLint 9 defaults to flat config and ESLint 10 drops `.eslintrc` entirely. `FOLDER_STRUCTURE.md` §1 and `CODING_STANDARDS.md` §12 updated to match; the rule set itself is unchanged.

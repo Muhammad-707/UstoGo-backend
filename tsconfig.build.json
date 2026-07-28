@@ -2,6 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": "./src",
+    // Must live inside outDir. nest-cli.json deletes dist/ before every build; a build
+    // info file surviving outside it convinces tsc nothing changed, so it emits nothing
+    // and leaves a dist/ containing only the files touched since the last run.
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
