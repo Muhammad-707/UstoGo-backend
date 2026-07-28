@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-29
 **Current phase:** Phase 1 — Platform Foundation
 **Version:** 0.1.0 (in development)
-**Overall progress:** ▓░░░░░░░░░ 11% (documentation baseline complete, repository scaffold landed)
+**Overall progress:** ▓▓░░░░░░░░ 13% (documentation baseline complete, scaffold and local stack landed)
 
 ---
 
@@ -36,7 +36,7 @@ Two known consequences of that, both closing in §1.6 and neither a blocker:
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓░░░░░░░░░ 9%   |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓░░░░░░░░ 18%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
