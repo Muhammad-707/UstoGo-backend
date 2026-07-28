@@ -10,6 +10,10 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
+    "dev": "npm run stack:up && npm run start:dev",
+    "stack:up": "docker compose up -d --wait postgres minio redis mailpit && docker compose run --rm --quiet-pull minio-init",
+    "stack:down": "docker compose down",
+    "stack:reset": "docker compose down -v",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",

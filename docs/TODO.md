@@ -22,9 +22,9 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.2 Local environment
 
-- [ ] `docker-compose.yml`: PostgreSQL 16, MinIO, Redis, Mailpit
-- [ ] Multi-stage `Dockerfile`, non-root user, no dev dependencies in the runtime layer
-- [ ] `npm run dev` brings up the full stack from a clean clone in ≤ 15 minutes (NFR-OP-5)
+- [x] `docker-compose.yml`: PostgreSQL 16, MinIO, Redis, Mailpit
+- [x] Multi-stage `Dockerfile`, non-root user, no dev dependencies in the runtime layer
+- [x] `npm run dev` brings up the full stack from a clean clone in ≤ 15 minutes (NFR-OP-5)
 
 ### 1.3 Configuration
 

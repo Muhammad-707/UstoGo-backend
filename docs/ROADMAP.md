@@ -22,7 +22,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 **Goal:** a running, secured, observable skeleton with working authentication.
 
 - ✅ Project scaffold: NestJS 11, TypeScript strict, ESLint, Prettier, Husky, commitlint
-- ⬜ `docker-compose` with PostgreSQL 16 and MinIO
+- ✅ `docker-compose` with PostgreSQL 16, MinIO, Redis and Mailpit; multi-stage `Dockerfile`
 - ⬜ `ConfigModule` with boot-time schema validation
 - ⬜ `PrismaModule`: client, soft-delete extension, `TransactionManager`
 - ⬜ Initial Prisma schema and migration (identity, sessions, cities)

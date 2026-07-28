@@ -13,7 +13,7 @@
 | ------------------- | ----------------------------------------------------------------- |
 | Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                    |
 | Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks     |
-| Local environment   | ⬜ Not started — `docker-compose` is the next task                |
+| Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs |
 | Configuration       | ⬜ Not started — no `ConfigModule`; `main.ts` still uses literals |
 | Database schema     | ⬜ Specified in `DATABASE.md`, not yet in `schema.prisma`         |
 | Authentication      | ⬜ Not started                                                    |
@@ -23,6 +23,11 @@
 | Deployment          | ⬜ Not started                                                    |
 
 The application boots and serves HTTP on `http://localhost:3000/api/v1`, but exposes **no routes yet** — `AppModule` is empty until `HealthModule` lands in §1.6. `npm run lint`, `npm run typecheck` and `npm run build` are green.
+
+Two known consequences of that, both closing in §1.6 and neither a blocker:
+
+- The `Dockerfile` `HEALTHCHECK` probes `/health`, so a running container reports **unhealthy**. The directive matches the contract in `DEPLOYMENT.md` §4 and is left in place rather than removed and re-added.
+- `npm run dev` starts the containers and the API but runs no migrations; `prisma migrate dev` joins the script in §1.4.
 
 ---
 

@@ -6,12 +6,12 @@
 
 ## 1. Environments
 
-| Environment | Purpose | Database | Swagger |
-| --- | --- | --- | --- |
-| `development` | Local | Docker PostgreSQL | Open |
-| `test` | Automated tests | Testcontainers, ephemeral | Off |
-| `staging` | Pre-production verification | Managed, anonymised data | Open to the team |
-| `production` | Live | Managed, HA, PITR | Off (or gateway-protected) |
+| Environment   | Purpose                     | Database                  | Swagger                    |
+| ------------- | --------------------------- | ------------------------- | -------------------------- |
+| `development` | Local                       | Docker PostgreSQL         | Open                       |
+| `test`        | Automated tests             | Testcontainers, ephemeral | Off                        |
+| `staging`     | Pre-production verification | Managed, anonymised data  | Open to the team           |
+| `production`  | Live                        | Managed, HA, PITR         | Off (or gateway-protected) |
 
 Environments differ **only** in configuration. There are no `if (env === 'production')` branches in business code — a code path that is never exercised outside production is a code path that is never tested.
 
@@ -31,12 +31,16 @@ npm run prisma:seed           # cities, categories, a dev admin
 npm run start:dev
 ```
 
-| Service | URL |
-| --- | --- |
-| API | http://localhost:3000/api/v1 |
-| Swagger | http://localhost:3000/api/docs |
-| MinIO console | http://localhost:9001 |
-| Mailpit | http://localhost:8025 |
+| Service       | URL                            |
+| ------------- | ------------------------------ |
+| API           | http://localhost:3000/api/v1   |
+| Swagger       | http://localhost:3000/api/docs |
+| MinIO console | http://localhost:9001          |
+| Mailpit       | http://localhost:8025          |
+
+`npm run dev` is the single command: it runs `docker compose up -d --wait`, provisions the MinIO bucket, then starts the API in watch mode. `npm run stack:down` stops the containers; `npm run stack:reset` also drops the volumes.
+
+**Port conflicts.** Every host port in `docker-compose.yml` is overridable — `POSTGRES_PORT`, `MINIO_PORT`, `MINIO_CONSOLE_PORT`, `REDIS_PORT`, `MAILPIT_SMTP_PORT`, `MAILPIT_WEB_PORT`. The defaults are the ports in the table above. A developer already running PostgreSQL natively, or another project's stack, sets these in `.env` instead of editing the compose file or stopping the other stack — and updates `DATABASE_URL`, `S3_ENDPOINT`, `REDIS_URL` and `MAIL_PORT` to match. Container ports never change, so nothing inside the compose network is affected.
 
 Target: clone to running, seeded API in under 15 minutes (NFR-OP-5). If it takes longer, that is a bug in this document.
 
@@ -86,6 +90,7 @@ SWAGGER_ENABLED=false
 ```
 
 Rules
+
 - Secrets come from a secret manager, never from an image or a repository
 - The Zod schema validates everything at boot; invalid configuration exits **before** the listener binds
 - `CORS_ORIGINS=*` is rejected in production
@@ -138,12 +143,12 @@ Non-root, no dev dependencies, no source, no `.env`. Base image pinned by digest
 
 **Expand/contract is mandatory** (NFR-A-3). Renaming `bio` to `about`:
 
-| Release | Action |
-| --- | --- |
-| N | Add `about` (nullable). Write to both. Read from `bio`. |
-| N+1 | Backfill `about`. Read from `about`. Still write both. |
-| N+2 | Stop writing `bio`. |
-| N+3 | Drop `bio`. |
+| Release | Action                                                  |
+| ------- | ------------------------------------------------------- |
+| N       | Add `about` (nullable). Write to both. Read from `bio`. |
+| N+1     | Backfill `about`. Read from `about`. Still write both.  |
+| N+2     | Stop writing `bio`.                                     |
+| N+3     | Drop `bio`.                                             |
 
 Slower than a rename, and it is the difference between a deploy and an outage. Destructive migrations require sign-off recorded in `CHANGELOG.md`.
 
@@ -185,7 +190,7 @@ jobs:
       - lint
       - typecheck
       - test:unit
-      - test:integration    # Testcontainers
+      - test:integration # Testcontainers
       - test:e2e
       - coverage gate
       - npm audit --audit-level=high
@@ -197,7 +202,7 @@ jobs:
 
   deploy-production:
     if: tag matches v*.*.* && quality passed
-    environment: production        # requires manual approval
+    environment: production # requires manual approval
     steps: [build image, push, migrate deploy, rolling deploy, smoke tests, notify]
 ```
 
@@ -207,38 +212,38 @@ Production deploys are tag-triggered and manually approved. Continuous deploymen
 
 ## 8. Observability
 
-| Signal | Implementation |
-| --- | --- |
-| Logs | Structured JSON (Pino) with `requestId`, shipped to a central store, 90-day retention |
+| Signal  | Implementation                                                                                           |
+| ------- | -------------------------------------------------------------------------------------------------------- |
+| Logs    | Structured JSON (Pino) with `requestId`, shipped to a central store, 90-day retention                    |
 | Metrics | Prometheus at `/metrics` (protected): request rate, error rate, latency histogram, DB pool, job outcomes |
-| Errors | Sentry with `requestId` and `userId`, **without** request bodies |
-| Uptime | External probe on `/health` from two regions |
-| Traces | OpenTelemetry (Phase 6, B-65) |
+| Errors  | Sentry with `requestId` and `userId`, **without** request bodies                                         |
+| Uptime  | External probe on `/health` from two regions                                                             |
+| Traces  | OpenTelemetry (Phase 6, B-65)                                                                            |
 
 **Alerts**
 
-| Condition | Severity |
-| --- | --- |
-| 5xx rate > 1% over 5 min | Page |
-| p95 latency > 1 s over 10 min | Page |
-| `/health/ready` failing on any instance | Page |
-| DB connection pool > 80% for 5 min | Warn |
-| Refresh-token reuse detections spiking | Page (possible credential theft) |
-| 401/403 rate spiking | Warn (possible attack) |
-| Scheduled job failed twice consecutively | Warn |
-| Disk > 80% | Warn |
+| Condition                                | Severity                         |
+| ---------------------------------------- | -------------------------------- |
+| 5xx rate > 1% over 5 min                 | Page                             |
+| p95 latency > 1 s over 10 min            | Page                             |
+| `/health/ready` failing on any instance  | Page                             |
+| DB connection pool > 80% for 5 min       | Warn                             |
+| Refresh-token reuse detections spiking   | Page (possible credential theft) |
+| 401/403 rate spiking                     | Warn (possible attack)           |
+| Scheduled job failed twice consecutively | Warn                             |
+| Disk > 80%                               | Warn                             |
 
 ---
 
 ## 9. Backup & Recovery
 
-| Item | Policy |
-| --- | --- |
-| Full backup | Nightly, encrypted, 30-day retention |
-| PITR | WAL archiving, 7-day window |
-| Object storage | Versioning enabled, cross-region replication |
-| RTO | 1 hour |
-| RPO | 15 minutes |
+| Item              | Policy                                                        |
+| ----------------- | ------------------------------------------------------------- |
+| Full backup       | Nightly, encrypted, 30-day retention                          |
+| PITR              | WAL archiving, 7-day window                                   |
+| Object storage    | Versioning enabled, cross-region replication                  |
+| RTO               | 1 hour                                                        |
+| RPO               | 15 minutes                                                    |
 | Restore rehearsal | Quarterly, into an isolated environment, timed and documented |
 
 A backup that has never been restored is a hypothesis, not a backup. The rehearsal is what makes the RTO number real.
@@ -260,6 +265,7 @@ Caching is applied only where measured: category tree (5 min), search results (6
 ## 11. Runbook
 
 **API returning 5xx**
+
 1. Check `/health/ready` on each instance
 2. Check database connectivity and pool saturation
 3. Check Sentry for the dominant error signature, correlate by `requestId`
@@ -267,18 +273,21 @@ Caching is applied only where measured: category tree (5 min), search results (6
 5. Record the incident in `CHANGELOG.md`
 
 **Database unreachable**
+
 1. Verify the managed instance status and connection limits
 2. Check for long-running or blocking queries (`pg_stat_activity`)
 3. Scale up connections or terminate the blocker
 4. Readiness will already be failing, so traffic has stopped — resolve before restarting instances
 
 **Suspected credential compromise**
+
 1. Rotate `JWT_ACCESS_SECRET` — every access token dies instantly
 2. Revoke the affected refresh token families
 3. Review `AuditLog` and 401/403 patterns for the blast radius
 4. Notify affected users within 72 hours if personal data is implicated
 
 **Job stopped running**
+
 1. Check job metrics and the last success timestamp
 2. Verify the advisory lock is not stuck from a hard-killed instance
 3. Jobs are idempotent — safe to trigger manually

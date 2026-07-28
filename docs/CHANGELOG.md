@@ -16,6 +16,9 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - Toolchain enforcing the gates in `PROJECT_RULES.md` §4: ESLint 9 (flat config) carrying the full rule set from `CODING_STANDARDS.md` §12, Prettier, `.editorconfig`, Jest, and the six `tsconfig` path aliases.
 - Git hooks via Husky — pre-commit runs lint-staged and `tsc --noEmit`, pre-push runs unit tests, commit-msg runs commitlint against the Conventional Commits type and scope lists in `NAMING_CONVENTIONS.md` §10.
 - `.env.example` covering every variable in `DEPLOYMENT.md` §3, with local defaults and no real secrets.
+- Local development stack: `docker-compose.yml` with PostgreSQL 16, MinIO (bucket provisioned on start), Redis and Mailpit, all healthchecked. `npm run dev` brings the stack up and starts the API; `stack:down` and `stack:reset` tear it down. Measured cold start of the containers: ~9 seconds against the 15-minute NFR-OP-5 budget.
+- Every compose host port is overridable via `.env` (`POSTGRES_PORT`, `REDIS_PORT`, `MINIO_PORT`, …), so the stack coexists with a native PostgreSQL or another project's containers without either side being stopped. Documented in `DEPLOYMENT.md` §2.
+- Multi-stage `Dockerfile` per `DEPLOYMENT.md` §4. The runtime image carries `dist/` and production dependencies only — no source, no dev dependencies — and runs as the non-root `app` user. Dependency install scripts are disabled in both stages.
 
 ### Changed
 - ESLint configuration is `eslint.config.mjs` (flat config) rather than the `.eslintrc.cjs` originally specified: ESLint 9 defaults to flat config and ESLint 10 drops `.eslintrc` entirely. `FOLDER_STRUCTURE.md` §1 and `CODING_STANDARDS.md` §12 updated to match; the rule set itself is unchanged.
