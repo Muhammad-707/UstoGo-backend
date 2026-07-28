@@ -1,0 +1,82 @@
+# Changelog — UstoGo Backend
+
+All notable changes to this project are documented here.
+
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+
+Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Security` · `Database` · `Docs`
+
+---
+
+## [Unreleased]
+
+### Docs
+- Complete documentation baseline (32 documents) covering requirements, architecture, data model, API, security and process.
+- Frozen v1 scope decisions: payments off-platform, S3-compatible storage, chat designed now / built in Phase 5, REST-only API.
+- 10 architecture decision records in `ARCHITECTURE.md` §11.
+- Error code registry in `ERROR_HANDLING.md` §4.
+- Booking state machine defined as a single authoritative transition table (`FUNCTIONAL_REQUIREMENTS.md` §7.1).
+- Six-case authorization test matrix mandated for every protected endpoint (`AUTHORIZATION.md` §8).
+
+### Planned for 0.1.0
+Project scaffold · configuration validation · Prisma foundation with soft delete · common layer · health and Swagger · authentication with refresh rotation and reuse detection · user profiles · file storage · admin bootstrap CLI · CI pipeline.
+
+---
+
+## [0.0.0] — 2026-07-29
+
+### Added
+- Repository initialised.
+- Documentation baseline established as the single source of truth.
+
+---
+
+## Conventions
+
+### Entry format
+
+```markdown
+## [1.2.0] — 2026-09-15
+
+### Added
+- `POST /bookings/:id/reschedule` — clients may move a booking once, ≥ 24 h before the slot. (#142)
+
+### Fixed
+- Availability computation dropped the final slot when a working day ended exactly on a slot boundary. (#151)
+
+### Database
+- Migration `20260915_add_booking_reschedule_count` — adds `bookings.reschedule_count` (nullable, backfilled to 0).
+
+### Security
+- Refresh token reuse now revokes the entire token family instead of the single token. (#149)
+```
+
+### Rules
+
+1. **Every user-visible or contract-affecting change gets an entry.** Internal refactors that change no behaviour do not.
+2. **Write for the consumer of the change**, not for the person who made it. "Clients may move a booking once" is useful; "refactored BookingService" is not.
+3. **Database migrations always get an entry** under `Database`, naming the migration and stating whether it is backwards-compatible.
+4. **Security fixes always get an entry** under `Security`, with enough detail for an operator to assess exposure and without enough detail to be a working exploit.
+5. **Breaking changes** are called out explicitly with a `BREAKING:` prefix and a migration note. A breaking change to the public API requires a new API version, not just a changelog line.
+6. Entries link to the pull request or issue.
+7. `[Unreleased]` accumulates during a phase and is renamed to a version on release.
+
+### Versioning
+
+| Bump | When |
+| --- | --- |
+| **MAJOR** | Breaking change to the public API contract |
+| **MINOR** | New backwards-compatible feature |
+| **PATCH** | Backwards-compatible fix |
+
+Pre-1.0.0, MINOR bumps mark phase completions:
+
+| Version | Milestone |
+| --- | --- |
+| 0.1.0 | Phase 1 — Platform Foundation |
+| 0.2.0 | Phase 2 — Supply Side |
+| 0.3.0 | Phase 3 — Discovery |
+| 0.4.0 | Phase 4 — The Transaction |
+| 0.5.0 | Phase 5 — Engagement & Operations |
+| 1.0.0 | Phase 6 — Hardening & Launch |
