@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Active phase:** Phase 3 — Discovery (Phases 1–2 complete, tagged `v0.1.1`) — Phase 3 feature work complete
+**Active phase:** Phase 4 — The Transaction (Phases 1–3 complete) — Phase 4 feature work complete
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -136,9 +136,18 @@ would ship its admin routes unaudited and need a retrofit.
 
 ---
 
-## 🟢 Later
+## ✅ Done — Phase 4: The Transaction
 
-**Phase 4** — booking creation pre-conditions, state machine, exclusion-constraint migration, all transitions, status history, expiry and reminder jobs, contact-disclosure test, notifications, reviews with transactional aggregates, concurrency suite.
+- [x] F-09 Bookings: `Booking`/`BookingStatusHistory` models, `bookings_no_overlap` GiST exclusion constraint + `booking_number_seq`, `BookingStateMachine` (100% branches), six ordered pre-conditions on create, `SERIALIZABLE` acceptance with an application-level overlap re-check, reject/cancel(client·master·admin)/start/complete
+- [x] Progressive contact-detail disclosure in `BookingResponseDto` (district-only until `ACCEPTED`), e2e-verified
+- [x] `ExpirePendingBookingsJob` (every 10 min, batches of 100, `FOR UPDATE SKIP LOCKED`) and `BookingReminderJob` (default proposed per `CLAUDE.md` §3 — no FR/SRS times this one; documented in `booking.constants.ts`)
+- [x] F-11 Notifications: `Notification` model, event listeners on booking/master-moderation/review events (never called directly — `NotificationsModule` is import-free of every module it listens to), list/unread-count/mark-read/mark-all-read, admin broadcast
+- [x] F-10 Reviews: booking-gated creation (30-day window), 24h edit window, one reply per review, admin hide/unhide, `ratingAverage`/`ratingCount` recomputed from the current `VISIBLE` set inside the same transaction as every write
+- [x] Concurrency suite: direct-insert bypass proving the exclusion constraint, parallel `accept()` on overlapping bookings (exactly one wins), parallel review creation on one booking (exactly one survives)
+
+---
+
+## 🟢 Later
 
 **Phase 5** — chat REST + Socket.io gateway, banners, admin dashboard, broadcast notifications, Prometheus metrics, load tests.
 

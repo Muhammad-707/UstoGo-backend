@@ -43,6 +43,11 @@ const config: Config = {
     'src/modules/auth/services/token.service.ts': { branches: 100 },
     'src/modules/auth/services/password-reset.service.ts': { branches: 100 },
     'src/common/guards/roles.guard.ts': { branches: 100 },
+    'src/modules/bookings/domain/booking-state-machine.ts': { branches: 100 },
+    // AvailabilityCalculator is not added here: it sits at ~87% branches today (line
+    // 79, an unreachable-in-practice guard), a Phase 3 gap this phase does not own —
+    // adding the threshold here would fail CI for work already merged before Phase 4.
+
     'src/modules/**/services/*.ts': { lines: 90 },
     'src/common/guards/*.ts': { lines: 90 },
     'src/common/interceptors/*.ts': { lines: 90 },

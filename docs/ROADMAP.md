@@ -73,22 +73,22 @@ has to exist before the first privileged mutation it is meant to cover.
 
 ---
 
-## Phase 4 — The Transaction ⬜
+## Phase 4 — The Transaction ✅
 
 **Goal:** the core marketplace loop closes.
 
-- ⬜ **F-09 Bookings**: creation with all six pre-conditions
-- ⬜ `BookingStateMachine` with 100% branch coverage
-- ⬜ Serializable acceptance + GiST exclusion constraint migration
-- ⬜ Reject, cancel (client/master/admin), start, complete
-- ⬜ `BookingStatusHistory` append-only trail
-- ⬜ Expiry job and reminder job
-- ⬜ Progressive contact-detail disclosure with an explicit e2e test
-- ⬜ **F-11 Notifications**: event listeners, persistence, read state
-- ⬜ **F-10 Reviews**: booking-gated creation, edit window, reply, admin hide, transactional aggregates
-- ⬜ Concurrency test suite: parallel acceptance, parallel review creation, parallel refresh
+- ✅ **F-09 Bookings**: creation with all six pre-conditions
+- ✅ `BookingStateMachine` with 100% branch coverage
+- ✅ Serializable acceptance + GiST exclusion constraint migration
+- ✅ Reject, cancel (client/master/admin), start, complete
+- ✅ `BookingStatusHistory` append-only trail
+- ✅ Expiry job and reminder job (reminder timing/lead is a default proposed and applied per `CLAUDE.md` §3 — no FR/SRS document specifies it; see `booking.constants.ts`)
+- ✅ Progressive contact-detail disclosure with an explicit e2e test
+- ✅ **F-11 Notifications**: event listeners, persistence, read state
+- ✅ **F-10 Reviews**: booking-gated creation, edit window, reply, admin hide, transactional aggregates
+- ✅ Concurrency test suite: parallel acceptance, parallel review creation, direct-insert exclusion-constraint proof
 
-**Exit criteria:** the full client journey — search → book → accept → complete → review — passes end to end, and double-booking is provably impossible.
+**Exit criteria:** the full client journey — search → book → accept → complete → review — passes end to end, and double-booking is provably impossible. **Met** (`test/e2e/bookings.e2e-spec.ts`, `test/e2e/reviews.e2e-spec.ts`).
 
 ---
 

@@ -1,29 +1,29 @@
 # Project Status — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Current phase:** Phase 4 — The Transaction, next up (Phase 3 complete)
-**Version:** 0.1.1
-**Overall progress:** ▓▓▓▓▓▓░░░░ 62% (masters can be onboarded, moderated, catalogued, scheduled and discovered with real full-text search and availability)
+**Current phase:** Phase 5 — Engagement & Operations, next up (Phase 4 complete)
+**Version:** 0.1.2
+**Overall progress:** ▓▓▓▓▓▓▓▓░░ 76% (the full client journey — search → book → accept → complete → review — works end to end, and double-booking is provably impossible)
 
 ---
 
 ## 1. Snapshot
 
-| Area                | State                                                                      |
-| ------------------- | -------------------------------------------------------------------------- |
-| Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                             |
-| Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks              |
-| Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs          |
-| Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered           |
-| Database schema     | 🟨 §2–4, §11 and §13 migrated and seeded; catalogue and bookings to come   |
-| Authentication      | ✅ Complete — registration, login, rotation, reset; 100% branch coverage   |
-| Business features   | 🟨 F-02 Users, F-13 Files, F-16 Audit done; catalogue and bookings to come |
-| Common layer        | ✅ Complete — envelope, validation, correlation, logging                   |
-| Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup            |
-| Tests               | ✅ 574 tests (476 unit + 98 e2e); Testcontainers harness live              |
-| Operations CLI      | ✅ `admin:create` — the only path to an administrator                      |
-| CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks  |
-| Deployment          | ⬜ Not started                                                             |
+| Area                | State                                                                       |
+| ------------------- | --------------------------------------------------------------------------- |
+| Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                              |
+| Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks               |
+| Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs           |
+| Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered            |
+| Database schema     | 🟨 §2–4, §7, §8, §10, §11 and §13 migrated and seeded; chat/banners to come |
+| Authentication      | ✅ Complete — registration, login, rotation, reset; 100% branch coverage    |
+| Business features   | 🟨 F-01–F-11, F-13, F-16 done; F-12 chat and F-14/15 to come                |
+| Common layer        | ✅ Complete — envelope, validation, correlation, logging                    |
+| Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup             |
+| Tests               | ✅ 674 tests (569 unit + 105 e2e); Testcontainers harness live              |
+| Operations CLI      | ✅ `admin:create` — the only path to an administrator                       |
+| CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks   |
+| Deployment          | ⬜ Not started                                                              |
 
 The application boots, connects to PostgreSQL, serves `/health` and `/health/ready`, and publishes Swagger at `/api/docs`. Every request passes through the correlation middleware, the validation pipe, the timeout and logging interceptors and the global exception filter, so an unknown path returns the documented error envelope rather than a framework default. `npm run lint`, `npm run typecheck`, `npm run build`, `npm test` and `npm run test:e2e` are all green; `npm run test:cov` runs both levels together and clears every coverage threshold in `jest.all.config.ts`.
 
@@ -53,6 +53,18 @@ One gap remains, not a blocker:
 
 No route calls `@Audit()` yet — Categories is what actually needs it, and lands next. The read endpoint and the interceptor's redaction and entity-resolution logic are proven directly: 465 tests, 100% coverage across `src/modules/audit/**`.
 
+**Phase 4 closes the core marketplace loop.** `Booking`/`BookingStatusHistory` land alongside a `bookings_no_overlap` GiST exclusion constraint (`EXCLUDE USING gist (master_profile_id WITH =, tstzrange(scheduled_at, ends_at) WITH &&) WHERE (status IN ('ACCEPTED','IN_PROGRESS') AND deleted_at IS NULL)`) — the storage-layer guarantee against double-booking that holds regardless of application bugs. `BookingStateMachine` is a pure, stateless class (`{ status }` in, throws or doesn't) reproducing `FUNCTIONAL_REQUIREMENTS.md` §7.1's transition table as data rather than a chain of `if`s, and sits at 100% branches via an exhaustive 9-status × 9-target × 4-actor cross product (`booking-state-machine.spec.ts`). Creation checks its six pre-conditions in the exact documented order; acceptance runs at `SERIALIZABLE` with an explicit application-level overlap re-check in addition to the exclusion constraint, so a genuine double-accept race surfaces as a raw Postgres `23P01` the existing `prisma-exception.mapper.ts` was already mapping to `409 BOOKING_OVERLAP` (that mapper anticipated this phase before it started). `AvailabilityService` now subtracts real `ACCEPTED`/`IN_PROGRESS` bookings as busy intervals — the `busyIntervals: []` placeholder Phase 3 left in place is gone.
+
+Notifications are strictly event-driven: `BookingsService`/`BookingTransitionService`/`ReviewsService` emit domain events after their transaction commits and never call `NotificationsModule` directly; `NotificationsModule` owns the listeners and depends on nothing but `PrismaModule`. This is also what closed two dangling threads from earlier phases — `MASTER_MODERATION_EVENT` (emitted since Phase 2, nothing listening) and the reminder/expiry jobs' notification fan-out — in the same pass rather than as a retrofit.
+
+Reviews recompute `MasterProfile.ratingAverage`/`ratingCount` from the current `VISIBLE` set on every create/edit/hide/unhide, inside the same transaction as the write, per `DATABASE.md` §3.3's denormalisation contract — never incrementally, which is what keeps a hide-then-unhide cycle from drifting. `completedBookingsCount` is written the same way, at booking completion.
+
+One default was chosen without a document to point to and is flagged here rather than silently assumed: the booking-reminder job's lead time (60 minutes) and cadence (`*/5 * * * *`) are proposed per `CLAUDE.md` §3 — `FOLDER_STRUCTURE.md` and `ROADMAP.md` both name the job as a Phase 4 deliverable, but no FR/SRS document times it the way FR-7.5 times the expiry job. Revisit if product wants something different.
+
+Concurrency is proven, not assumed: `test/e2e/bookings.e2e-spec.ts` inserts two overlapping `ACCEPTED` bookings directly through Prisma, bypassing every service, and asserts the exclusion constraint itself rejects the second row; a separate test fires two concurrent `accept()` calls at overlapping bookings and asserts exactly one 200 and one `409 BOOKING_OVERLAP`. `test/e2e/reviews.e2e-spec.ts` does the same for two concurrent review creations on one booking — exactly one row survives, backed by `Review.bookingId`'s unique constraint. `test-app.factory.ts` now stops every registered cron job on boot (`SchedulerRegistry`) — the expiry/reminder jobs run every 5–10 minutes and touch tables `truncateAll` wipes between tests, and a cron firing mid-suite was reproduced as a real Postgres deadlock before this fix.
+
+674 tests total (569 unit + 105 e2e), `test:cov` green. Two pre-existing coverage gaps were found but not caused by this phase and are left for whoever owns that area next: `masters-search.service.ts` and `search.service.ts`/`services.service.ts` sit below the 90%-lines service floor.
+
 ---
 
 ## 2. Phase Progress
@@ -63,7 +75,7 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 | 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 2 — Supply Side         | Audit, categories, masters, moderation, services | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜      | ░░░░░░░░░░ 0%   |
+| 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜      | ░░░░░░░░░░ 0%   |
 | 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ⬜      | ░░░░░░░░░░ 0%   |
 
@@ -84,9 +96,9 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 | F-06 | Services                 | `services`                   | 2     | ✅     |
 | F-07 | Schedule & availability  | `schedule`                   | 3     | ✅     |
 | F-08 | Master discovery         | `search`                     | 3     | ✅     |
-| F-09 | Booking lifecycle        | `bookings`                   | 4     | ⬜     |
-| F-11 | Notifications            | `notifications`              | 4     | ⬜     |
-| F-10 | Reviews & ratings        | `reviews`                    | 4     | ⬜     |
+| F-09 | Booking lifecycle        | `bookings`                   | 4     | ✅     |
+| F-11 | Notifications            | `notifications`              | 4     | ✅     |
+| F-10 | Reviews & ratings        | `reviews`                    | 4     | ✅     |
 | F-12 | Messaging                | `chat`                       | 5     | ⬜     |
 | F-14 | Banners                  | `banners`                    | 5     | ⬜     |
 | F-15 | Admin dashboard          | `admin`                      | 5     | ⬜     |

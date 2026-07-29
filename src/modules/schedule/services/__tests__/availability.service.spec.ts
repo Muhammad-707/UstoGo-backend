@@ -11,6 +11,7 @@ const build = (
     service?: Partial<Record<string, jest.Mock>>;
     workingDay?: Partial<Record<string, jest.Mock>>;
     scheduleException?: Partial<Record<string, jest.Mock>>;
+    booking?: Partial<Record<string, jest.Mock>>;
     assertPublic?: jest.Mock;
   } = {},
 ) => {
@@ -29,6 +30,7 @@ const build = (
         findMany: jest.fn().mockResolvedValue([]),
         ...overrides.scheduleException,
       },
+      booking: { findMany: jest.fn().mockResolvedValue([]), ...overrides.booking },
     },
   } as unknown as PrismaService;
   const mastersSearch = {
@@ -92,5 +94,33 @@ describe('AvailabilityService', () => {
       new Date('2026-08-03T04:00:00.000Z'),
       new Date('2026-08-03T05:00:00.000Z'),
     ]);
+  });
+
+  it('subtracts ACCEPTED/IN_PROGRESS bookings from the computed slots', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        scheduledAt: new Date('2026-08-03T04:00:00.000Z'),
+        endsAt: new Date('2026-08-03T05:00:00.000Z'),
+      },
+    ]);
+    const { service, prisma } = build({
+      workingDay: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            weekday: 1,
+            startTime: new Date('1970-01-01T09:00:00.000Z'),
+            endTime: new Date('1970-01-01T11:00:00.000Z'),
+          },
+        ]),
+      },
+      booking: { findMany },
+    });
+
+    const slots = await service.compute('m-1', '2026-08-03', '2026-08-03', 's-1');
+
+    expect(slots).toEqual([new Date('2026-08-03T05:00:00.000Z')]);
+    expect(prisma.db.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ masterProfileId: 'm-1' }) }),
+    );
   });
 });

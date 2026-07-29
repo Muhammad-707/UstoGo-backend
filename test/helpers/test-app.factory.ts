@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import type { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-storage-record.interface';
@@ -89,6 +90,16 @@ export const createTestApp = async (options: TestAppOptions = {}): Promise<TestA
 
   await app.init();
 
+  // Phase 4 adds jobs that run every 5–10 minutes and touch tables `truncateAll` wipes
+  // between tests (`bookings`); left running, a cron firing mid-suite races the
+  // truncate for a real Postgres deadlock (40P01), not a flaky assertion. Every e2e
+  // suite calls jobs through their own endpoints/services when it means to test them —
+  // never by waiting for the scheduler — so stopping the registry costs nothing here.
+  const scheduler = app.get(SchedulerRegistry);
+  for (const job of scheduler.getCronJobs().values()) {
+    await job.stop();
+  }
+
   const prisma = app.get(PrismaService);
 
   return {
@@ -118,5 +129,5 @@ export const createTestApp = async (options: TestAppOptions = {}): Promise<TestA
 export const truncateAll = async (prisma: PrismaService): Promise<void> => {
   // A tagged template with no interpolation — the table list is a fixed literal, and
   // there is no value here for anything to inject through.
-  await prisma.$executeRaw`TRUNCATE TABLE "users", "client_profiles", "master_profiles", "refresh_tokens", "password_reset_tokens", "files", "audit_logs", "categories", "master_categories", "certificates", "services" RESTART IDENTITY CASCADE`;
+  await prisma.$executeRaw`TRUNCATE TABLE "users", "client_profiles", "master_profiles", "refresh_tokens", "password_reset_tokens", "files", "audit_logs", "categories", "master_categories", "certificates", "services", "bookings", "booking_status_history", "reviews", "review_replies", "notifications" RESTART IDENTITY CASCADE`;
 };
