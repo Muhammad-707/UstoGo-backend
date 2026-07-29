@@ -1,9 +1,9 @@
 # Project Status — UstoGo Backend
 
-**Last updated:** 2026-07-29
-**Current phase:** Phase 2 — Supply Side (Phase 1 complete)
+**Last updated:** 2026-07-30
+**Current phase:** Phase 3 — Discovery, next up (Phase 2 complete)
 **Version:** 0.1.1
-**Overall progress:** ▓▓▓▓░░░░░░ 43% (accounts can be created, read, updated, given an avatar and deactivated)
+**Overall progress:** ▓▓▓▓▓░░░░░ 55% (masters can be onboarded, moderated, catalogued with services, and discovered publicly)
 
 ---
 
@@ -57,15 +57,15 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 
 ## 2. Phase Progress
 
-| Phase                   | Scope                                            | Status         | Progress        |
-| ----------------------- | ------------------------------------------------ | -------------- | --------------- |
-| 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 2 — Supply Side         | Audit, categories, masters, moderation, services | 🟨 In progress | ▓▓░░░░░░░░ 20%  |
-| 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
-| 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
-| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜             | ░░░░░░░░░░ 0%   |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ⬜             | ░░░░░░░░░░ 0%   |
+| Phase                   | Scope                                            | Status  | Progress        |
+| ----------------------- | ------------------------------------------------ | ------- | --------------- |
+| 0 — Documentation       | Full `docs/` set                                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
+| 2 — Supply Side         | Audit, categories, masters, moderation, services | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
+| 3 — Discovery           | Schedule, availability, search                   | ⬜      | ░░░░░░░░░░ 0%   |
+| 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜      | ░░░░░░░░░░ 0%   |
+| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜      | ░░░░░░░░░░ 0%   |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ⬜      | ░░░░░░░░░░ 0%   |
 
 ---
 
@@ -79,9 +79,9 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 | F-13 | File storage             | `files`                      | 1     | ✅     |
 | F-16 | Audit log                | `audit`                      | 2     | ✅     |
 | F-05 | Categories               | `categories`                 | 2     | ✅     |
-| F-03 | Master profile           | `masters`                    | 2     | ⬜     |
-| F-04 | Master moderation        | `admin`                      | 2     | ⬜     |
-| F-06 | Services                 | `services`                   | 2     | ⬜     |
+| F-03 | Master profile           | `masters`                    | 2     | ✅     |
+| F-04 | Master moderation        | `admin`                      | 2     | ✅     |
+| F-06 | Services                 | `services`                   | 2     | ✅     |
 | F-07 | Schedule & availability  | `schedule`                   | 3     | ⬜     |
 | F-08 | Master discovery         | `search`                     | 3     | ⬜     |
 | F-09 | Booking lifecycle        | `bookings`                   | 4     | ⬜     |
@@ -169,7 +169,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-Phase 1 is closed and tagged `v0.1.0`. F-16 Audit is closed. Next up is **F-05 Categories**: model, public tree endpoint, admin CRUD (each mutation decorated with `@Audit()`), depth/leaf rules, caching, and the initial taxonomy seed (`docs/TODO.md`, `ROADMAP.md`).
+Phase 2 (Supply Side) is closed: F-16 Audit, F-05 Categories, F-03 Masters, F-04 Moderation, F-06 Services and the cities/category seed are all in place. Next up is **Phase 3 — Discovery**: weekly schedule, availability, and master search (`docs/TODO.md`, `ROADMAP.md`).
 
 Detailed task list: `TODO.md`.
 

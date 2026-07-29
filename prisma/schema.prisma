@@ -166,13 +166,14 @@ model User {
   updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt       DateTime?  @map("deleted_at") @db.Timestamptz(3)
 
-  clientProfile       ClientProfile?
-  masterProfile       MasterProfile?
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  approvedMasters     MasterProfile[]      @relation("MasterApprovedBy")
-  uploadedFiles       File[]
-  auditLogs           AuditLog[]
+  clientProfile        ClientProfile?
+  masterProfile        MasterProfile?
+  refreshTokens        RefreshToken[]
+  passwordResetTokens  PasswordResetToken[]
+  approvedMasters      MasterProfile[]      @relation("MasterApprovedBy")
+  uploadedFiles        File[]
+  auditLogs            AuditLog[]
+  verifiedCertificates Certificate[]        @relation("CertificateVerifiedBy")
 
   @@index([role, status])
   @@index([createdAt])
@@ -232,10 +233,80 @@ model MasterProfile {
   approvedBy User? @relation("MasterApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Restrict)
   avatar     File? @relation("MasterAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
 
+  categories   MasterCategory[]
+  certificates Certificate[]
+  services     Service[]
+
   @@index([approvalStatus, isActive])
   @@index([cityId])
   @@index([ratingAverage(sort: Desc)])
   @@map("master_profiles")
+}
+
+/// §3.4. Deletion is soft — a certificate referenced by a past moderation decision
+/// must remain reconstructable. `verifiedAt` is unused in v1 (manual review only) and
+/// exists so automated verification (B-10) is an additive change.
+model Certificate {
+  id               String    @id @default(uuid()) @db.Uuid
+  masterProfileId  String    @map("master_profile_id") @db.Uuid
+  fileId           String    @map("file_id") @db.Uuid
+  title            String    @db.VarChar(200)
+  issuedBy         String?   @map("issued_by") @db.VarChar(200)
+  issuedAt         DateTime? @map("issued_at") @db.Date
+  verifiedAt       DateTime? @map("verified_at") @db.Timestamptz(3)
+  verifiedByUserId String?   @map("verified_by_user_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+  file          File          @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  verifiedBy    User?         @relation("CertificateVerifiedBy", fields: [verifiedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([masterProfileId, deletedAt])
+  @@map("certificates")
+}
+
+/// §5.2. Unique per (masterProfileId, categoryId); attaching an already-attached
+/// category is idempotent at the service layer rather than a 409, since the caller's
+/// intent — "this category should be attached" — is already satisfied.
+model MasterCategory {
+  id              String   @id @default(uuid()) @db.Uuid
+  masterProfileId String   @map("master_profile_id") @db.Uuid
+  categoryId      String   @map("category_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([masterProfileId, categoryId])
+  @@map("master_categories")
+}
+
+/// §5.3. `currency` is deployment-constant (BR-24), not per-row — it is stored per row
+/// only because a price is meaningless without the unit it was quoted in.
+model Service {
+  id              String    @id @default(uuid()) @db.Uuid
+  masterProfileId String    @map("master_profile_id") @db.Uuid
+  categoryId      String    @map("category_id") @db.Uuid
+  title           String    @db.VarChar(200)
+  description     String?
+  priceType       PriceType @map("price_type")
+  price           Decimal   @db.Decimal(12, 2)
+  currency        String    @db.Char(3)
+  durationMinutes Int       @map("duration_minutes")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([masterProfileId, isActive])
+  @@index([categoryId, isActive])
+  @@index([price])
+  @@map("services")
 }
 
 /// §3.5. Seeded reference data — no soft delete; withdraw a city with isActive.
@@ -324,6 +395,7 @@ model File {
   clientAvatars ClientProfile[] @relation("ClientAvatar")
   masterAvatars MasterProfile[] @relation("MasterAvatar")
   categoryIcons Category[]
+  certificates  Certificate[]
 
   @@index([uploadedByUserId])
   @@index([isConfirmed, createdAt])
@@ -380,9 +452,11 @@ model Category {
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children Category[] @relation("CategoryTree")
-  icon     File?      @relation(fields: [iconFileId], references: [id], onDelete: SetNull)
+  parent   Category?        @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[]       @relation("CategoryTree")
+  icon     File?            @relation(fields: [iconFileId], references: [id], onDelete: SetNull)
+  masters  MasterCategory[]
+  services Service[]
 
   @@index([parentId, sortOrder])
   @@index([isActive])

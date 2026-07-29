@@ -42,7 +42,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 
 ---
 
-## Phase 2 — Supply Side 🟨
+## Phase 2 — Supply Side ✅
 
 **Goal:** masters can be onboarded, moderated and catalogued.
 
@@ -51,12 +51,12 @@ has to exist before the first privileged mutation it is meant to cover.
 
 - ✅ **F-16 Audit**: `AuditLog`, audit interceptor, admin read endpoint
 - ✅ **F-05 Categories**: public tree, admin CRUD, depth and leaf rules, caching
-- ⬜ **F-03 Masters**: professional profile, category attachment, certificates, submit/resubmit, public projection
-- ⬜ **F-04 Moderation**: approve, reject, activate, deactivate with readiness checks, notifications and audit
-- ⬜ **F-06 Services**: master-scoped CRUD with pricing and duration rules
-- ⬜ Seed data: cities and a realistic category tree
+- ✅ **F-03 Masters**: professional profile, category attachment, certificates, submit/resubmit, public projection
+- ✅ **F-04 Moderation**: approve, reject, activate, deactivate with readiness checks, notifications and audit
+- ✅ **F-06 Services**: master-scoped CRUD with pricing and duration rules
+- ✅ Seed data: cities and a realistic category tree
 
-**Exit criteria:** an admin can take a master from registration to approved and publicly visible; every moderation action is audited.
+**Exit criteria:** an admin can take a master from registration to approved and publicly visible; every moderation action is audited. **Met.**
 
 ---
 

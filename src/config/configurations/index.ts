@@ -1,6 +1,9 @@
 export { buildAppConfig } from './app.config';
 export type { AppConfig, LogLevel, NodeEnv } from './app.config';
 
+export { buildCatalogueConfig } from './catalogue.config';
+export type { CatalogueConfig } from './catalogue.config';
+
 export { buildDatabaseConfig } from './database.config';
 export type { DatabaseConfig } from './database.config';
 

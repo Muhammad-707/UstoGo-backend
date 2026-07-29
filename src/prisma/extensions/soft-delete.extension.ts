@@ -10,6 +10,8 @@ export const SOFT_DELETABLE_MODELS: ReadonlySet<string> = new Set([
   'MasterProfile',
   'File',
   'Category',
+  'Certificate',
+  'Service',
 ]);
 
 /**

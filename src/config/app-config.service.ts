@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import {
   buildAppConfig,
+  buildCatalogueConfig,
   buildDatabaseConfig,
   buildJwtConfig,
   buildMailConfig,
@@ -11,6 +12,7 @@ import {
 } from './configurations';
 import type {
   AppConfig,
+  CatalogueConfig,
   DatabaseConfig,
   JwtConfig,
   MailConfig,
@@ -37,6 +39,7 @@ export class AppConfigService {
   readonly redis: RedisConfig;
   readonly storage: StorageConfig;
   readonly throttle: ThrottleConfig;
+  readonly catalogue: CatalogueConfig;
 
   constructor(env: Env) {
     this.app = buildAppConfig(env);
@@ -46,6 +49,7 @@ export class AppConfigService {
     this.redis = buildRedisConfig(env);
     this.storage = buildStorageConfig(env);
     this.throttle = buildThrottleConfig(env);
+    this.catalogue = buildCatalogueConfig(env);
 
     Object.freeze(this);
   }

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
+import { seedCategories } from './categories.seed';
 import { seedCities } from './cities.seed';
 
 /**
@@ -17,6 +18,9 @@ const main = async (): Promise<void> => {
   try {
     const cityCount = await seedCities(prisma);
     console.log(`Seeded ${String(cityCount)} cities`);
+
+    const categoryCount = await seedCategories(prisma);
+    console.log(`Seeded ${String(categoryCount)} categories`);
   } finally {
     await prisma.$disconnect();
   }

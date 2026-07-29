@@ -82,6 +82,12 @@ export const envSchema = z
     THROTTLE_TTL: z.coerce.number().int().min(1).default(60),
     THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
 
+    // ---- Catalogue (BR-24: currency is fixed per deployment; D-3) ----
+    SERVICE_CURRENCY: z
+      .string()
+      .regex(/^[A-Z]{3}$/, 'must be an ISO-4217 3-letter code')
+      .default('USD'),
+
     // ---- Observability ----
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     SENTRY_DSN: z.string().default(''),

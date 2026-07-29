@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
-**Last updated:** 2026-07-29
-**Active phase:** Phase 2 — Supply Side (Phase 1 complete, tagged `v0.1.1`)
+**Last updated:** 2026-07-30
+**Active phase:** Phase 2 — Supply Side (Phase 1 complete, tagged `v0.1.1`) — Phase 2 feature work complete
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -120,10 +120,10 @@ would ship its admin routes unaudited and need a retrofit.
 
 - [x] F-16 Audit: `AuditLog` model, `AuditInterceptor` with redaction, `GET /admin/audit-logs`
 - [x] F-05 Categories: model, tree endpoint, admin CRUD, depth/leaf rules, caching
-- [ ] F-03 Masters: profile fields, category attachment, certificates, submit/resubmit, public projection
-- [ ] F-04 Moderation: approve/reject/activate/deactivate with readiness checks, notifications, audit
-- [ ] F-06 Services: CRUD, leaf-category and pricing rules, soft delete
-- [ ] Seed: cities and the initial category tree
+- [x] F-03 Masters: profile fields, category attachment, certificates, submit/resubmit, public projection
+- [x] F-04 Moderation: approve/reject/activate/deactivate with readiness checks, notifications, audit
+- [x] F-06 Services: CRUD, leaf-category and pricing rules, soft delete
+- [x] Seed: cities and the initial category tree
 
 ---
 

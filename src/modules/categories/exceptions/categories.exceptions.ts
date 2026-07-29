@@ -53,3 +53,14 @@ export class CategorySlugTakenException extends AppException {
     super(ERROR_CODE.CATEGORY_SLUG_TAKEN, 'That slug is already taken.', HttpStatus.CONFLICT);
   }
 }
+
+/** 422. BR-20: only leaf categories (no active children) accept master/service attachment. */
+export class CategoryNotLeafException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.CATEGORY_NOT_LEAF,
+      'Only leaf categories may be attached.',
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+  }
+}

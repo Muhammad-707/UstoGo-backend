@@ -18,6 +18,8 @@ import { GLOBAL_THROTTLE_NAME } from './modules/auth/constants/throttle.constant
 import { IdentifierThrottlerGuard } from './modules/auth/guards/identifier-throttler.guard';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { FilesModule } from './modules/files/files.module';
+import { MastersModule } from './modules/masters/masters.module';
+import { ServicesModule } from './modules/services/services.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { LoggerModule } from './shared/logger/logger.module';
@@ -76,6 +78,8 @@ import { StorageModule } from './shared/storage/storage.module';
     FilesModule,
     AuditModule,
     CategoriesModule,
+    MastersModule,
+    ServicesModule,
     JobsModule,
   ],
   providers: [
