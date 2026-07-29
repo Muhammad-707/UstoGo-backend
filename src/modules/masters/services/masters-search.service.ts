@@ -3,23 +3,26 @@ import { ApprovalStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '@prisma-lib/prisma.service';
 
-import { MasterSort, type MasterSearchQueryDto } from '../dto/requests/master-search-query.dto';
 import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 import { MasterServiceResponseDto } from '../dto/responses/master-service.response.dto';
 import { MasterNotFoundException } from '../exceptions/masters.exceptions';
 
-const PUBLIC_INCLUDE = {
+/** Shared with `SearchService` (F-08) — one public projection, one place it is built. */
+export const MASTER_PUBLIC_INCLUDE = {
   city: { select: { name: true } },
   categories: { include: { category: { select: { name: true } } } },
   services: { where: { isActive: true }, select: { price: true } },
   certificates: { where: { deletedAt: null }, select: { id: true }, take: 1 },
 } satisfies Prisma.MasterProfileInclude;
 
-type MasterRow = Prisma.MasterProfileGetPayload<{ include: typeof PUBLIC_INCLUDE }>;
+export type MasterRow = Prisma.MasterProfileGetPayload<{ include: typeof MASTER_PUBLIC_INCLUDE }>;
 
 const BIO_PREVIEW_LENGTH = 200;
 
-const toPublicDto = (row: MasterRow, truncateBio: boolean): MasterPublicResponseDto => {
+export const toMasterPublicDto = (
+  row: MasterRow,
+  truncateBio: boolean,
+): MasterPublicResponseDto => {
   const dto = new MasterPublicResponseDto();
   const prices = row.services.map((service) => service.price);
 
@@ -45,59 +48,25 @@ const toPublicDto = (row: MasterRow, truncateBio: boolean): MasterPublicResponse
 };
 
 /**
- * `price:asc`/`price:desc` fall back to `ratingAverage` — Prisma's relation `orderBy`
- * supports `_count` on a to-many relation but not `_min`/`_max` on one of its fields,
- * and sorting on an aggregate that needs its own query would mean paginating in
- * memory. Correct price ordering needs a raw aggregate query; deferred with search
- * (F-08, Phase 3), which is what actually needs a real ranking engine.
+ * API.md §7/§8 — single-master public projections. `GET /masters` (search & filter)
+ * lives in `SearchModule` (F-08), which composes this module with `ScheduleModule` for
+ * `availableOn` and needs a raw-SQL ranking query this service has no reason to own.
  */
-const orderByFor = (sort: MasterSort | undefined): Prisma.MasterProfileOrderByWithRelationInput => {
-  switch (sort) {
-    case MasterSort.CREATED_DESC:
-      return { createdAt: 'desc' };
-    case MasterSort.PRICE_ASC:
-    case MasterSort.PRICE_DESC:
-    case MasterSort.RATING_DESC:
-    default:
-      return { ratingAverage: 'desc' };
-  }
-};
-
-/** API.md §7 — public discovery. Never exposes email, phone or address. */
 @Injectable()
 export class MastersSearchService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async search(
-    query: MasterSearchQueryDto,
-  ): Promise<{ items: MasterPublicResponseDto[]; total: number }> {
-    const where = this.whereFor(query);
-
-    const [rows, total] = await Promise.all([
-      this.prisma.db.masterProfile.findMany({
-        where,
-        include: PUBLIC_INCLUDE,
-        orderBy: orderByFor(query.sort),
-        skip: query.skip,
-        take: query.limit,
-      }),
-      this.prisma.db.masterProfile.count({ where }),
-    ]);
-
-    return { items: rows.map((row) => toPublicDto(row, true)), total };
-  }
-
   async getPublicProfile(id: string): Promise<MasterPublicResponseDto> {
     const row = await this.prisma.db.masterProfile.findFirst({
       where: { id, approvalStatus: ApprovalStatus.APPROVED, isActive: true },
-      include: PUBLIC_INCLUDE,
+      include: MASTER_PUBLIC_INCLUDE,
     });
 
     if (row === null) {
       throw new MasterNotFoundException();
     }
 
-    return toPublicDto(row, false);
+    return toMasterPublicDto(row, false);
   }
 
   async assertPublic(id: string): Promise<void> {
@@ -120,37 +89,5 @@ export class MastersSearchService {
     });
 
     return services.map((service) => MasterServiceResponseDto.fromEntity(service));
-  }
-
-  private whereFor(query: MasterSearchQueryDto): Prisma.MasterProfileWhereInput {
-    return {
-      approvalStatus: ApprovalStatus.APPROVED,
-      isActive: true,
-      ...(query.cityId !== undefined ? { cityId: query.cityId } : {}),
-      ...(query.minRating !== undefined ? { ratingAverage: { gte: query.minRating } } : {}),
-      ...(query.categoryId !== undefined
-        ? { categories: { some: { categoryId: query.categoryId } } }
-        : {}),
-      ...(query.hasCertificates === true ? { certificates: { some: { deletedAt: null } } } : {}),
-      ...(query.search !== undefined
-        ? {
-            OR: [
-              { displayName: { contains: query.search, mode: 'insensitive' } },
-              { bio: { contains: query.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-      ...(query.minPrice !== undefined || query.maxPrice !== undefined
-        ? {
-            services: {
-              some: {
-                isActive: true,
-                ...(query.minPrice !== undefined ? { price: { gte: query.minPrice } } : {}),
-                ...(query.maxPrice !== undefined ? { price: { lte: query.maxPrice } } : {}),
-              },
-            },
-          }
-        : {}),
-    };
   }
 }

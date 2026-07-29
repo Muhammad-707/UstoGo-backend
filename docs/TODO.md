@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Active phase:** Phase 2 — Supply Side (Phase 1 complete, tagged `v0.1.1`) — Phase 2 feature work complete
+**Active phase:** Phase 3 — Discovery (Phases 1–2 complete, tagged `v0.1.1`) — Phase 3 feature work complete
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -127,9 +127,16 @@ would ship its admin routes unaudited and need a retrofit.
 
 ---
 
-## 🟢 Later
+## ✅ Done — Phase 3: Discovery
 
-**Phase 3** — weekly schedule, exceptions, `AvailabilityCalculator`, availability endpoint, full-text search with GIN, filters/sorting, k6 baseline.
+- [x] F-07 Schedule: `WorkingDay`, `ScheduleException` models, `AvailabilityCalculator` (pure, timezone-correct via `Intl`, no new dependency), `masters/me/schedule` CRUD
+- [x] Availability endpoint (`GET /masters/:id/availability`) — 31-day cap as a named `DATE_RANGE_TOO_LARGE`, not generic validation
+- [x] F-08 Search: dedicated `SearchModule`, real full-text via a generated `tsvector` + GIN index, a real price aggregate for `price:asc`/`price:desc`, category-descendant matching, `availableOn`
+- [x] Performance pass: index verification and query-count (no-N+1) assertions in `test/e2e/performance.e2e-spec.ts`; `k6/search.js` and `k6/availability.js` for the p95 measurement at scale (manual, not CI — needs a 50k-master seed)
+
+---
+
+## 🟢 Later
 
 **Phase 4** — booking creation pre-conditions, state machine, exclusion-constraint migration, all transitions, status history, expiry and reminder jobs, contact-disclosure test, notifications, reviews with transactional aggregates, concurrency suite.
 

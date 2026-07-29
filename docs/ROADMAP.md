@@ -60,16 +60,16 @@ has to exist before the first privileged mutation it is meant to cover.
 
 ---
 
-## Phase 3 — Discovery ⬜
+## Phase 3 — Discovery ✅
 
 **Goal:** a client can find the right master and see when they are free.
 
-- ⬜ **F-07 Schedule**: weekly working days, exceptions, `AvailabilityCalculator`
-- ⬜ Availability endpoint with 31-day range cap and timezone correctness
-- ⬜ **F-08 Search**: full-text (`tsvector` + GIN), filters, sorting, pagination
-- ⬜ Performance pass: index verification, query-count assertions, k6 baseline
+- ✅ **F-07 Schedule**: weekly working days, exceptions, `AvailabilityCalculator`
+- ✅ Availability endpoint with 31-day range cap and timezone correctness
+- ✅ **F-08 Search**: full-text (`tsvector` + GIN), filters, sorting, pagination
+- ✅ Performance pass: index verification, query-count assertions, k6 baseline
 
-**Exit criteria:** master search meets NFR-P-2 (p95 ≤ 500 ms over 50 000 masters) and availability computation meets NFR-P-5.
+**Exit criteria:** master search meets NFR-P-2 (p95 ≤ 500 ms over 50 000 masters) and availability computation meets NFR-P-5. Index verification and query-count assertions are automated (`test/e2e/performance.e2e-spec.ts`); the actual p95 measurement at 50k-master scale needs a seeded environment and is run manually via `k6/search.js` and `k6/availability.js`, not in CI.
 
 ---
 

@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -21,7 +22,7 @@ export enum MasterSort {
   CREATED_DESC = 'createdAt:desc',
 }
 
-/** API.md §7. `availableOn` is omitted — it needs the availability engine (F-07). */
+/** API.md §7. */
 export class MasterSearchQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -71,4 +72,9 @@ export class MasterSearchQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(MasterSort)
   sort?: MasterSort;
+
+  @ApiPropertyOptional({ example: '2026-08-15', description: 'Masters with ≥1 free slot that day' })
+  @IsOptional()
+  @IsDateString({ strict: true })
+  availableOn?: string;
 }

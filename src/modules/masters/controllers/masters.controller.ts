@@ -1,32 +1,17 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { ApiPaginatedResponse } from '@common/decorators/api-paginated-response.decorator';
 import { Public } from '@common/decorators/public.decorator';
-import { PaginatedDto } from '@common/dto/paginated.dto';
 
-import { MasterSearchQueryDto } from '../dto/requests/master-search-query.dto';
 import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 import { MasterServiceResponseDto } from '../dto/responses/master-service.response.dto';
 import { MastersSearchService } from '../services/masters-search.service';
 
+/** `GET /masters` (search & filter) lives in `SearchModule` — see `SearchController`. */
 @ApiTags('Masters')
 @Controller('masters')
 export class MastersController {
   constructor(private readonly search: MastersSearchService) {}
-
-  @Get()
-  @Public()
-  @ApiOperation({
-    summary: 'Search and filter approved masters',
-    description: 'Public. Approved, active, non-deleted masters only (API.md §7).',
-  })
-  @ApiPaginatedResponse(MasterPublicResponseDto)
-  async list(@Query() query: MasterSearchQueryDto): Promise<PaginatedDto<MasterPublicResponseDto>> {
-    const { items, total } = await this.search.search(query);
-
-    return PaginatedDto.from(items, total, query.page, query.limit);
-  }
 
   @Get(':id')
   @Public()

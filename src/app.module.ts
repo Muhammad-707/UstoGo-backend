@@ -19,6 +19,8 @@ import { IdentifierThrottlerGuard } from './modules/auth/guards/identifier-throt
 import { CategoriesModule } from './modules/categories/categories.module';
 import { FilesModule } from './modules/files/files.module';
 import { MastersModule } from './modules/masters/masters.module';
+import { ScheduleModule as MastersScheduleModule } from './modules/schedule/schedule.module';
+import { SearchModule } from './modules/search/search.module';
 import { ServicesModule } from './modules/services/services.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -80,6 +82,8 @@ import { StorageModule } from './shared/storage/storage.module';
     CategoriesModule,
     MastersModule,
     ServicesModule,
+    MastersScheduleModule,
+    SearchModule,
     JobsModule,
   ],
   providers: [

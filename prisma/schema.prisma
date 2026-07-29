@@ -4,8 +4,10 @@
 // This migration covers §2 Enumerations, §3 Identity and §4 Sessions. Models whose
 // dependencies have not landed are deliberately absent rather than stubbed:
 //   - Certificate (§3.4) arrives with F-03 in Phase 2.
-//   - MasterProfile.searchVector (§3.3) is a generated tsvector for full-text search
-//     and arrives with F-08 in Phase 3.
+//   - MasterProfile.searchVector (§3.3) is a generated tsvector for full-text search,
+//     added in raw SQL below rather than as a Prisma field — Prisma cannot express a
+//     `GENERATED ALWAYS AS (...) STORED` column, so it is queried through
+//     `$queryRaw` in SearchService rather than the generated client.
 
 generator client {
   provider        = "prisma-client-js"
@@ -233,14 +235,52 @@ model MasterProfile {
   approvedBy User? @relation("MasterApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Restrict)
   avatar     File? @relation("MasterAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
 
-  categories   MasterCategory[]
-  certificates Certificate[]
-  services     Service[]
+  categories         MasterCategory[]
+  certificates       Certificate[]
+  services           Service[]
+  workingDays        WorkingDay[]
+  scheduleExceptions ScheduleException[]
 
   @@index([approvalStatus, isActive])
   @@index([cityId])
   @@index([ratingAverage(sort: Desc)])
   @@map("master_profiles")
+}
+
+/// §6.1. The weekly template; overlap within a weekday is rejected at the service
+/// layer (`SCHEDULE_OVERLAP`) and the whole set is replaced atomically on `PUT`.
+model WorkingDay {
+  id              String   @id @default(uuid()) @db.Uuid
+  masterProfileId String   @map("master_profile_id") @db.Uuid
+  weekday         Int      @db.SmallInt
+  startTime       DateTime @map("start_time") @db.Time
+  endTime         DateTime @map("end_time") @db.Time
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+
+  @@index([masterProfileId, weekday])
+  @@map("working_days")
+}
+
+/// §6.2. A date-specific override of the weekly template — a day off or custom hours.
+/// One row per (masterProfileId, date).
+model ScheduleException {
+  id              String    @id @default(uuid()) @db.Uuid
+  masterProfileId String    @map("master_profile_id") @db.Uuid
+  date            DateTime  @db.Date
+  isDayOff        Boolean   @map("is_day_off")
+  startTime       DateTime? @map("start_time") @db.Time
+  endTime         DateTime? @map("end_time") @db.Time
+  note            String?   @db.VarChar(500)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([masterProfileId, date])
+  @@map("schedule_exceptions")
 }
 
 /// §3.4. Deletion is soft — a certificate referenced by a past moderation decision

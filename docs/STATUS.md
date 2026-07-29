@@ -1,9 +1,9 @@
 # Project Status — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Current phase:** Phase 3 — Discovery, next up (Phase 2 complete)
+**Current phase:** Phase 4 — The Transaction, next up (Phase 3 complete)
 **Version:** 0.1.1
-**Overall progress:** ▓▓▓▓▓░░░░░ 55% (masters can be onboarded, moderated, catalogued with services, and discovered publicly)
+**Overall progress:** ▓▓▓▓▓▓░░░░ 62% (masters can be onboarded, moderated, catalogued, scheduled and discovered with real full-text search and availability)
 
 ---
 
@@ -20,7 +20,7 @@
 | Business features   | 🟨 F-02 Users, F-13 Files, F-16 Audit done; catalogue and bookings to come |
 | Common layer        | ✅ Complete — envelope, validation, correlation, logging                   |
 | Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup            |
-| Tests               | ✅ 465 tests (395 unit + 70 e2e); Testcontainers harness live              |
+| Tests               | ✅ 574 tests (476 unit + 98 e2e); Testcontainers harness live              |
 | Operations CLI      | ✅ `admin:create` — the only path to an administrator                      |
 | CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks  |
 | Deployment          | ⬜ Not started                                                             |
@@ -62,7 +62,7 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 2 — Supply Side         | Audit, categories, masters, moderation, services | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 3 — Discovery           | Schedule, availability, search                   | ⬜      | ░░░░░░░░░░ 0%   |
+| 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜      | ░░░░░░░░░░ 0%   |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜      | ░░░░░░░░░░ 0%   |
 | 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ⬜      | ░░░░░░░░░░ 0%   |
@@ -82,8 +82,8 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 | F-03 | Master profile           | `masters`                    | 2     | ✅     |
 | F-04 | Master moderation        | `admin`                      | 2     | ✅     |
 | F-06 | Services                 | `services`                   | 2     | ✅     |
-| F-07 | Schedule & availability  | `schedule`                   | 3     | ⬜     |
-| F-08 | Master discovery         | `search`                     | 3     | ⬜     |
+| F-07 | Schedule & availability  | `schedule`                   | 3     | ✅     |
+| F-08 | Master discovery         | `search`                     | 3     | ✅     |
 | F-09 | Booking lifecycle        | `bookings`                   | 4     | ⬜     |
 | F-11 | Notifications            | `notifications`              | 4     | ⬜     |
 | F-10 | Reviews & ratings        | `reviews`                    | 4     | ⬜     |
@@ -136,11 +136,11 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 
 | Metric                               | Target              | Current                                                        |
 | ------------------------------------ | ------------------- | -------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 465 tests green (395 unit + 70 e2e); `test:cov` thresholds met |
+| Line coverage                        | ≥ 80%               | 574 tests green (476 unit + 98 e2e); `test:cov` thresholds met |
 | Service/guard coverage               | ≥ 90%               | Met                                                            |
 | Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                |
-| Endpoints implemented                | ~95                 | 20                                                             |
-| Endpoints documented in Swagger      | 100% of implemented | 100% (20 of 20 in `openapi.json`)                              |
+| Endpoints implemented                | ~95                 | 50                                                             |
+| Endpoints documented in Swagger      | 100% of implemented | 100% (`openapi.json` regenerated with every route)             |
 | Files over 300 lines                 | 0                   | 0                                                              |
 | `any` occurrences                    | 0                   | 0                                                              |
 | Open high/critical vulnerabilities   | 0                   | 0 (`npm audit --omit=dev --audit-level=high`)                  |
@@ -149,7 +149,9 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 
 ## 6. Blockers
 
-None. Phase 2 can begin immediately.
+None. Phase 4 can begin immediately.
+
+One known e2e flake, not a regression: `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full 9–10 file e2e suite runs together (never in isolation or smaller batches) — `AuditInterceptor` writes are fire-and-forget by design (`STATUS.md` Phase 2 notes), and heavy parallel Testcontainers startup is enough CPU contention to occasionally lose that race. Fixing it properly means awaiting the audit write in the interceptor, which is a real design change outside Phase 3's scope.
 
 ---
 
@@ -169,7 +171,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-Phase 2 (Supply Side) is closed: F-16 Audit, F-05 Categories, F-03 Masters, F-04 Moderation, F-06 Services and the cities/category seed are all in place. Next up is **Phase 3 — Discovery**: weekly schedule, availability, and master search (`docs/TODO.md`, `ROADMAP.md`).
+Phase 3 (Discovery) is closed: F-07 Schedule (`WorkingDay`/`ScheduleException`, `AvailabilityCalculator`, the availability endpoint) and F-08 Search (a dedicated `SearchModule`, real `tsvector` full-text, a real price aggregate, category descendants, `availableOn`) are all in place, with an automated performance pass (index verification + no-N+1 query-count assertion) and manual k6 baselines for the p95 targets. Next up is **Phase 4 — The Transaction**: booking creation, the state machine, notifications and reviews (`docs/TODO.md`, `ROADMAP.md`).
 
 Detailed task list: `TODO.md`.
 
