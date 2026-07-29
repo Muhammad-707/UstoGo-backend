@@ -26,8 +26,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ `ConfigModule` with boot-time schema validation
 - ✅ `PrismaModule`: client, soft-delete extension, `TransactionManager`
 - ✅ Initial Prisma schema and migration (identity, sessions, cities)
-- ⬜ `CommonModule`: validation pipe, exception filter, serialisation, request id, decorators
-- ⬜ Structured logging (Pino) with redaction
+- ✅ `CommonModule`: validation pipe, exception filter, serialisation, request id, decorators
+- ✅ Structured logging (Pino) with redaction
 - ⬜ `HealthModule`: `/health`, `/health/ready`
 - ⬜ Swagger bootstrap with tags and bearer auth
 - ⬜ **F-01 Auth**: register (client/master), login, refresh with rotation and reuse detection, logout, logout-all, forgot/reset password, change password

@@ -44,15 +44,15 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.5 Common layer
 
-- [ ] `AppException` base + generic subclasses
-- [ ] `GlobalExceptionFilter` with the single envelope + Prisma error mapper
-- [ ] `ValidationPipe` configured per `VALIDATION.md` §1
-- [ ] `RequestIdMiddleware` + `X-Request-Id` echo
-- [ ] Pino logger with the central redaction list
-- [ ] `@CurrentUser()`, `@Roles()`, `@Public()`, `@ApiAuth()`, `@ApiPaginatedResponse()`
-- [ ] `PaginationQueryDto`, `PaginatedDto`, `ErrorResponseDto`
-- [ ] Custom validators: `@IsFutureDate`, `@IsMultipleOf`, `@IsTimeZone`, `@IsAfterField`, `@MaxRangeDays`, `@IsSafeText`
-- [ ] `LoggingInterceptor`, `TimeoutInterceptor`
+- [x] `AppException` base + generic subclasses
+- [x] `GlobalExceptionFilter` with the single envelope + Prisma error mapper
+- [x] `ValidationPipe` configured per `VALIDATION.md` §1
+- [x] `RequestIdMiddleware` + `X-Request-Id` echo
+- [x] Pino logger with the central redaction list
+- [x] `@CurrentUser()`, `@Roles()`, `@Public()`, `@ApiAuth()`, `@ApiPaginatedResponse()`
+- [x] `PaginationQueryDto`, `PaginatedDto`, `ErrorResponseDto`
+- [x] Custom validators: `@IsFutureDate`, `@IsMultipleOf`, `@IsTimeZone`, `@IsAfterField`, `@MaxRangeDays`, `@IsSafeText`
+- [x] `LoggingInterceptor`, `TimeoutInterceptor`
 
 ### 1.6 Health & Swagger
 

@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { Logger as PinoLogger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
@@ -14,7 +15,11 @@ async function bootstrap(): Promise<void> {
   // variable is wrong. The result is memoised, so ConfigModule reuses this parse.
   loadEnv();
 
-  const app = await NestFactory.create(AppModule);
+  // bufferLogs holds anything logged during bootstrap until the Pino logger is
+  // installed, so early lines keep the same format and redaction as everything else.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(PinoLogger));
+
   const { app: appConfig } = app.get(AppConfigService);
 
   app.setGlobalPrefix(appConfig.apiPrefix);

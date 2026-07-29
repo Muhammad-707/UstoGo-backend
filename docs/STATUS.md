@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-29
 **Current phase:** Phase 1 — Platform Foundation
 **Version:** 0.1.0 (in development)
-**Overall progress:** ▓▓░░░░░░░░ 20% (scaffold, local stack, configuration and the Prisma foundation landed)
+**Overall progress:** ▓▓▓░░░░░░░ 25% (platform plumbing complete through the common layer)
 
 ---
 
@@ -18,18 +18,17 @@
 | Database schema     | 🟨 §2–4 migrated and seeded; catalogue and bookings still to come |
 | Authentication      | ⬜ Not started                                                    |
 | Business features   | ⬜ Not started                                                    |
-| Tests               | 🟨 69 unit tests (config, soft delete, transactions); no e2e yet  |
+| Common layer        | ✅ Complete — envelope, validation, correlation, logging          |
+| Tests               | 🟨 178 unit tests; no integration or e2e harness yet              |
 | CI/CD               | ⬜ Not started                                                    |
 | Deployment          | ⬜ Not started                                                    |
 
-The application boots and serves HTTP on `http://localhost:3000/api/v1`, but exposes **no routes yet** — `AppModule` is empty until `HealthModule` lands in §1.6. `npm run lint`, `npm run typecheck` and `npm run build` are green.
+The application boots, connects to PostgreSQL and serves HTTP on `http://localhost:3000/api/v1`, but exposes **no business routes yet** — the first controller arrives with `HealthModule` in §1.6. Every request already passes through the correlation middleware, the validation pipe, the timeout and logging interceptors and the global exception filter, so an unknown path returns the documented error envelope rather than a framework default. `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` are green.
 
-Two known consequences of that, both closing in §1.6 and neither a blocker:
+Two known gaps, neither a blocker:
 
-- The `Dockerfile` `HEALTHCHECK` probes `/health`, so a running container reports **unhealthy**. The directive matches the contract in `DEPLOYMENT.md` §4 and is left in place rather than removed and re-added.
-- `npm run dev` starts the containers and the API but runs no migrations; `prisma migrate dev` joins the script in §1.4.
-
-Nothing yet connects to PostgreSQL, MinIO, Redis or Mailpit — their settings are validated at boot but not used until the modules that consume them land.
+- The `Dockerfile` `HEALTHCHECK` probes `/health`, so a running container reports **unhealthy** until §1.6. The directive matches the contract in `DEPLOYMENT.md` §4 and is left in place rather than removed and re-added.
+- MinIO, Redis and Mailpit are validated at boot but nothing connects to them yet; each is wired by the module that consumes it (§1.9 storage, throttling in §1.7, mail with password reset).
 
 ---
 
@@ -38,7 +37,7 @@ Nothing yet connects to PostgreSQL, MinIO, Redis or Mailpit — their settings a
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓░░░░░░ 36%  |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓░░░░░ 45%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |

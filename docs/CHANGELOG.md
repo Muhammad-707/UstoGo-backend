@@ -22,6 +22,12 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - `PrismaModule` (global) exporting `PrismaService` and `TransactionManager`. `PrismaService` owns the client lifecycle and routes Prisma's log events through the application logger; query text and duration are logged in development, bound parameters never are. `TransactionManager` retries `P2034` write conflicts up to three times with fully jittered exponential backoff.
 - Soft-delete client extension. Every read on `User`, `ClientProfile` and `MasterProfile` — including `findUnique`, `aggregate` and `groupBy` — excludes deleted rows. Writes are untouched so that soft-deleting and restoring remain possible, and an explicit `deletedAt` filter always wins, which is the seam `withDeleted()` variants use.
 - Idempotent seed script (`npm run prisma:seed`) loading the starter city list. No administrator is seeded: `PROJECT_RULES.md` forbids an admin registration path, and a seeded admin with a known password is that path by another name.
+- `CommonModule`: the single error envelope from `ERROR_HANDLING.md` §1, the global validation pipe from `VALIDATION.md` §1, request-correlation middleware, and timeout and logging interceptors — all registered globally so a new controller inherits them rather than opting in.
+- `AppException` hierarchy and the complete error-code registry (`ERROR_HANDLING.md` §4) as a frozen const, plus a Prisma error mapper. Raw Prisma messages never reach a client: `P2002` becomes a targeted conflict code, `P2003` an `INVALID_REFERENCE`, and a `23P01` exclusion violation becomes `BOOKING_OVERLAP` rather than a 500.
+- `X-Request-Id` correlation. An inbound value is honoured only after validation — it is echoed into a response header and every log line, so an unvalidated one is a header-splitting and log-injection vector. The envelope body, the response header and every log line for a request now carry the same id.
+- Structured logging (Pino) with the central redaction list from `ERROR_HANDLING.md` §6. `Authorization` headers, passwords, token hashes and reset tokens are censored by the logger itself, not at call sites.
+- Shared DTOs (`ErrorResponseDto`, `PaginatedDto`, `PaginationQueryDto` with the hard limit cap of 100) and decorators (`@CurrentUser`, `@Roles`, `@Public`, `@ApiAuth`, `@ApiPaginatedResponse`). `@ApiAuth` sets the guard metadata and documents it together, so enforcement and specification cannot drift.
+- Six custom validators: `@IsFutureDate`, `@IsMultipleOf`, `@IsTimeZone`, `@IsAfterField`, `@MaxRangeDays`, `@IsSafeText`.
 - Multi-stage `Dockerfile` per `DEPLOYMENT.md` §4.
 
 ### Database
@@ -33,6 +39,7 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 - `nest build` emitted an incomplete `dist/`. `incremental: true` wrote its build-info file outside `outDir` while `deleteOutDir` wiped `dist/`, so TypeScript saw an up-to-date project, emitted only the files touched since the previous run, and produced a `dist/` that failed at `require`. The build-info file now lives inside `dist/`.
 
 ### Changed
+- `VALIDATION.md` §2 now requires `@IsDefined()` alongside `@ValidateNested()` and `@Type()` on every required nested object. `@ValidateNested()` runs the child's decorators only when the value exists, so omitting the property entirely passed validation — the same silent hole as forgetting `@Type()`, and harder to spot. Pinned by a regression test.
 - ESLint configuration is `eslint.config.mjs` (flat config) rather than the `.eslintrc.cjs` originally specified: ESLint 9 defaults to flat config and ESLint 10 drops `.eslintrc` entirely. `FOLDER_STRUCTURE.md` §1 and `CODING_STANDARDS.md` §12 updated to match; the rule set itself is unchanged.
 
 ### Docs
