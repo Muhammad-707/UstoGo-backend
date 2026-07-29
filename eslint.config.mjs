@@ -175,7 +175,28 @@ export default tseslint.config(
       'max-lines-per-function': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/unbound-method': 'off',
+      // Supertest types `response.body` and `getHttpServer()` as `any`, so every
+      // assertion against a response body trips these. Casting each one would bury the
+      // assertion — which is the only thing a reader of a test is looking for — under
+      // type ceremony that proves nothing. `no-explicit-any` stays on: writing `any`
+      // deliberately is still a decision to justify, and none of these do.
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      // An expectation reached through an optional chain is a real condition at runtime
+      // even when the types say otherwise, because the row may not exist.
+      '@typescript-eslint/no-unnecessary-condition': 'off',
     },
+  },
+
+  // The e2e bootstrap is the one place outside src/config that writes the environment:
+  // it starts the containers and publishes their addresses, which the config layer then
+  // validates exactly as it would in production.
+  {
+    files: ['test/setup/**/*.ts'],
+    rules: { 'no-restricted-properties': 'off' },
   },
 
   // Root-level CommonJS config files are tooling, not application code: no TypeScript

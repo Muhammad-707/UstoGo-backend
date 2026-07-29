@@ -99,9 +99,9 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 ### 1.10 CLI & CI
 
 - [x] `npm run cli -- admin:create` with an interactive password prompt (never argv)
-- [ ] GitHub Actions: lint → typecheck → unit → integration → e2e → coverage → audit → gitleaks
-- [ ] Testcontainers harness, `test-app.factory.ts`, `auth.helper.ts`, `authz-matrix.helper.ts`
-- [ ] Coverage thresholds enforced in `jest.config.ts`
+- [x] GitHub Actions: lint → typecheck → unit → integration → e2e → coverage → audit → gitleaks
+- [x] Testcontainers harness, `test-app.factory.ts`, `auth.helper.ts`, `authz-matrix.helper.ts`
+- [x] Coverage thresholds enforced in `jest.config.ts` (`jest.all.config.ts`)
 
 ### 1.11 Phase 1 exit
 

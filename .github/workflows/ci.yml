@@ -1,0 +1,113 @@
+name: CI
+
+# The pipeline from TESTING.md §10: lint → typecheck → unit → e2e → coverage gate →
+# audit → secret scan. Every stage must pass to merge.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  # A new push supersedes the run it replaced; nothing is learned from finishing a
+  # pipeline for a commit that is no longer the branch tip.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  static:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # The Prisma client is generated code that the type checker needs; without it
+      # every `@prisma/client` import fails and the errors point everywhere but here.
+      - run: npx prisma generate
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run build
+
+      # The committed OpenAPI document is the public contract. Regenerating it and
+      # diffing catches a change to an endpoint that never reached the file, which is
+      # how a client library silently goes out of date.
+      - name: OpenAPI document is up to date
+        run: |
+          npm run swagger:export
+          git diff --exit-code openapi.json
+
+  test:
+    name: Tests & coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      # Unit and e2e in one run, so the coverage gate sees both levels. A controller is
+      # covered by the e2e suite and by nothing else; measuring the unit run alone
+      # would report it as untested.
+      #
+      # Testcontainers starts PostgreSQL and MinIO itself — the runner's Docker daemon
+      # is all it needs, so there are no service definitions to keep in step with
+      # docker-compose.yml.
+      - name: Unit, e2e and the coverage gate
+        run: npm run test:cov
+
+      - name: Publish coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # Production dependencies only, at high and above. A dev-only advisory does not
+      # ship, and failing the build on one trains everyone to pass --force.
+      - run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks compares against history; a shallow clone finds nothing in the
+          # commits that matter.
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
