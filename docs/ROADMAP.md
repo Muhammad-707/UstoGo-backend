@@ -31,7 +31,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ `HealthModule`: `/health`, `/health/ready`
 - ✅ Swagger bootstrap with tags and bearer auth
 - ✅ **F-01 Auth**: register (client/master), login, refresh with rotation and reuse detection, logout, logout-all, forgot/reset password, change password
-- ⬜ **F-02 Users**: `/users/me` read and update, deactivate, cities
+- ✅ **F-02 Users**: `/users/me` read and update, deactivate, cities (avatar lands with F-13)
 - ⬜ **F-13 Files**: presign, confirm, S3/MinIO provider, cleanup job
 - ⬜ Admin bootstrap CLI (`admin:create`)
 - 🟨 Rate limiting (Throttler; Redis storage deferred to B-77)

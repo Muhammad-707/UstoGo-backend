@@ -80,12 +80,12 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.8 F-02 Users
 
-- [ ] `ClientProfile`, `City` models + seed
-- [ ] `GET /users/me`, `PATCH /users/me`
-- [ ] `DELETE /users/me` (soft delete + revoke all sessions)
-- [ ] `PATCH /users/me/avatar`
-- [ ] `GET /cities`
-- [ ] Repository projections that exclude `passwordHash` structurally
+- [x] `ClientProfile`, `City` models + seed
+- [x] `GET /users/me`, `PATCH /users/me`
+- [x] `DELETE /users/me` (soft delete + revoke all sessions)
+- [ ] `PATCH /users/me/avatar` — moved to §1.9: FR-3.3 requires `POST /files/presign` and the `File` model, neither of which exists until then
+- [x] `GET /cities`
+- [x] Repository projections that exclude `passwordHash` structurally
 
 ### 1.9 F-13 Files
 

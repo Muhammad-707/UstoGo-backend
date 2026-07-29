@@ -553,6 +553,195 @@
           "Auth"
         ]
       }
+    },
+    "/users/me": {
+      "get": {
+        "description": "Returns the user together with whichever profile their role implies. Never returns the password hash, refresh tokens or moderation notes — the projection does not fetch them.",
+        "operationId": "findMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read the caller’s own account and profile",
+        "tags": [
+          "Users"
+        ]
+      },
+      "patch": {
+        "description": "Partial update. Email and role are not updatable here: email needs re-verification and role is fixed at creation. A field belonging to the other role — `displayName` sent by a client, say — is rejected rather than ignored.",
+        "operationId": "updateMe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CITY_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED — including a field that does not apply to the caller’s role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Update the caller’s own profile",
+        "tags": [
+          "Users"
+        ]
+      },
+      "delete": {
+        "description": "Soft delete. Every session is revoked immediately, and the email and phone become available for registration again. Historical bookings and reviews are retained, with the author shown as a redacted placeholder.",
+        "operationId": "deleteMe",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Deactivate the caller’s own account",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/cities": {
+      "get": {
+        "description": "Public — no authentication required. Reference data for the city selectors on registration and profile forms. Returned unpaginated because the whole list is meant to be fetched once and cached; withdrawn cities are omitted but remain in the database so historical rows keep resolving.",
+        "operationId": "list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CityResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List active cities",
+        "tags": [
+          "Users"
+        ]
+      }
     }
   },
   "info": {
@@ -1085,6 +1274,292 @@
         "required": [
           "password",
           "currentPassword"
+        ]
+      },
+      "ClientProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Aziz"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Karimov"
+          },
+          "cityId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "defaultAddress": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "ApprovalStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "APPROVED",
+          "REJECTED"
+        ]
+      },
+      "MasterProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Aziz — Plumbing & Heating"
+          },
+          "bio": {
+            "type": "object",
+            "nullable": true
+          },
+          "yearsOfExperience": {
+            "type": "number",
+            "example": 8
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serviceRadiusKm": {
+            "type": "number",
+            "example": 15
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Tashkent"
+          },
+          "approvalStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalStatus"
+              }
+            ]
+          },
+          "rejectionReason": {
+            "type": "object",
+            "nullable": true,
+            "description": "Why an admin rejected this profile"
+          },
+          "approvedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": false
+          },
+          "ratingAverage": {
+            "type": "string",
+            "example": "4.85",
+            "description": "Decimal, serialised as a string"
+          },
+          "ratingCount": {
+            "type": "number",
+            "example": 27
+          },
+          "completedBookingsCount": {
+            "type": "number",
+            "example": 31
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "displayName",
+          "yearsOfExperience",
+          "cityId",
+          "serviceRadiusKm",
+          "timezone",
+          "approvalStatus",
+          "isActive",
+          "ratingAverage",
+          "ratingCount",
+          "completedBookingsCount"
+        ]
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "aziz@example.com"
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserStatus"
+              }
+            ]
+          },
+          "lastLoginAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "clientProfile": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClientProfileDto"
+              }
+            ]
+          },
+          "masterProfile": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MasterProfileDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "status",
+          "createdAt"
+        ]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "Aziz",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Karimov",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "example": "+998901234567",
+            "description": "E.164"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "defaultAddress": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Client only"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 150,
+            "description": "Master only"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Master only"
+          },
+          "yearsOfExperience": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 70,
+            "description": "Master only"
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Tashkent",
+            "description": "Master only — IANA time zone"
+          },
+          "serviceRadiusKm": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Master only — kilometres"
+          }
+        }
+      },
+      "CityResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Tashkent"
+          },
+          "slug": {
+            "type": "string",
+            "example": "tashkent"
+          },
+          "region": {
+            "type": "object",
+            "nullable": true,
+            "example": "Tashkent"
+          },
+          "latitude": {
+            "type": "object",
+            "nullable": true,
+            "example": "41.299500",
+            "description": "Decimal as string"
+          },
+          "longitude": {
+            "type": "object",
+            "nullable": true,
+            "example": "69.240100"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
         ]
       }
     }

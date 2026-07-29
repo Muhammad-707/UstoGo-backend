@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-29
 **Current phase:** Phase 1 — Platform Foundation
 **Version:** 0.1.0 (in development)
-**Overall progress:** ▓▓▓▓░░░░░░ 35% (authentication works end to end)
+**Overall progress:** ▓▓▓▓░░░░░░ 39% (accounts can be created, read, updated and deactivated)
 
 ---
 
@@ -17,9 +17,9 @@
 | Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered  |
 | Database schema     | 🟨 §2–4 migrated and seeded; catalogue and bookings still to come |
 | Authentication      | ✅ Complete — registration, login, rotation, reset; 283 tests     |
-| Business features   | ⬜ Not started                                                    |
+| Business features   | 🟨 F-02 Users done; catalogue and bookings still to come          |
 | Common layer        | ✅ Complete — envelope, validation, correlation, logging          |
-| Tests               | 🟨 283 unit tests; no integration or e2e harness yet              |
+| Tests               | 🟨 307 unit tests; no integration or e2e harness yet              |
 | CI/CD               | ⬜ Not started                                                    |
 | Deployment          | ⬜ Not started                                                    |
 
@@ -40,7 +40,7 @@ Three gaps, none a blocker:
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓▓░░░ 64%  |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓▓▓░░ 73%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
@@ -55,7 +55,7 @@ Three gaps, none a blocker:
 | ---- | ------------------------ | ---------------------------- | ----- | ------ |
 | F-17 | Platform & cross-cutting | `common`, `config`, `prisma` | 1     | ⬜     |
 | F-01 | Authentication           | `auth`                       | 1     | ✅     |
-| F-02 | Users & profiles         | `users`                      | 1     | ⬜     |
+| F-02 | Users & profiles         | `users`                      | 1     | ✅     |
 | F-13 | File storage             | `files`                      | 1     | ⬜     |
 | F-05 | Categories               | `categories`                 | 2     | ⬜     |
 | F-03 | Master profile           | `masters`                    | 2     | ⬜     |
