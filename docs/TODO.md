@@ -1,13 +1,13 @@
 # TODO — UstoGo Backend
 
 **Last updated:** 2026-07-29
-**Active phase:** Phase 1 — Platform Foundation
+**Active phase:** Phase 2 — Supply Side (Phase 1 complete, tagged `v0.1.0`)
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
 ---
 
-## 🔴 Now — Phase 1: Platform Foundation
+## ✅ Done — Phase 1: Platform Foundation
 
 ### 1.1 Repository scaffold
 
@@ -105,13 +105,13 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.11 Phase 1 exit
 
-- [ ] All Phase 1 exit criteria in `ROADMAP.md` met
-- [ ] `STATUS.md`, `CHANGELOG.md` updated
-- [ ] Tag `v0.1.0`
+- [x] All Phase 1 exit criteria in `ROADMAP.md` met
+- [x] `STATUS.md`, `CHANGELOG.md` updated
+- [x] Tag `v0.1.0`
 
 ---
 
-## 🟡 Next — Phase 2: Supply Side
+## 🔴 Now — Phase 2: Supply Side
 
 - [ ] F-05 Categories: model, tree endpoint, admin CRUD, depth/leaf rules, caching, seed taxonomy
 - [ ] F-16 Audit: `AuditLog` model, `AuditInterceptor` with redaction, `GET /admin/audit-logs`

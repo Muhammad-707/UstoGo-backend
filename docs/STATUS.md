@@ -1,8 +1,8 @@
 # Project Status — UstoGo Backend
 
 **Last updated:** 2026-07-29
-**Current phase:** Phase 1 — Platform Foundation
-**Version:** 0.1.0 (in development)
+**Current phase:** Phase 2 — Supply Side (Phase 1 complete)
+**Version:** 0.1.0
 **Overall progress:** ▓▓▓▓░░░░░░ 43% (accounts can be created, read, updated, given an avatar and deactivated)
 
 ---
@@ -53,8 +53,8 @@ Two gaps remain, neither a blocker:
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓▓▓▓░ 97%  |
-| 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
+| 2 — Supply Side         | Categories, masters, moderation, services, audit | 🟨 In progress | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜             | ░░░░░░░░░░ 0%   |
@@ -142,7 +142,7 @@ Two gaps remain, neither a blocker:
 
 ## 6. Blockers
 
-None. Phase 1 can begin immediately.
+None. Phase 2 can begin immediately.
 
 ---
 
@@ -162,7 +162,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-1. Phase 1 exit review and tag `v0.1.0` — §1.11. §1.7 and §1.10 are the last items closed; what remains outside that review is the D-5-blocked Redis throttle storage (B-77), which is not a Phase 1 exit criterion.
+Phase 1 is closed and tagged `v0.1.0`. Next up is Phase 2 — Supply Side, starting with **F-05 Categories**: model, public tree endpoint, admin CRUD, depth/leaf rules, caching, and the initial taxonomy seed (`docs/TODO.md`, `ROADMAP.md`).
 
 Detailed task list: `TODO.md`.
 

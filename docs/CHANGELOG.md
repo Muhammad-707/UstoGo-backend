@@ -11,6 +11,10 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-07-29
+
+Phase 1 — Platform Foundation. A running, secured, observable skeleton: a client or a master can register, log in, rotate tokens and manage their own profile; auth sits at 100% branch coverage; CI is green.
+
 ### Added
 - NestJS 11 application scaffold on TypeScript strict mode. `npm run start:dev` boots an API on `http://localhost:3000/api/v1` with graceful shutdown hooks enabled.
 - Toolchain enforcing the gates in `PROJECT_RULES.md` §4: ESLint 9 (flat config) carrying the full rule set from `CODING_STANDARDS.md` §12, Prettier, `.editorconfig`, Jest, and the six `tsconfig` path aliases.

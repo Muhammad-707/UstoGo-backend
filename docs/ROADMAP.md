@@ -17,7 +17,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 
 ---
 
-## Phase 1 — Platform Foundation 🟨
+## Phase 1 — Platform Foundation ✅
 
 **Goal:** a running, secured, observable skeleton with working authentication.
 
@@ -38,7 +38,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ CI pipeline: lint, typecheck, test, audit, secret scan
 - ✅ Test harness: Testcontainers, auth helpers, authz matrix helper
 
-**Exit criteria:** a client and a master can register, log in, rotate tokens and manage their own profile; ✅ auth has 100% branch coverage; ✅ CI is green.
+**Exit criteria:** a client and a master can register, log in, rotate tokens and manage their own profile; ✅ auth has 100% branch coverage; ✅ CI is green. **Met — tagged `v0.1.0`.** Rate-limit storage stays per-instance in memory rather than Redis-backed, which is not an exit criterion; deferred as **B-77**, blocked on open decision **D-5**.
 
 ---
 
