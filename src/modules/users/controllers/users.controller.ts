@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -13,6 +14,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '@common/dto/error-response.dto';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
+import { SetAvatarDto } from '../dto/requests/set-avatar.dto';
 import { UpdateProfileDto } from '../dto/requests/update-profile.dto';
 import { UserResponseDto } from '../dto/responses/user.response.dto';
 import { UsersService } from '../services/users.service';
@@ -56,6 +58,26 @@ export class UsersController {
     @Body() dto: UpdateProfileDto,
   ): Promise<UserResponseDto> {
     return UserResponseDto.fromEntity(await this.users.updateMe(user.id, dto));
+  }
+
+  @Patch('me/avatar')
+  @ApiAuth()
+  @ApiOperation({
+    summary: 'Attach a confirmed file as the caller’s avatar',
+    description:
+      'Step 3 of the upload flow: presign, PUT the binary, then attach. The file must ' +
+      'already be confirmed and have purpose AVATAR — this endpoint attaches bytes the ' +
+      'server has verified rather than accepting any. The previous avatar is released ' +
+      'for cleanup.',
+  })
+  @ApiOkResponse({ type: UserResponseDto })
+  @ApiNotFoundResponse({ description: 'FILE_NOT_FOUND', type: ErrorResponseDto })
+  @ApiConflictResponse({ description: 'FILE_NOT_CONFIRMED', type: ErrorResponseDto })
+  async setAvatar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetAvatarDto,
+  ): Promise<UserResponseDto> {
+    return UserResponseDto.fromEntity(await this.users.setAvatar(user.id, dto.fileId));
   }
 
   @Delete('me')

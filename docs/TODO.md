@@ -83,18 +83,18 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [x] `ClientProfile`, `City` models + seed
 - [x] `GET /users/me`, `PATCH /users/me`
 - [x] `DELETE /users/me` (soft delete + revoke all sessions)
-- [ ] `PATCH /users/me/avatar` — moved to §1.9: FR-3.3 requires `POST /files/presign` and the `File` model, neither of which exists until then
+- [x] `PATCH /users/me/avatar` — landed with §1.9, which supplied the `File` model and the presign/confirm flow it depends on
 - [x] `GET /cities`
 - [x] Repository projections that exclude `passwordHash` structurally
 
 ### 1.9 F-13 Files
 
-- [ ] `File` model + migration
-- [ ] `StorageProvider` interface + S3 implementation (MinIO locally)
-- [ ] `POST /files/presign` with MIME and size constraints
-- [ ] `POST /files/:id/confirm` with server-side HEAD verification
-- [ ] Presigned read URLs (15 min)
-- [ ] `CleanupUnconfirmedFilesJob`
+- [x] `File` model + migration
+- [x] `StorageProvider` interface + S3 implementation (MinIO locally)
+- [x] `POST /files/presign` with MIME and size constraints
+- [x] `POST /files/:id/confirm` with server-side HEAD verification
+- [x] Presigned read URLs (15 min), scoped to the uploader
+- [x] `CleanupUnconfirmedFilesJob`
 
 ### 1.10 CLI & CI
 

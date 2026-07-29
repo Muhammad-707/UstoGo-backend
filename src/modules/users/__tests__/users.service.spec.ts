@@ -2,6 +2,7 @@ import type { PrismaService } from '@prisma-lib/prisma.service';
 import type { TransactionManager } from '@prisma-lib/transaction.manager';
 
 import type { TokenService } from '../../auth/services/token.service';
+import type { FilesService } from '../../files/services/files.service';
 import {
   CityNotFoundException,
   FieldNotApplicableException,
@@ -47,9 +48,14 @@ const build = (options: { user?: unknown; city?: unknown } = {}) => {
   const tokens = {
     revokeAllForUser: jest.fn().mockResolvedValue(undefined),
   } as unknown as TokenService;
+  const files = {
+    getAttachable: jest.fn().mockResolvedValue({ id: 'f1' }),
+    softDelete: jest.fn().mockResolvedValue(undefined),
+  } as unknown as FilesService;
 
   return {
-    service: new UsersService(prisma, tx, tokens),
+    service: new UsersService(prisma, tx, tokens, files),
+    files,
     userDelegate,
     clientProfile,
     masterProfile,

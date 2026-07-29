@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { CommonModule } from './common/common.module';
@@ -9,12 +10,15 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { AppConfigService } from './config/app-config.service';
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
+import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GLOBAL_THROTTLE_NAME } from './modules/auth/constants/throttle.constants';
+import { FilesModule } from './modules/files/files.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { MailModule } from './shared/mail/mail.module';
+import { StorageModule } from './shared/storage/storage.module';
 
 /**
  * Root module. Feature modules are registered here as they land, in the order
@@ -35,7 +39,9 @@ import { MailModule } from './shared/mail/mail.module';
     LoggerModule,
     PrismaModule,
     MailModule,
+    StorageModule,
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => ({
@@ -57,6 +63,8 @@ import { MailModule } from './shared/mail/mail.module';
     HealthModule,
     AuthModule,
     UsersModule,
+    FilesModule,
+    JobsModule,
   ],
   providers: [
     // Order matters: these run in registration order, which is the stack documented in

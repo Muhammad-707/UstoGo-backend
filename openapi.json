@@ -717,6 +717,84 @@
         ]
       }
     },
+    "/users/me/avatar": {
+      "patch": {
+        "description": "Step 3 of the upload flow: presign, PUT the binary, then attach. The file must already be confirmed and have purpose AVATAR — this endpoint attaches bytes the server has verified rather than accepting any. The previous avatar is released for cleanup.",
+        "operationId": "setAvatar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAvatarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "FILE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "FILE_NOT_CONFIRMED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Attach a confirmed file as the caller’s avatar",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/cities": {
       "get": {
         "description": "Public — no authentication required. Reference data for the city selectors on registration and profile forms. Returned unpaginated because the whole list is meant to be fetched once and cached; withdrawn cities are omitted but remain in the database so historical rows keep resolving.",
@@ -740,6 +818,238 @@
         "summary": "List active cities",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/files/presign": {
+      "post": {
+        "description": "Returns a short-lived URL to PUT the binary to directly — binaries never pass through the API. The declared type and size are checked here to fail fast and to bound what the signed URL accepts, but they are **not** trusted: the file is unusable until `POST /files/:id/confirm` has read the stored object’s real metadata. Limited to 20 requests per hour.",
+        "operationId": "presign",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "UNSUPPORTED_MIME_TYPE | FILE_TOO_LARGE | VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Request an upload URL",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/files/{id}/confirm": {
+      "post": {
+        "description": "The server HEADs the stored object and checks its real content type and size against the limits for its purpose. A mismatch deletes both the object and the row. Idempotent: confirming an already-confirmed file returns it unchanged.",
+        "operationId": "confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "FILE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INVALID_FILE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Confirm an upload",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/files/{id}/url": {
+      "get": {
+        "description": "Confirmed files the caller uploaded. The URL expires so that a link leaked from a client cannot be shared indefinitely. A file belonging to someone else returns 404, not 403, so an id cannot be probed for existence.",
+        "operationId": "readUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadUrlResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "FILE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "FILE_NOT_CONFIRMED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Get a short-lived read URL for an own file",
+        "tags": [
+          "Files"
         ]
       }
     }
@@ -1296,6 +1606,11 @@
             "format": "uuid",
             "nullable": true
           },
+          "avatarFileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
           "defaultAddress": {
             "type": "object",
             "nullable": true
@@ -1351,6 +1666,11 @@
           "timezone": {
             "type": "string",
             "example": "Asia/Tashkent"
+          },
+          "avatarFileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
           },
           "approvalStatus": {
             "allOf": [
@@ -1524,6 +1844,19 @@
           }
         }
       },
+      "SetAvatarDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A confirmed file with purpose AVATAR"
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
       "CityResponseDto": {
         "type": "object",
         "properties": {
@@ -1560,6 +1893,137 @@
           "id",
           "name",
           "slug"
+        ]
+      },
+      "FilePurpose": {
+        "type": "string",
+        "enum": [
+          "AVATAR",
+          "CERTIFICATE",
+          "BANNER",
+          "MESSAGE_ATTACHMENT",
+          "CATEGORY_ICON"
+        ]
+      },
+      "PresignRequestDto": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "example": "AVATAR",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilePurpose"
+              }
+            ]
+          },
+          "mimeType": {
+            "type": "string",
+            "example": "image/jpeg",
+            "description": "Declared type — verified after upload"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "example": 204800,
+            "minimum": 1,
+            "description": "Declared size in bytes"
+          },
+          "fileName": {
+            "type": "string",
+            "example": "portrait.jpg",
+            "description": "Only the extension is used, and only if it is a short alphanumeric run."
+          }
+        },
+        "required": [
+          "purpose",
+          "mimeType",
+          "sizeBytes"
+        ]
+      },
+      "PresignResponseDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "description": "PUT the binary here directly. It never passes through the API."
+          },
+          "fileKey": {
+            "type": "string",
+            "example": "avatars/9f1c…/3b8e….jpg"
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 900,
+            "description": "Seconds until the upload URL expires"
+          }
+        },
+        "required": [
+          "fileId",
+          "uploadUrl",
+          "fileKey",
+          "expiresIn"
+        ]
+      },
+      "FileResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "example": "avatars/9f1c…/3b8e….jpg"
+          },
+          "mimeType": {
+            "type": "string",
+            "example": "image/jpeg",
+            "description": "The stored object’s real type"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "example": 204800,
+            "description": "The stored object’s real size"
+          },
+          "purpose": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilePurpose"
+              }
+            ]
+          },
+          "isConfirmed": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "mimeType",
+          "sizeBytes",
+          "purpose",
+          "isConfirmed"
+        ]
+      },
+      "ReadUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Short-lived signed URL"
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 900
+          }
+        },
+        "required": [
+          "url",
+          "expiresIn"
         ]
       }
     }

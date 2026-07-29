@@ -28,6 +28,7 @@ export const CLIENT_PROFILE_SELECT = {
   firstName: true,
   lastName: true,
   cityId: true,
+  avatarFileId: true,
   defaultAddress: true,
 } as const satisfies Prisma.ClientProfileSelect;
 
@@ -46,6 +47,7 @@ export const MASTER_PROFILE_SELECT = {
   cityId: true,
   serviceRadiusKm: true,
   timezone: true,
+  avatarFileId: true,
   approvalStatus: true,
   rejectionReason: true,
   approvedAt: true,

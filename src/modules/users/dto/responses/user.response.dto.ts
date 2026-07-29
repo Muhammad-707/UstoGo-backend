@@ -8,6 +8,7 @@ export class ClientProfileDto {
   @ApiProperty({ example: 'Aziz' }) firstName!: string;
   @ApiProperty({ example: 'Karimov' }) lastName!: string;
   @ApiPropertyOptional({ format: 'uuid', nullable: true }) cityId!: string | null;
+  @ApiPropertyOptional({ format: 'uuid', nullable: true }) avatarFileId!: string | null;
   @ApiPropertyOptional({ nullable: true }) defaultAddress!: string | null;
 }
 
@@ -21,6 +22,7 @@ export class MasterProfileDto {
   @ApiProperty({ format: 'uuid' }) cityId!: string;
   @ApiProperty({ example: 15 }) serviceRadiusKm!: number;
   @ApiProperty({ example: 'Asia/Tashkent' }) timezone!: string;
+  @ApiPropertyOptional({ format: 'uuid', nullable: true }) avatarFileId!: string | null;
 
   @ApiProperty({ enum: ApprovalStatus, enumName: 'ApprovalStatus' })
   approvalStatus!: ApprovalStatus;

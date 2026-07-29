@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../auth/auth.module';
+import { FilesModule } from '../files/files.module';
 import { CitiesController } from './controllers/cities.controller';
 import { UsersController } from './controllers/users.controller';
 import { CitiesService } from './services/cities.service';
@@ -14,7 +15,7 @@ import { UsersService } from './services/users.service';
  * being reimplemented here.
  */
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, FilesModule],
   controllers: [UsersController, CitiesController],
   providers: [UsersService, CitiesService],
   exports: [UsersService],

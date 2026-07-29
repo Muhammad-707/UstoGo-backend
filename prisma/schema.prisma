@@ -3,8 +3,7 @@
 //
 // This migration covers §2 Enumerations, §3 Identity and §4 Sessions. Models whose
 // dependencies have not landed are deliberately absent rather than stubbed:
-//   - File (§11) arrives in TODO §1.9, and with it the avatarFileId columns on both
-//     profiles and the Certificate model (§3.4), as an additive migration.
+//   - Certificate (§3.4) arrives with F-03 in Phase 2.
 //   - MasterProfile.searchVector (§3.3) is a generated tsvector for full-text search
 //     and arrives with F-08 in Phase 3.
 
@@ -172,6 +171,7 @@ model User {
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   approvedMasters     MasterProfile[]      @relation("MasterApprovedBy")
+  uploadedFiles       File[]
 
   @@index([role, status])
   @@index([createdAt])
@@ -185,13 +185,15 @@ model ClientProfile {
   firstName      String    @map("first_name") @db.VarChar(100)
   lastName       String    @map("last_name") @db.VarChar(100)
   cityId         String?   @map("city_id") @db.Uuid
+  avatarFileId   String?   @map("avatar_file_id") @db.Uuid
   defaultAddress String?   @map("default_address") @db.VarChar(500)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  city City? @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city   City? @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  avatar File? @relation("ClientAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
 
   @@index([cityId])
   @@map("client_profiles")
@@ -211,6 +213,7 @@ model MasterProfile {
   cityId                 String         @map("city_id") @db.Uuid
   serviceRadiusKm        Int            @default(15) @map("service_radius_km") @db.SmallInt
   timezone               String         @db.VarChar(64)
+  avatarFileId           String?        @map("avatar_file_id") @db.Uuid
   approvalStatus         ApprovalStatus @default(PENDING) @map("approval_status")
   rejectionReason        String?        @map("rejection_reason") @db.VarChar(500)
   approvedAt             DateTime?      @map("approved_at") @db.Timestamptz(3)
@@ -226,6 +229,7 @@ model MasterProfile {
   user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   city       City  @relation(fields: [cityId], references: [id], onDelete: Restrict)
   approvedBy User? @relation("MasterApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+  avatar     File? @relation("MasterAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
 
   @@index([approvalStatus, isActive])
   @@index([cityId])
@@ -293,4 +297,33 @@ model PasswordResetToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// §11 Files
+// ---------------------------------------------------------------------------
+
+/// §11. A row is created at presign time with isConfirmed = false and becomes usable
+/// only after the server has read the stored object's real content type and size.
+/// Unconfirmed rows older than 24 hours are hard-deleted by a nightly job, together
+/// with any object that did get uploaded.
+model File {
+  id               String      @id @default(uuid()) @db.Uuid
+  key              String      @unique @db.VarChar(500)
+  bucket           String      @db.VarChar(100)
+  mimeType         String      @map("mime_type") @db.VarChar(150)
+  sizeBytes        BigInt      @map("size_bytes")
+  purpose          FilePurpose
+  uploadedByUserId String?     @map("uploaded_by_user_id") @db.Uuid
+  isConfirmed      Boolean     @default(false) @map("is_confirmed")
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt        DateTime?   @map("deleted_at") @db.Timestamptz(3)
+
+  uploadedBy    User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  clientAvatars ClientProfile[] @relation("ClientAvatar")
+  masterAvatars MasterProfile[] @relation("MasterAvatar")
+
+  @@index([uploadedByUserId])
+  @@index([isConfirmed, createdAt])
+  @@map("files")
 }

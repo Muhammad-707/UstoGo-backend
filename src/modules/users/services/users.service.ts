@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { UserRole, UserStatus } from '@prisma/client';
+import { FilePurpose, UserRole, UserStatus } from '@prisma/client';
 
 import { PrismaService } from '@prisma-lib/prisma.service';
 import { TransactionManager, type PrismaTransaction } from '@prisma-lib/transaction.manager';
 
 import { REVOKED_REASON } from '../../auth/constants/auth.constants';
 import { TokenService } from '../../auth/services/token.service';
+import { FilesService } from '../../files/services/files.service';
 import {
   CLIENT_ONLY_FIELDS,
   MASTER_ONLY_FIELDS,
@@ -27,6 +28,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly tx: TransactionManager,
     private readonly tokens: TokenService,
+    private readonly files: FilesService,
   ) {}
 
   /** FR-3.1. The projection is what keeps `passwordHash` out, not a later filter. */
@@ -98,6 +100,37 @@ export class UsersService {
 
       await this.tokens.revokeAllForUser(userId, REVOKED_REASON.ADMIN_ACTION, tx);
     });
+  }
+
+  /**
+   * FR-3.3, step 3. The file must already be confirmed, which is what makes this an
+   * attach rather than an upload: the bytes were verified server-side before this
+   * endpoint ever saw the id.
+   *
+   * The previous avatar is soft-deleted so the cleanup job can reclaim its object —
+   * replacing a picture should not leave the old one paid for indefinitely.
+   */
+  async setAvatar(userId: string, fileId: string): Promise<UserWithProfile> {
+    const current = await this.findMe(userId);
+
+    await this.files.getAttachable(fileId, userId, FilePurpose.AVATAR);
+
+    const previousId =
+      current.masterProfile?.avatarFileId ?? current.clientProfile?.avatarFileId ?? null;
+
+    await this.tx.run(async (tx) => {
+      if (current.role === UserRole.MASTER) {
+        await tx.masterProfile.update({ where: { userId }, data: { avatarFileId: fileId } });
+      } else {
+        await tx.clientProfile.update({ where: { userId }, data: { avatarFileId: fileId } });
+      }
+    });
+
+    if (previousId !== null && previousId !== fileId) {
+      await this.files.softDelete(previousId);
+    }
+
+    return this.findMe(userId);
   }
 
   private assertFieldsApplicable(role: UserRole, dto: UpdateProfileDto): void {
