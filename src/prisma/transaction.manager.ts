@@ -1,10 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { PrismaService } from './prisma.service';
+import { PrismaService, type SoftDeleteAwareClient } from './prisma.service';
 
-/** The client handed to a transaction callback; repositories accept it as `tx`. */
-export type PrismaTransaction = Prisma.TransactionClient;
+/**
+ * The client handed to a transaction callback; repositories accept it as `tx`.
+ *
+ * Derived from the **extended** client, not `Prisma.TransactionClient`. A transaction
+ * started from the base client hands the callback an unextended handle, so every read
+ * inside it would see soft-deleted rows — the one place where DATABASE.md §1's
+ * guarantee would silently not hold, and the place it matters most, since uniqueness
+ * checks and state reads happen inside transactions. Pinned by a regression test.
+ */
+export type PrismaTransaction = Omit<
+  SoftDeleteAwareClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends' | '$use'
+>;
 
 export type TransactionOptions = {
   readonly isolationLevel?: Prisma.TransactionIsolationLevel;
@@ -47,7 +58,7 @@ export class TransactionManager {
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
       try {
-        return await this.prisma.$transaction(fn, {
+        return await this.prisma.db.$transaction(fn, {
           ...(options.isolationLevel !== undefined
             ? { isolationLevel: options.isolationLevel }
             : {}),

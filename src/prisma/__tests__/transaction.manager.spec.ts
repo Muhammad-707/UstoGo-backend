@@ -18,7 +18,7 @@ const notFound = (): Prisma.PrismaClientKnownRequestError =>
 // Only $transaction is exercised; the double cast keeps the test from having to
 // construct a real PrismaClient and its connection pool.
 const managerWith = (transaction: jest.Mock): TransactionManager =>
-  new TransactionManager({ $transaction: transaction } as unknown as PrismaService);
+  new TransactionManager({ db: { $transaction: transaction } } as unknown as PrismaService);
 
 describe('TransactionManager', () => {
   describe('run', () => {
@@ -86,6 +86,24 @@ describe('TransactionManager', () => {
       expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
         isolationLevel: 'Serializable',
       });
+    });
+
+    // A transaction started from the base client hands the callback an unextended
+    // handle, so every read inside it would see soft-deleted rows — the one place
+    // DATABASE.md §1's guarantee would silently not hold, and the place it matters
+    // most, since uniqueness checks happen inside transactions.
+    it('runs on the soft-delete-aware client, not the raw one', async () => {
+      const extended = jest.fn().mockResolvedValue('committed');
+      const raw = jest.fn().mockResolvedValue('committed');
+      const manager = new TransactionManager({
+        $transaction: raw,
+        db: { $transaction: extended },
+      } as unknown as PrismaService);
+
+      await manager.run(() => Promise.resolve('committed'));
+
+      expect(extended).toHaveBeenCalledTimes(1);
+      expect(raw).not.toHaveBeenCalled();
     });
 
     it('omits options that were not supplied rather than passing undefined', async () => {
