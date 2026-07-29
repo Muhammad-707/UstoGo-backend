@@ -172,6 +172,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   approvedMasters     MasterProfile[]      @relation("MasterApprovedBy")
   uploadedFiles       File[]
+  auditLogs           AuditLog[]
 
   @@index([role, status])
   @@index([createdAt])
@@ -326,4 +327,32 @@ model File {
   @@index([uploadedByUserId])
   @@index([isConfirmed, createdAt])
   @@map("files")
+}
+
+// ---------------------------------------------------------------------------
+// §13 Audit
+// ---------------------------------------------------------------------------
+
+/// §13. Append-only: no update or delete path exists in code, and the database role
+/// has no DELETE grant on this table (SECURITY.md §2.9). `before`/`after` are optional
+/// because a creation has no prior state and a delete has no resulting one.
+model AuditLog {
+  id          String      @id @default(uuid()) @db.Uuid
+  actorUserId String      @map("actor_user_id") @db.Uuid
+  action      AuditAction
+  entityType  String      @map("entity_type") @db.VarChar(60)
+  entityId    String      @map("entity_id") @db.Uuid
+  before      Json?
+  after       Json?
+  reason      String?     @db.VarChar(500)
+  ipAddress   String?     @map("ip_address") @db.VarChar(45)
+  userAgent   String?     @map("user_agent") @db.VarChar(500)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("audit_logs")
 }

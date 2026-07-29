@@ -1052,6 +1052,163 @@
           "Files"
         ]
       }
+    },
+    "/admin/audit-logs": {
+      "get": {
+        "description": "Every privileged mutation writes an append-only row here (SECURITY.md §2.9). Filterable by actor, action, entity and a createdAt range.",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MASTER_APPROVED",
+                "MASTER_REJECTED",
+                "MASTER_ACTIVATED",
+                "MASTER_DEACTIVATED",
+                "USER_BLOCKED",
+                "USER_UNBLOCKED",
+                "CATEGORY_CREATED",
+                "CATEGORY_UPDATED",
+                "CATEGORY_DEACTIVATED",
+                "SERVICE_DEACTIVATED",
+                "BOOKING_FORCE_CANCELLED",
+                "REVIEW_HIDDEN",
+                "REVIEW_UNHIDDEN",
+                "BANNER_CREATED",
+                "BANNER_UPDATED",
+                "BANNER_DELETED",
+                "NOTIFICATION_BROADCAST",
+                "CONVERSATION_ACCESSED"
+              ]
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "Category",
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "ISO-8601, inclusive lower bound on createdAt",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "ISO-8601, inclusive upper bound on createdAt",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AuditLogResponseDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List audit log entries",
+        "tags": [
+          "Admin"
+        ]
+      }
     }
   },
   "info": {
@@ -2024,6 +2181,132 @@
         "required": [
           "url",
           "expiresIn"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 137
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 7
+          },
+          "hasNext": {
+            "type": "boolean",
+            "example": true
+          },
+          "hasPrev": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages",
+          "hasNext",
+          "hasPrev"
+        ]
+      },
+      "PaginatedDto": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "meta"
+        ]
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "MASTER_APPROVED",
+              "MASTER_REJECTED",
+              "MASTER_ACTIVATED",
+              "MASTER_DEACTIVATED",
+              "USER_BLOCKED",
+              "USER_UNBLOCKED",
+              "CATEGORY_CREATED",
+              "CATEGORY_UPDATED",
+              "CATEGORY_DEACTIVATED",
+              "SERVICE_DEACTIVATED",
+              "BOOKING_FORCE_CANCELLED",
+              "REVIEW_HIDDEN",
+              "REVIEW_UNHIDDEN",
+              "BANNER_CREATED",
+              "BANNER_UPDATED",
+              "BANNER_DELETED",
+              "NOTIFICATION_BROADCAST",
+              "CONVERSATION_ACCESSED"
+            ]
+          },
+          "entityType": {
+            "type": "string",
+            "example": "Category"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "before": {
+            "type": "object",
+            "nullable": true,
+            "description": "The submitted payload"
+          },
+          "after": {
+            "type": "object",
+            "nullable": true,
+            "description": "The resulting representation"
+          },
+          "reason": {
+            "type": "object",
+            "nullable": true
+          },
+          "ipAddress": {
+            "type": "object",
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "action",
+          "entityType",
+          "entityId",
+          "createdAt"
         ]
       }
     }

@@ -9,21 +9,21 @@
 
 ## 1. Snapshot
 
-| Area                | State                                                                     |
-| ------------------- | ------------------------------------------------------------------------- |
-| Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                            |
-| Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks             |
-| Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs         |
-| Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered          |
-| Database schema     | 🟨 §2–4 and §11 migrated and seeded; catalogue and bookings to come       |
-| Authentication      | ✅ Complete — registration, login, rotation, reset; 100% branch coverage  |
-| Business features   | 🟨 F-02 Users and F-13 Files done; catalogue and bookings to come         |
-| Common layer        | ✅ Complete — envelope, validation, correlation, logging                  |
-| Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup           |
-| Tests               | ✅ 433 tests (373 unit + 60 e2e); Testcontainers harness live             |
-| Operations CLI      | ✅ `admin:create` — the only path to an administrator                     |
-| CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks |
-| Deployment          | ⬜ Not started                                                            |
+| Area                | State                                                                      |
+| ------------------- | -------------------------------------------------------------------------- |
+| Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                             |
+| Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks              |
+| Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs          |
+| Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered           |
+| Database schema     | 🟨 §2–4, §11 and §13 migrated and seeded; catalogue and bookings to come   |
+| Authentication      | ✅ Complete — registration, login, rotation, reset; 100% branch coverage   |
+| Business features   | 🟨 F-02 Users, F-13 Files, F-16 Audit done; catalogue and bookings to come |
+| Common layer        | ✅ Complete — envelope, validation, correlation, logging                   |
+| Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup            |
+| Tests               | ✅ 465 tests (395 unit + 70 e2e); Testcontainers harness live              |
+| Operations CLI      | ✅ `admin:create` — the only path to an administrator                      |
+| CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks  |
+| Deployment          | ⬜ Not started                                                             |
 
 The application boots, connects to PostgreSQL, serves `/health` and `/health/ready`, and publishes Swagger at `/api/docs`. Every request passes through the correlation middleware, the validation pipe, the timeout and logging interceptors and the global exception filter, so an unknown path returns the documented error envelope rather than a framework default. `npm run lint`, `npm run typecheck`, `npm run build`, `npm test` and `npm run test:e2e` are all green; `npm run test:cov` runs both levels together and clears every coverage threshold in `jest.all.config.ts`.
 
@@ -47,6 +47,12 @@ One gap remains, not a blocker:
 
 - Redis's own reachability is not part of `/health/ready`. Readiness probes PostgreSQL and the object store only; a credentialed check turning a permissions problem into a restart loop is why storage readiness was deferred earlier, and the same reasoning applies here now that something actually depends on Redis being up.
 
+**Phase 2 opens with F-16 Audit, not F-05 Categories.** `TODO.md` and `ROADMAP.md` originally listed Categories first; `FEATURES.md`'s dependency graph places audit ahead of it (`F-16 audit → F-05 categories`), because Categories' admin mutations are the first privileged actions Phase 2 introduces and `CLAUDE.md` §5 requires every one of them audited from the endpoint's first commit, not retrofitted. Both tracking documents were reordered to match rather than left to disagree.
+
+`AuditLog` (DATABASE.md §13) is append-only — no update or delete path exists in code. `AuditService.record()` never throws: a write failure is logged for the alerting in `DEPLOYMENT.md` §8 rather than turning an already-committed, already-responded mutation into a failed request. `AuditInterceptor` is registered globally and is a no-op for any route without `@Audit(action, entityType)` — nothing is audited by default, so adding the interceptor could not retroactively start recording a route nobody decorated. `before` is the submitted payload and `after` the returned representation, both redacted for `password`, `*Hash` and `*Token`-shaped keys — a generic interceptor has no way to know which repository owns the decorated entity, so it cannot honestly claim to capture prior database state without an extra read the owning service already paid for once. `GET /admin/audit-logs` (ADMIN-only) filters by actor, action, entity and a `createdAt` range.
+
+No route calls `@Audit()` yet — Categories is what actually needs it, and lands next. The read endpoint and the interceptor's redaction and entity-resolution logic are proven directly: 465 tests, 100% coverage across `src/modules/audit/**`.
+
 ---
 
 ## 2. Phase Progress
@@ -55,7 +61,7 @@ One gap remains, not a blocker:
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 2 — Supply Side         | Categories, masters, moderation, services, audit | 🟨 In progress | ░░░░░░░░░░ 0%   |
+| 2 — Supply Side         | Audit, categories, masters, moderation, services | 🟨 In progress | ▓░░░░░░░░░ 10%  |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜             | ░░░░░░░░░░ 0%   |
@@ -71,9 +77,9 @@ One gap remains, not a blocker:
 | F-01 | Authentication           | `auth`                       | 1     | ✅     |
 | F-02 | Users & profiles         | `users`                      | 1     | ✅     |
 | F-13 | File storage             | `files`                      | 1     | ✅     |
+| F-16 | Audit log                | `audit`                      | 2     | ✅     |
 | F-05 | Categories               | `categories`                 | 2     | ⬜     |
 | F-03 | Master profile           | `masters`                    | 2     | ⬜     |
-| F-16 | Audit log                | `audit`                      | 2     | ⬜     |
 | F-04 | Master moderation        | `admin`                      | 2     | ⬜     |
 | F-06 | Services                 | `services`                   | 2     | ⬜     |
 | F-07 | Schedule & availability  | `schedule`                   | 3     | ⬜     |
@@ -130,11 +136,11 @@ One gap remains, not a blocker:
 
 | Metric                               | Target              | Current                                                        |
 | ------------------------------------ | ------------------- | -------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 433 tests green (373 unit + 60 e2e); `test:cov` thresholds met |
+| Line coverage                        | ≥ 80%               | 465 tests green (395 unit + 70 e2e); `test:cov` thresholds met |
 | Service/guard coverage               | ≥ 90%               | Met                                                            |
 | Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                |
-| Endpoints implemented                | ~95                 | 19                                                             |
-| Endpoints documented in Swagger      | 100% of implemented | 100% (19 of 19 in `openapi.json`)                              |
+| Endpoints implemented                | ~95                 | 20                                                             |
+| Endpoints documented in Swagger      | 100% of implemented | 100% (20 of 20 in `openapi.json`)                              |
 | Files over 300 lines                 | 0                   | 0                                                              |
 | `any` occurrences                    | 0                   | 0                                                              |
 | Open high/critical vulnerabilities   | 0                   | 0 (`npm audit --omit=dev --audit-level=high`)                  |
@@ -163,7 +169,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-Phase 1 is closed and tagged `v0.1.0`. Next up is Phase 2 — Supply Side, starting with **F-05 Categories**: model, public tree endpoint, admin CRUD, depth/leaf rules, caching, and the initial taxonomy seed (`docs/TODO.md`, `ROADMAP.md`).
+Phase 1 is closed and tagged `v0.1.0`. F-16 Audit is closed. Next up is **F-05 Categories**: model, public tree endpoint, admin CRUD (each mutation decorated with `@Audit()`), depth/leaf rules, caching, and the initial taxonomy seed (`docs/TODO.md`, `ROADMAP.md`).
 
 Detailed task list: `TODO.md`.
 

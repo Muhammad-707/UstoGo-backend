@@ -12,6 +12,7 @@ import { AppConfigService } from './config/app-config.service';
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GLOBAL_THROTTLE_NAME } from './modules/auth/constants/throttle.constants';
 import { IdentifierThrottlerGuard } from './modules/auth/guards/identifier-throttler.guard';
@@ -72,6 +73,7 @@ import { StorageModule } from './shared/storage/storage.module';
     AuthModule,
     UsersModule,
     FilesModule,
+    AuditModule,
     JobsModule,
   ],
   providers: [

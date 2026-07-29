@@ -11,6 +11,14 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ## [Unreleased]
 
+### Added
+- **F-16 Audit log** (Phase 2, DATABASE.md §13). `AuditLog` is append-only — no update or delete path exists in code — recording actor, action, entity, a redacted before/after diff, reason, IP and user agent. `AuditService.record()` never throws: a write failure is logged for the alerting in `DEPLOYMENT.md` §8 rather than turning an already-committed, already-responded mutation into a failed request.
+- `AuditInterceptor`, registered globally, is a no-op for any route without `@Audit(action, entityType)` — adding it could not retroactively start auditing a route nobody decorated, and nothing does yet. `before` is the submitted request body and `after` the returned response, both redacted for `password`, `passwordHash`, `token`, `tokenHash`, `accessToken`, `refreshToken` and `resetToken`-shaped keys at any depth: a generic interceptor has no way to know which repository owns the decorated entity, so reading the database twice to recover prior state the owning service already loaded once was not worth the coupling.
+- `GET /admin/audit-logs` (ADMIN-only), filterable by `actorUserId`, `action`, `entityType`, `entityId` and a `createdAt` range, paginated through the standard envelope.
+
+### Changed
+- **Reconciled `TODO.md` and `ROADMAP.md` against `FEATURES.md`'s dependency graph.** Both listed Phase 2 as Categories-then-Audit; the graph places audit first (`F-16 audit → F-05 categories`), because Categories' admin mutations are the first privileged actions Phase 2 introduces and every one has to be audited from its first commit, per `CLAUDE.md` §5 — not retrofitted once Categories already shipped without it.
+
 ## [0.1.1] — 2026-07-29
 
 ### Added
