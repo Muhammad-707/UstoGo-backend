@@ -6,6 +6,7 @@ import type { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-st
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@config/app-config.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
+import { MAIL_PROVIDER, type MailMessage, type MailProvider } from '@shared/mail/mail.provider';
 
 /** Kept in step with `main.ts`; a probe URL must not move when the API is versioned. */
 const UNVERSIONED_ROUTES = ['health', 'health/ready'];
@@ -14,6 +15,8 @@ export type TestApp = {
   readonly app: INestApplication;
   readonly prisma: PrismaService;
   readonly server: ReturnType<INestApplication['getHttpServer']>;
+  /** Every message the application attempted to send, captured instead of relayed. */
+  readonly mail: readonly MailMessage[];
   close(): Promise<void>;
 };
 
@@ -52,12 +55,28 @@ const NO_ACCUMULATION: ThrottlerStorage = {
     Promise.resolve({ totalHits: 1, timeToExpire: 60, isBlocked: false, timeToBlockExpire: 0 }),
 };
 
+/**
+ * Captures every message instead of relaying it — no SMTP relay is reachable from the
+ * containers this harness starts, and a reset-password journey has no other way to
+ * reach the raw token, which exists only in the outbound email and never in the
+ * database (`PasswordResetService`).
+ */
+const capturingMailProvider = (sink: MailMessage[]): MailProvider => ({
+  send: (message) => {
+    sink.push(message);
+    return Promise.resolve();
+  },
+});
+
 export const createTestApp = async (options: TestAppOptions = {}): Promise<TestApp> => {
   const builder = Test.createTestingModule({ imports: [AppModule] });
 
   if (options.throttling !== true) {
     builder.overrideProvider(ThrottlerStorage).useValue(NO_ACCUMULATION);
   }
+
+  const mail: MailMessage[] = [];
+  builder.overrideProvider(MAIL_PROVIDER).useValue(capturingMailProvider(mail));
 
   const moduleRef = await builder.compile();
 
@@ -76,6 +95,7 @@ export const createTestApp = async (options: TestAppOptions = {}): Promise<TestA
     app,
     prisma,
     server: app.getHttpServer(),
+    mail,
     close: async () => {
       await app.close();
     },

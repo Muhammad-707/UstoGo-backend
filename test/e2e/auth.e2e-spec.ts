@@ -222,6 +222,106 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  // SRS-AUTH-8: the full reset cycle, driven with the token captured from the outbound
+  // email rather than read from the database — only its hash is ever stored.
+  describe('reset cycle', () => {
+    const resetToken = (): string => {
+      const sent = app.mail.at(-1);
+      if (sent === undefined) {
+        throw new Error('No reset email was captured.');
+      }
+      const token = /token=([^\s&]+)/.exec(sent.text)?.[1];
+      if (token === undefined) {
+        throw new Error('Reset email carried no token.');
+      }
+      return token;
+    };
+
+    it('sets a new password, revokes every session and rejects reuse of the link', async () => {
+      const actor = await createClient(app);
+
+      await request(app.server)
+        .post('/api/v1/auth/forgot-password')
+        .send({ email: actor.email })
+        .expect(202);
+
+      const token = resetToken();
+      const newPassword = 'brandnewpass9';
+
+      await request(app.server)
+        .post('/api/v1/auth/reset-password')
+        .send({ token, password: newPassword })
+        .expect(204);
+
+      // The session that was live before the reset is gone.
+      await request(app.server)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: actor.refreshToken })
+        .expect(401);
+
+      // The new password works; the old one does not.
+      await login(app, actor.email, newPassword);
+      await request(app.server)
+        .post('/api/v1/auth/login')
+        .send({ email: actor.email, password: VALID_PASSWORD })
+        .expect(401);
+
+      // A second use of the same link is a used, not merely an unknown, token.
+      const replay = await request(app.server)
+        .post('/api/v1/auth/reset-password')
+        .send({ token, password: 'anotherpass9' })
+        .expect(400);
+      expect(replay.body.code).toBe('INVALID_RESET_TOKEN');
+    });
+
+    it('rejects an unknown token', async () => {
+      const response = await request(app.server)
+        .post('/api/v1/auth/reset-password')
+        .send({ token: 'not-a-real-token', password: 'brandnewpass9' })
+        .expect(400);
+
+      expect(response.body.code).toBe('INVALID_RESET_TOKEN');
+    });
+  });
+
+  describe('PATCH /auth/password', () => {
+    it('changes the password and revokes every other session but the caller’s', async () => {
+      const actor = await createClient(app);
+      const other = await login(app, actor.email, VALID_PASSWORD);
+      const newPassword = 'anotherpassword9';
+
+      await request(app.server)
+        .patch('/api/v1/auth/password')
+        .set('Authorization', `Bearer ${actor.accessToken}`)
+        .send({ currentPassword: VALID_PASSWORD, password: newPassword })
+        .expect(204);
+
+      // The other session is revoked; the caller's is not.
+      await request(app.server)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: other.refreshToken })
+        .expect(401);
+      await request(app.server)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: actor.refreshToken })
+        .expect(200);
+
+      await login(app, actor.email, newPassword);
+    });
+
+    it('rejects the wrong current password', async () => {
+      const actor = await createClient(app);
+
+      const response = await request(app.server)
+        .patch('/api/v1/auth/password')
+        .set('Authorization', `Bearer ${actor.accessToken}`)
+        .send({ currentPassword: 'wrongpassword1', password: 'anotherpassword9' })
+        .expect(401);
+
+      expect(response.body.code).toBe('INVALID_CREDENTIALS');
+    });
+  });
+
   describe('unknown routes', () => {
     it('returns the error envelope rather than a framework default', async () => {
       const response = await request(app.server).get('/api/v1/does-not-exist').expect(404);

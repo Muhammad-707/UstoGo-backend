@@ -76,7 +76,7 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [x] `JwtAuthGuard` registered globally, `RolesGuard`
 - [x] Throttling: the `API.md` §13 limits, keyed by IP
 - [ ] Throttling: identifier-scoped keys (IP+email, email, userId) and Redis storage — blocked on open decision **D-5**
-- [ ] **100% branch coverage** — `token.service`, `password-reset.service` and `roles.guard` are at 100%; `auth.service` is at 90%, `jwt-auth.guard` at 89%, `password.service` at 54% (thin bcrypt wrapper), and the controller at 0%. The controller is covered by the e2e suite in §1.10; the rest needs the remaining branches.
+- [x] **100% branch coverage** — every file in `src/modules/auth/**`, `jwt-auth.guard` and `roles.guard` at 100% lines/branches/functions/statements. Closed by the e2e reset-password and change-password journeys (§1.10) and two `registerClient`/`registerMaster` optional-field unit tests.
 
 ### 1.8 F-02 Users
 

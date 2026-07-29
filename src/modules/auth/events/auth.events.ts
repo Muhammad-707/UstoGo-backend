@@ -12,8 +12,6 @@ export const AUTH_EVENT = Object.freeze({
   USER_REGISTERED: 'user.registered',
   MASTER_REGISTERED: 'master.registered',
   PASSWORD_CHANGED: 'user.password-changed',
-  PASSWORD_RESET: 'user.password-reset',
-  REFRESH_TOKEN_REUSED: 'auth.refresh-token-reused',
 } as const);
 
 /** Payloads carry identifiers, never entities and never credentials. */
@@ -33,11 +31,4 @@ export class MasterRegisteredEvent {
 
 export class PasswordChangedEvent {
   constructor(readonly userId: string) {}
-}
-
-export class RefreshTokenReusedEvent {
-  constructor(
-    readonly userId: string,
-    readonly familyId: string,
-  ) {}
 }

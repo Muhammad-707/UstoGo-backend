@@ -67,14 +67,16 @@ const build = (stubs: Stubs = {}) => {
     create: jest.fn().mockResolvedValue(user()),
   };
   const cityDelegate = { findFirst: jest.fn().mockResolvedValue(cityStub) };
+  const clientProfileDelegate = { create: jest.fn().mockResolvedValue({ id: 'cp1' }) };
+  const masterProfileDelegate = { create: jest.fn().mockResolvedValue({ id: 'mp1' }) };
 
   const prisma = { db: { user: userDelegate, city: cityDelegate } } as unknown as PrismaService;
   const tx = {
     run: (fn: (client: unknown) => unknown) =>
       fn({
         user: userDelegate,
-        clientProfile: { create: jest.fn().mockResolvedValue({ id: 'cp1' }) },
-        masterProfile: { create: jest.fn().mockResolvedValue({ id: 'mp1' }) },
+        clientProfile: clientProfileDelegate,
+        masterProfile: masterProfileDelegate,
       }),
   } as unknown as TransactionManager;
 
@@ -93,6 +95,8 @@ const build = (stubs: Stubs = {}) => {
     service: new AuthService(prisma, tx, passwords, tokens, events),
     userDelegate,
     cityDelegate,
+    clientProfileDelegate,
+    masterProfileDelegate,
     passwords,
     tokens,
     events,
@@ -151,6 +155,15 @@ describe('AuthService.registerClient', () => {
     expect(cityDelegate.findFirst).not.toHaveBeenCalled();
   });
 
+  it('attaches the city when one was supplied and exists', async () => {
+    const { service, clientProfileDelegate } = build();
+
+    await service.registerClient({ ...CLIENT_DTO, cityId: 'c1' }, {});
+
+    const created = firstArg<{ data: { cityId?: string } }>(clientProfileDelegate.create);
+    expect(created.data.cityId).toBe('c1');
+  });
+
   // The role is a literal in the service, never read from the payload.
   it('always creates a CLIENT', async () => {
     const { service, userDelegate } = build();
@@ -187,6 +200,28 @@ describe('AuthService.registerMaster', () => {
     await expect(service.registerMaster(MASTER_DTO, {})).rejects.toBeInstanceOf(
       CityNotFoundException,
     );
+  });
+
+  it('omits bio and years of experience when neither was supplied', async () => {
+    const { service, masterProfileDelegate } = build();
+
+    await service.registerMaster(MASTER_DTO, {});
+
+    const created = firstArg<{ data: Record<string, unknown> }>(masterProfileDelegate.create);
+    expect(created.data).not.toHaveProperty('bio');
+    expect(created.data).not.toHaveProperty('yearsOfExperience');
+  });
+
+  it('attaches bio and years of experience when supplied', async () => {
+    const { service, masterProfileDelegate } = build();
+
+    await service.registerMaster({ ...MASTER_DTO, bio: 'Plumber', yearsOfExperience: 5 }, {});
+
+    const created = firstArg<{ data: { bio?: string; yearsOfExperience?: number } }>(
+      masterProfileDelegate.create,
+    );
+    expect(created.data.bio).toBe('Plumber');
+    expect(created.data.yearsOfExperience).toBe(5);
   });
 });
 

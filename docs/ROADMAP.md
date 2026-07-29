@@ -38,7 +38,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ CI pipeline: lint, typecheck, test, audit, secret scan
 - ✅ Test harness: Testcontainers, auth helpers, authz matrix helper
 
-**Exit criteria:** a client and a master can register, log in, rotate tokens and manage their own profile; auth has 100% branch coverage; CI is green.
+**Exit criteria:** a client and a master can register, log in, rotate tokens and manage their own profile; ✅ auth has 100% branch coverage; ✅ CI is green.
 
 ---
 
