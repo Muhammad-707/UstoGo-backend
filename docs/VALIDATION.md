@@ -114,7 +114,7 @@ A required nested object needs a third decorator, `@IsDefined()`, as in the exam
 | Field                   | Rules                                            |
 | ----------------------- | ------------------------------------------------ |
 | `weekday`               | `@IsInt()`, `@Min(0)`, `@Max(6)`                 |
-| `startTime` / `endTime` | `@Matches(/^([01]\d                              | 2[0-3]):[0-5]\d$/)` |
+| `startTime` / `endTime` | `@Matches(/^([01]\d\|2[0-3]):[0-5]\d$/)`         |
 | `date`                  | `@IsDateString({ strict: true })`, date-only     |
 | range `from`/`to`       | `@IsISO8601()` + class-level `@MaxRangeDays(31)` |
 
