@@ -1,0 +1,310 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Public — no authentication required. Answers 200 whenever the process is running, and checks nothing else. A liveness probe that consults a dependency restarts the application when the dependency fails, which loses the instance and fixes nothing.",
+        "operationId": "liveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness probe",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Public — no authentication required. Verifies that PostgreSQL and the object store are reachable. Returns 503 while any dependency is down, so the load balancer stops routing before the instance stops answering.",
+        "operationId": "readiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SERVICE_UNAVAILABLE — `details` names each failing dependency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Readiness probe",
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "UstoGo API",
+    "description": "Marketplace API connecting clients with professional craftsmen.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Registration, login, sessions, passwords"
+    },
+    {
+      "name": "Users",
+      "description": "Own profile and account"
+    },
+    {
+      "name": "Files",
+      "description": "Presigned uploads"
+    },
+    {
+      "name": "Categories",
+      "description": "Public category tree"
+    },
+    {
+      "name": "Masters",
+      "description": "Public master discovery"
+    },
+    {
+      "name": "Master Cabinet",
+      "description": "Master self-service (role: MASTER)"
+    },
+    {
+      "name": "Bookings",
+      "description": "Booking lifecycle"
+    },
+    {
+      "name": "Reviews",
+      "description": "Ratings and reviews"
+    },
+    {
+      "name": "Notifications",
+      "description": "In-app notifications"
+    },
+    {
+      "name": "Chat",
+      "description": "Client ↔ master messaging"
+    },
+    {
+      "name": "Banners",
+      "description": "Public promotional content"
+    },
+    {
+      "name": "Admin",
+      "description": "Administration and moderation (role: ADMIN)"
+    },
+    {
+      "name": "Health",
+      "description": "Liveness and readiness"
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local"
+    },
+    {
+      "url": "https://api.staging.ustogo.app",
+      "description": "Staging"
+    },
+    {
+      "url": "https://api.ustogo.app",
+      "description": "Production"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "access-token": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Access token from /auth/login"
+      }
+    },
+    "schemas": {
+      "LivenessResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Always \"ok\" — the process answered"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 12.482,
+            "description": "Process uptime in seconds"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-07-29T10:15:00.000Z"
+          }
+        },
+        "required": [
+          "status",
+          "uptimeSeconds",
+          "timestamp"
+        ]
+      },
+      "HealthStatus": {
+        "type": "string",
+        "enum": [
+          "up",
+          "down"
+        ]
+      },
+      "HealthCheckDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "example": "up",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HealthStatus"
+              }
+            ]
+          },
+          "latencyMs": {
+            "type": "number",
+            "example": 3,
+            "description": "How long the probe took, in milliseconds"
+          }
+        },
+        "required": [
+          "status",
+          "latencyMs"
+        ]
+      },
+      "ReadinessResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "checks": {
+            "description": "One entry per dependency, keyed by name",
+            "example": {
+              "database": {
+                "status": "up",
+                "latencyMs": 3
+              },
+              "objectStorage": {
+                "status": "up",
+                "latencyMs": 11
+              }
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HealthCheckDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-07-29T10:15:00.000Z"
+          }
+        },
+        "required": [
+          "status",
+          "checks",
+          "timestamp"
+        ]
+      },
+      "ErrorDetailDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "example": "email",
+            "description": "Dot path; array elements use indices"
+          },
+          "constraints": {
+            "example": [
+              "email must be an email"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "field",
+          "constraints"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 409,
+            "description": "Mirrors the HTTP response status"
+          },
+          "code": {
+            "type": "string",
+            "example": "SLOT_NOT_AVAILABLE",
+            "description": "Stable identifier. Clients branch on this, never on `message`."
+          },
+          "message": {
+            "type": "string",
+            "example": "The requested time slot is no longer available.",
+            "description": "English, developer-facing. Clients localise from `code`."
+          },
+          "details": {
+            "description": "Populated for 422; empty otherwise",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetailDto"
+            }
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/bookings",
+            "description": "Path without the query string"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-07-29T10:15:00.000Z",
+            "description": "ISO-8601 UTC"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "3f1a2b8c-9d4e-4f60-8a1b-2c3d4e5f6a7b",
+            "description": "Correlates to logs and to the X-Request-Id header"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "details",
+          "path",
+          "timestamp",
+          "requestId"
+        ]
+      }
+    }
+  }
+}

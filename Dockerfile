@@ -11,9 +11,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
+COPY prisma ./prisma
 COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
-RUN npm run build
+
+# Explicit because install scripts are off: @prisma/client ships as a stub and its
+# postinstall is what normally fills it in from schema.prisma.
+RUN npx prisma generate && npm run build
 
 # ---------- runtime ----------
 FROM node:22-alpine AS runtime
@@ -27,6 +31,11 @@ COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
+# The generated client, not the schema-driven generation step: the runtime image has no
+# prisma CLI, and regenerating at start-up would make boot depend on a devDependency.
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+# Migrations run as a separate deploy step (DEPLOYMENT.md §5) and need the schema.
+COPY prisma ./prisma
 
 USER app
 EXPOSE 3000

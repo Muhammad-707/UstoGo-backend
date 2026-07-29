@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable, type NestMiddleware } from '@nestjs/common';
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
+
+import type { AppRequest } from '../types/app-request.type';
 
 export const REQUEST_ID_HEADER = 'X-Request-Id';
 
@@ -33,7 +35,7 @@ export const resolveRequestId = (inbound: string | undefined): string =>
  */
 @Injectable()
 export class RequestIdMiddleware implements NestMiddleware {
-  use(request: Request, response: Response, next: NextFunction): void {
+  use(request: AppRequest, response: Response, next: NextFunction): void {
     const requestId = request.requestId ?? resolveRequestId(request.header(REQUEST_ID_HEADER));
 
     request.requestId = requestId;

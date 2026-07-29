@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { CommonModule } from './common/common.module';
 import { ConfigModule } from './config/config.module';
+import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { LoggerModule } from './shared/logger/logger.module';
 
@@ -18,6 +19,6 @@ import { LoggerModule } from './shared/logger/logger.module';
  * `requestId: "unknown"` — breaking the one thing that field exists for.
  */
 @Module({
-  imports: [ConfigModule, CommonModule, LoggerModule, PrismaModule],
+  imports: [ConfigModule, CommonModule, LoggerModule, PrismaModule, HealthModule],
 })
 export class AppModule {}

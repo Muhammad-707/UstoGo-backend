@@ -1,6 +1,7 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
 
 import { RequestIdMiddleware, resolveRequestId } from '../middleware/request-id.middleware';
+import type { AppRequest } from '../types/app-request.type';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -37,14 +38,14 @@ describe('resolveRequestId', () => {
 
 describe('RequestIdMiddleware', () => {
   const run = (
-    request: Partial<Request> & { headers?: Record<string, string> },
-  ): { request: Request; setHeader: jest.Mock; next: jest.Mock } => {
+    request: Partial<AppRequest> & { headers?: Record<string, string> },
+  ): { request: AppRequest; setHeader: jest.Mock; next: jest.Mock } => {
     const setHeader = jest.fn();
     const next = jest.fn();
     const req = {
       header: (name: string) => request.headers?.[name.toLowerCase()],
       ...request,
-    } as unknown as Request;
+    } as unknown as AppRequest;
 
     new RequestIdMiddleware().use(req, { setHeader } as unknown as Response, next as NextFunction);
 

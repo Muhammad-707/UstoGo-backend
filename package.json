@@ -20,6 +20,7 @@
     "prisma:migrate:reset": "prisma migrate reset",
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
+    "swagger:export": "ts-node -r tsconfig-paths/register -P tsconfig.json src/bootstrap/export-openapi.ts",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",

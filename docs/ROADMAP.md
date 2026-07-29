@@ -28,8 +28,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ Initial Prisma schema and migration (identity, sessions, cities)
 - ✅ `CommonModule`: validation pipe, exception filter, serialisation, request id, decorators
 - ✅ Structured logging (Pino) with redaction
-- ⬜ `HealthModule`: `/health`, `/health/ready`
-- ⬜ Swagger bootstrap with tags and bearer auth
+- ✅ `HealthModule`: `/health`, `/health/ready`
+- ✅ Swagger bootstrap with tags and bearer auth
 - ⬜ **F-01 Auth**: register (client/master), login, refresh with rotation and reuse detection, logout, logout-all, forgot/reset password, change password
 - ⬜ **F-02 Users**: `/users/me` read and update, deactivate, cities
 - ⬜ **F-13 Files**: presign, confirm, S3/MinIO provider, cleanup job

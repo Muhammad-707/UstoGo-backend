@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-29
 **Current phase:** Phase 1 — Platform Foundation
 **Version:** 0.1.0 (in development)
-**Overall progress:** ▓▓▓░░░░░░░ 25% (platform plumbing complete through the common layer)
+**Overall progress:** ▓▓▓░░░░░░░ 29% (platform plumbing complete; the API is observable and documented)
 
 ---
 
@@ -23,12 +23,11 @@
 | CI/CD               | ⬜ Not started                                                    |
 | Deployment          | ⬜ Not started                                                    |
 
-The application boots, connects to PostgreSQL and serves HTTP on `http://localhost:3000/api/v1`, but exposes **no business routes yet** — the first controller arrives with `HealthModule` in §1.6. Every request already passes through the correlation middleware, the validation pipe, the timeout and logging interceptors and the global exception filter, so an unknown path returns the documented error envelope rather than a framework default. `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` are green.
+The application boots, connects to PostgreSQL, serves `/health` and `/health/ready`, and publishes Swagger at `/api/docs`. Every request passes through the correlation middleware, the validation pipe, the timeout and logging interceptors and the global exception filter, so an unknown path returns the documented error envelope rather than a framework default. `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` are green.
 
-Two known gaps, neither a blocker:
+No **business** routes exist yet — the first is `POST /auth/register/client` in §1.7.
 
-- The `Dockerfile` `HEALTHCHECK` probes `/health`, so a running container reports **unhealthy** until §1.6. The directive matches the contract in `DEPLOYMENT.md` §4 and is left in place rather than removed and re-added.
-- MinIO, Redis and Mailpit are validated at boot but nothing connects to them yet; each is wired by the module that consumes it (§1.9 storage, throttling in §1.7, mail with password reset).
+One known gap, not a blocker: Redis and Mailpit are validated at boot but nothing connects to them yet. Each is wired by the module that consumes it — throttling in §1.7, mail with password reset. The object store is now probed for reachability by readiness, though a credentialed check arrives with `StorageProvider` in §1.9.
 
 ---
 
@@ -37,7 +36,7 @@ Two known gaps, neither a blocker:
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓░░░░░ 45%  |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓░░░░ 55%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |

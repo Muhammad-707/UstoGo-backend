@@ -6,11 +6,12 @@ import {
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 
 import { mapPrismaError } from './prisma-exception.mapper';
 import { ERROR_CODE, type ErrorCode } from '../constants/error-codes.constant';
 import { AppException, type ErrorDetail } from '../exceptions/app.exception';
+import type { AppRequest } from '../types/app-request.type';
 
 type ErrorBody = {
   // Typed as the enum rather than a plain number so that the comparisons in `log`
@@ -61,7 +62,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
-    const request = http.getRequest<Request>();
+    const request = http.getRequest<AppRequest>();
     const response = http.getResponse<Response>();
 
     const body = this.toBody(exception, request);
@@ -71,7 +72,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     response.status(body.statusCode).json(body);
   }
 
-  private toBody(exception: unknown, request: Request): ErrorBody {
+  private toBody(exception: unknown, request: AppRequest): ErrorBody {
     const { statusCode, code, message, details } = this.classify(exception);
 
     // Key order follows the envelope in ERROR_HANDLING.md §1 so that a response read
@@ -125,7 +126,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   /** Logging policy from ERROR_HANDLING.md §6. The request body is never included. */
-  private log(exception: unknown, request: Request, body: ErrorBody): void {
+  private log(exception: unknown, request: AppRequest, body: ErrorBody): void {
     const { user } = request;
     const context = [
       `${request.method} ${request.path}`,

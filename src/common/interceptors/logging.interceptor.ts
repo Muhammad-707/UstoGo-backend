@@ -5,9 +5,11 @@ import {
   type ExecutionContext,
   type NestInterceptor,
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import type { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+
+import type { AppRequest } from '../types/app-request.type';
 
 /**
  * One line per completed request, carrying the correlation id.
@@ -26,7 +28,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
-    const request = http.getRequest<Request>();
+    const request = http.getRequest<AppRequest>();
     const startedAt = Date.now();
 
     return next.handle().pipe(

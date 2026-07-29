@@ -14,14 +14,14 @@ develop     ────●────●───●────●───  
 feat/…      ──────●─        ●              short-lived feature branches
 ```
 
-| Branch | Purpose | Protection |
-| --- | --- | --- |
-| `main` | Production | No direct pushes; PR + green CI + 1 approval; tagged on release |
-| `develop` | Integration; auto-deploys to staging | No direct pushes; PR + green CI |
-| `feat/<desc>` | One feature | Branched from `develop` |
-| `fix/<desc>` | Bug fix | |
-| `hotfix/<desc>` | Urgent production fix | Branched from `main`, merged to both |
-| `docs/<desc>` | Documentation only | |
+| Branch          | Purpose                              | Protection                                                      |
+| --------------- | ------------------------------------ | --------------------------------------------------------------- |
+| `main`          | Production                           | No direct pushes; PR + green CI + 1 approval; tagged on release |
+| `develop`       | Integration; auto-deploys to staging | No direct pushes; PR + green CI                                 |
+| `feat/<desc>`   | One feature                          | Branched from `develop`                                         |
+| `fix/<desc>`    | Bug fix                              |                                                                 |
+| `hotfix/<desc>` | Urgent production fix                | Branched from `main`, merged to both                            |
+| `docs/<desc>`   | Documentation only                   |                                                                 |
 
 Feature branches live **days, not weeks**. A long-lived branch is a merge conflict accruing interest.
 
@@ -51,20 +51,24 @@ Domain before service before transport is deliberate. Writing the controller fir
 ## 3. Daily Cycle
 
 **Start of session**
+
 ```bash
 git checkout develop && git pull
 npm ci
 docker compose up -d
 npm run prisma:migrate:dev
 ```
+
 Read `STATUS.md` and `TODO.md`. Pick the first unchecked item. Do not start something else because it looks more interesting.
 
 **During**
+
 - Small commits, each one leaving the tree green
 - Run the relevant tests continuously (`npm run test:watch`)
 - Anything out of scope goes to `BACKLOG.md`, not into the branch
 
 **End of session**
+
 ```bash
 npm run lint && npm run typecheck && npm test
 # update STATUS.md / TODO.md / CHANGELOG.md
@@ -107,23 +111,30 @@ The body earns its place by answering the question a future reader will actually
 ## 5. Pull Requests
 
 **Template**
+
 ```markdown
 ## What
+
 One or two sentences.
 
 ## Why
+
 The requirement (SRS-xxx / FR-xxx / BR-xx) this satisfies.
 
 ## How
+
 Notable design decisions and anything a reviewer should look at closely.
 
 ## Testing
+
 What was added; how the failure paths are covered.
 
 ## Documentation
+
 Which documents changed.
 
 ## Checklist
+
 - [ ] Matches the documented requirement
 - [ ] Validation on every input
 - [ ] Authorization enforced and tested (six-case matrix)
@@ -198,6 +209,22 @@ npm run prisma:migrate:dev -- --name add_booking_overlap_exclusion
 ```
 
 Checklist: indexes for every new query pattern · soft delete on business entities · FK delete behaviour explicit · expand/contract for anything destructive · reviewed generated SQL.
+
+---
+
+## 9a. Dependencies
+
+Adding a runtime dependency requires a stated rationale and a clean audit (`PROJECT_RULES.md` §7).
+
+**Regenerate `package-lock.json` inside Linux, not on your workstation:**
+
+```bash
+docker run --rm -v "$PWD:/app" -w /app node:22-alpine npm install --package-lock-only
+```
+
+npm records platform-specific optional dependencies, and it only records the ones it resolves on the platform it runs on. A lock generated on Windows or macOS can omit packages that the Linux image needs, and the failure surfaces as `npm ci` refusing the lock during `docker build` — not on the machine that wrote it. This has already happened once: the wasm32-wasi optional subtree of `unrs-resolver`, reached through `eslint-import-resolver-typescript`, needs hoisted `@emnapi` packages that a Windows resolve never writes down.
+
+`npm ci` validates the **entire** lock before installing anything, so `--omit=dev` does not sidestep an inconsistency introduced by a development dependency.
 
 ---
 

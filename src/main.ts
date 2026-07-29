@@ -3,9 +3,18 @@ import { NestFactory } from '@nestjs/core';
 import { Logger as PinoLogger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
+import { setupSwagger, SWAGGER_PATH } from './bootstrap/swagger';
 import { AppConfigService } from './config/app-config.service';
 import { InvalidEnvironmentException } from './config/invalid-environment.exception';
 import { loadEnv } from './config/load-env';
+
+/**
+ * Operational probes stay off the versioned prefix. The container HEALTHCHECK
+ * (DEPLOYMENT.md §4) and the external uptime probe (§8) both target `/health`, and a
+ * probe URL that moves when the API is versioned breaks every deployment that
+ * hard-codes it.
+ */
+const UNVERSIONED_ROUTES = ['health', 'health/ready'];
 
 async function bootstrap(): Promise<void> {
   // Validated before Nest is constructed, deliberately. Left to ConfigModule's provider
@@ -22,7 +31,11 @@ async function bootstrap(): Promise<void> {
 
   const { app: appConfig } = app.get(AppConfigService);
 
-  app.setGlobalPrefix(appConfig.apiPrefix);
+  app.setGlobalPrefix(appConfig.apiPrefix, { exclude: UNVERSIONED_ROUTES });
+
+  if (appConfig.swaggerEnabled) {
+    setupSwagger(app);
+  }
 
   // Readiness must be able to fail before the process stops answering (DEPLOYMENT.md §6).
   app.enableShutdownHooks();
@@ -30,7 +43,13 @@ async function bootstrap(): Promise<void> {
   await app.listen(appConfig.port);
 
   Logger.log(
-    `Listening on http://localhost:${appConfig.port}/${appConfig.apiPrefix} [${appConfig.nodeEnv}]`,
+    `Listening on http://localhost:${String(appConfig.port)}/${appConfig.apiPrefix} [${appConfig.nodeEnv}]`,
+    'Bootstrap',
+  );
+  Logger.log(
+    appConfig.swaggerEnabled
+      ? `API docs at http://localhost:${String(appConfig.port)}/${SWAGGER_PATH}`
+      : 'API docs disabled (SWAGGER_ENABLED=false)',
     'Bootstrap',
   );
 }

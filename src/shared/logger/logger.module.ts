@@ -1,8 +1,8 @@
 import { Global, Module, RequestMethod } from '@nestjs/common';
-import type { Request } from 'express';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 
 import { REQUEST_ID_HEADER, resolveRequestId } from '@common/middleware/request-id.middleware';
+import type { AppRequest } from '@common/types/app-request.type';
 import { AppConfigService } from '@config/app-config.service';
 
 /**
@@ -54,16 +54,14 @@ export const REDACTED_PATHS: readonly string[] = [
           // and stashing it on the request also means RequestIdMiddleware finds it
           // already set and reuses it, so both agree on one value per request.
           genReqId: (request: unknown) => {
-            const typed = request as Request;
-            typed.requestId ??= resolveRequestId(
-              typed.headers[REQUEST_ID_HEADER.toLowerCase()] as string | undefined,
-            );
+            const typed = request as AppRequest;
+            typed.requestId ??= resolveRequestId(typed.header(REQUEST_ID_HEADER));
             return typed.requestId;
           },
 
           // Correlates every line with the error envelope and the X-Request-Id header.
           customProps: (request: unknown) => ({
-            requestId: (request as Request).requestId ?? 'unknown',
+            requestId: (request as AppRequest).requestId ?? 'unknown',
           }),
 
           // Structured JSON in every deployed environment — it is machine-parsed there.
@@ -81,7 +79,7 @@ export const REDACTED_PATHS: readonly string[] = [
           // Health probes fire every few seconds and would otherwise dominate the log.
           autoLogging: {
             ignore: (request: unknown) => {
-              return (request as Request).url.startsWith('/health');
+              return (request as AppRequest).url.startsWith('/health');
             },
           },
         },

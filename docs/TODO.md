@@ -56,11 +56,11 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.6 Health & Swagger
 
-- [ ] `/health` liveness
-- [ ] `/health/ready` checking PostgreSQL and object storage
-- [ ] Swagger bootstrap with tags, bearer auth, servers
-- [ ] `npm run swagger:export` writing `openapi.json` without binding a port
-- [ ] `SWAGGER_ENABLED` gate for production
+- [x] `/health` liveness
+- [x] `/health/ready` checking PostgreSQL and object storage
+- [x] Swagger bootstrap with tags, bearer auth, servers
+- [x] `npm run swagger:export` writing `openapi.json` without binding a port
+- [x] `SWAGGER_ENABLED` gate for production
 
 ### 1.7 F-01 Authentication
 
