@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-07-29
 **Current phase:** Phase 2 — Supply Side (Phase 1 complete)
-**Version:** 0.1.0
+**Version:** 0.1.1
 **Overall progress:** ▓▓▓▓░░░░░░ 43% (accounts can be created, read, updated, given an avatar and deactivated)
 
 ---
@@ -20,7 +20,7 @@
 | Business features   | 🟨 F-02 Users and F-13 Files done; catalogue and bookings to come         |
 | Common layer        | ✅ Complete — envelope, validation, correlation, logging                  |
 | Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup           |
-| Tests               | ✅ 420 tests (362 unit + 58 e2e); Testcontainers harness live             |
+| Tests               | ✅ 433 tests (373 unit + 60 e2e); Testcontainers harness live             |
 | Operations CLI      | ✅ `admin:create` — the only path to an administrator                     |
 | CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks |
 | Deployment          | ⬜ Not started                                                            |
@@ -41,10 +41,11 @@ One defect was found and fixed during review rather than after: `GET /files/:id/
 
 **Auth now meets the mandated 100% branch coverage** — every file in `src/modules/auth/**`, plus `jwt-auth.guard` and `roles.guard`, sits at 100% lines/branches/functions/statements. Closed by two additions: the e2e reset-password and change-password journeys (§1.10) exercised the controller lines only an HTTP round trip reaches, and two new unit tests exercise the `registerClient`/`registerMaster` optional-field branches (`cityId`, `bio`, `yearsOfExperience`). One unrelated stub surfaced and was removed in the same pass: `AUTH_EVENT.REFRESH_TOKEN_REUSED` and `RefreshTokenReusedEvent` were declared but never emitted by anything — `token.service` only logs the reuse — so covering them would have meant testing dead code rather than closing a real gap. `PASSWORD_RESET` was unused for the same reason. Both are easy to re-add in Phase 4 with `NotificationsModule`, which is what actually needs them.
 
-Two gaps remain, neither a blocker:
+**Rate limiting closes B-77.** `RedisService` owns one eager ioredis connection; `RedisThrottlerStorage` replaces the in-memory default so limits are global across instances rather than per-process, and `IdentifierThrottlerGuard` replaces the base `ThrottlerGuard` to key login on IP+email, forgot-password on email and refresh on the token's owner (resolved via the same indexed `tokenHash` lookup `TokenService.rotate` performs) — exactly `AUTHENTICATION.md` §9. A Redis outage fails the storage open rather than closed: `RedisThrottlerStorage.increment` logs and allows the request rather than making every throttled endpoint depend on Redis being reachable. D-5 (managed vs. self-hosted Redis) no longer blocks anything — the code only takes a `REDIS_URL` — but remains open for the production deployment decision itself.
 
-- **Rate limits are keyed by IP only, and stored in memory.** `AUTHENTICATION.md` §9 keys login on IP+email, forgot-password on email and refresh on userId, with Redis storage so limits are global rather than per-instance. Blocked on open decision **D-5**; recorded as B-77.
-- Redis is validated at boot but nothing connects to it yet. Readiness probes the object store for reachability only — `StorageProvider` now holds credentials, but a credentialed readiness check would turn a permissions problem into a restart loop, so it is left as a startup concern.
+One gap remains, not a blocker:
+
+- Redis's own reachability is not part of `/health/ready`. Readiness probes PostgreSQL and the object store only; a credentialed check turning a permissions problem into a restart loop is why storage readiness was deferred earlier, and the same reasoning applies here now that something actually depends on Redis being up.
 
 ---
 
@@ -129,7 +130,7 @@ Two gaps remain, neither a blocker:
 
 | Metric                               | Target              | Current                                                        |
 | ------------------------------------ | ------------------- | -------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 420 tests green (362 unit + 58 e2e); `test:cov` thresholds met |
+| Line coverage                        | ≥ 80%               | 433 tests green (373 unit + 60 e2e); `test:cov` thresholds met |
 | Service/guard coverage               | ≥ 90%               | Met                                                            |
 | Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                |
 | Endpoints implemented                | ~95                 | 19                                                             |
@@ -148,13 +149,13 @@ None. Phase 2 can begin immediately.
 
 ## 7. Open Decisions
 
-| #   | Question                                                                     | Owner     | Needed by                    |
-| --- | ---------------------------------------------------------------------------- | --------- | ---------------------------- |
-| D-1 | Deployment target (managed container platform vs. VPS + Docker)              | Tech lead | Phase 1 CI setup             |
-| D-2 | Transactional email provider                                                 | Tech lead | Phase 1 (`MailModule`)       |
-| D-3 | Deployment currency and ISO code                                             | Product   | Phase 2 (`Service.currency`) |
-| D-4 | Initial city list and category taxonomy content                              | Product   | Phase 2 seed                 |
-| D-5 | Redis: managed instance vs. self-hosted (needed for cluster-wide throttling) | Tech lead | Phase 1                      |
+| #   | Question                                                        | Owner     | Needed by                    |
+| --- | --------------------------------------------------------------- | --------- | ---------------------------- |
+| D-1 | Deployment target (managed container platform vs. VPS + Docker) | Tech lead | Phase 1 CI setup             |
+| D-2 | Transactional email provider                                    | Tech lead | Phase 1 (`MailModule`)       |
+| D-3 | Deployment currency and ISO code                                | Product   | Phase 2 (`Service.currency`) |
+| D-4 | Initial city list and category taxonomy content                 | Product   | Phase 2 seed                 |
+| D-5 | Redis: managed instance vs. self-hosted                         | Tech lead | Production deployment        |
 
 None of these block starting Phase 1; each has a documented default (`docker-compose` local equivalents) that carries the work forward.
 

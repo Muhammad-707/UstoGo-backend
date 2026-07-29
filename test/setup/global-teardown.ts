@@ -14,5 +14,5 @@ export default async function globalTeardown(): Promise<void> {
     return;
   }
 
-  await Promise.all([containers.minio.stop(), containers.postgres.stop()]);
+  await Promise.all([containers.minio.stop(), containers.postgres.stop(), containers.redis.stop()]);
 }

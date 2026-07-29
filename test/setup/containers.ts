@@ -3,6 +3,7 @@ import type { StartedTestContainer } from 'testcontainers';
 export type StartedContainers = {
   readonly postgres: StartedTestContainer;
   readonly minio: StartedTestContainer;
+  readonly redis: StartedTestContainer;
 };
 
 /**

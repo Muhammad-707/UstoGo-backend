@@ -40,10 +40,19 @@ export default async function globalSetup(): Promise<void> {
     .withWaitStrategy(Wait.forHttp('/minio/health/live', 9000))
     .start();
 
+  // Rate limiting is Redis-backed (AUTHENTICATION.md §9): `RedisService` connects
+  // eagerly at boot, so every e2e app — not only the throttling suite — needs a
+  // reachable Redis, the same way every suite already needs a reachable Postgres.
+  const redis = await new GenericContainer('redis:7-alpine')
+    .withExposedPorts(6379)
+    .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
+    .start();
+
   const databaseUrl = postgres.getConnectionUri();
   const s3Endpoint = `http://${minio.getHost()}:${String(minio.getMappedPort(9000))}`;
+  const redisUrl = `redis://${redis.getHost()}:${String(redis.getMappedPort(6379))}`;
 
-  registerContainers({ postgres, minio });
+  registerContainers({ postgres, minio, redis });
 
   // `migrate deploy`, not `db push`: the migrations are the artefact that will run
   // against production, so a test suite that bypassed them would leave the one thing
@@ -84,6 +93,7 @@ export default async function globalSetup(): Promise<void> {
     S3_BUCKET: BUCKET,
     S3_ACCESS_KEY_ID: MINIO_USER,
     S3_SECRET_ACCESS_KEY: MINIO_PASSWORD,
+    REDIS_URL: redisUrl,
     // Swagger and the scheduler are boot-time weight with no bearing on any assertion,
     // and a cron firing mid-suite would delete rows a test is still using.
     SWAGGER_ENABLED: 'false',

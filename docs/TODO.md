@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
 **Last updated:** 2026-07-29
-**Active phase:** Phase 2 — Supply Side (Phase 1 complete, tagged `v0.1.0`)
+**Active phase:** Phase 2 — Supply Side (Phase 1 complete, tagged `v0.1.1`)
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -75,7 +75,7 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 - [x] `JwtStrategy` re-reading user state from the database
 - [x] `JwtAuthGuard` registered globally, `RolesGuard`
 - [x] Throttling: the `API.md` §13 limits, keyed by IP
-- [ ] Throttling: identifier-scoped keys (IP+email, email, userId) and Redis storage — blocked on open decision **D-5**
+- [x] Throttling: identifier-scoped keys (IP+email, email, userId) and Redis storage — closes **B-77**
 - [x] **100% branch coverage** — every file in `src/modules/auth/**`, `jwt-auth.guard` and `roles.guard` at 100% lines/branches/functions/statements. Closed by the e2e reset-password and change-password journeys (§1.10) and two `registerClient`/`registerMaster` optional-field unit tests.
 
 ### 1.8 F-02 Users

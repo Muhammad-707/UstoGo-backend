@@ -11,6 +11,16 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-07-29
+
+### Added
+- **Closes B-77: Redis-backed, identifier-scoped rate limiting** (`AUTHENTICATION.md` §9). `RedisService` owns one eager `ioredis` connection; `RedisThrottlerStorage` replaces the default in-memory `ThrottlerStorage` with a Lua script that mirrors its hit-counting and block-then-reset semantics exactly, so limits are global across instances rather than per-process. A Redis outage fails the storage **open**, not closed — logged, not silent — so a dependency hiccup degrades rate limiting instead of taking every throttled endpoint down with it.
+- `IdentifierThrottlerGuard` replaces the base `ThrottlerGuard` as the global guard and keys three routes as documented rather than by IP alone: login on IP+email, forgot-password on email, refresh on the token's owner. The owner is resolved through the same indexed `tokenHash` lookup `TokenService.rotate` performs a moment later — the refresh token is opaque by design, so nothing about it reveals the account without that query, and paying for it twice is what lets a family's devices share one 30-per-hour budget instead of getting one each. Everything else — registration, reset-password, and every non-auth route — keeps the base class's IP tracker via a `@ThrottleIdentifier()` decorator that defaults to none.
+- The e2e Testcontainers harness now starts Redis alongside Postgres and MinIO, since `RedisService` connects at boot for every suite, not only the throttling one. Two new e2e cases prove the identifier scoping itself: five failed logins against one address do not touch another from the same IP, and the same for three `forgot-password` requests against one email.
+
+### Removed
+- **B-77** from `BACKLOG.md` — implemented. **D-5** (Redis: managed vs. self-hosted) no longer blocks anything; the code only takes a `REDIS_URL`, so it remains open purely as a production deployment decision.
+
 ## [0.1.0] — 2026-07-29
 
 Phase 1 — Platform Foundation. A running, secured, observable skeleton: a client or a master can register, log in, rotate tokens and manage their own profile; auth sits at 100% branch coverage; CI is green.

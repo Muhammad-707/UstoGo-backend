@@ -2,22 +2,26 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { CommonModule } from './common/common.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 import { AppConfigService } from './config/app-config.service';
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GLOBAL_THROTTLE_NAME } from './modules/auth/constants/throttle.constants';
+import { IdentifierThrottlerGuard } from './modules/auth/guards/identifier-throttler.guard';
 import { FilesModule } from './modules/files/files.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { MailModule } from './shared/mail/mail.module';
+import { RedisModule } from './shared/redis/redis.module';
+import { RedisService } from './shared/redis/redis.service';
 import { StorageModule } from './shared/storage/storage.module';
 
 /**
@@ -39,12 +43,13 @@ import { StorageModule } from './shared/storage/storage.module';
     LoggerModule,
     PrismaModule,
     MailModule,
+    RedisModule,
     StorageModule,
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
-      inject: [AppConfigService],
-      useFactory: (config: AppConfigService) => ({
+      inject: [AppConfigService, RedisService],
+      useFactory: (config: AppConfigService, redis: RedisService) => ({
         // Exactly one throttler, overridden per route by `@Throttle({ default: … })`.
         //
         // Declaring one named throttler per endpoint does not work: every declared
@@ -58,6 +63,9 @@ import { StorageModule } from './shared/storage/storage.module';
             limit: config.throttle.limit,
           },
         ],
+        // Redis-backed so the limit is global across every instance rather than
+        // per-process (AUTHENTICATION.md §9).
+        storage: new RedisThrottlerStorage(redis),
       }),
     }),
     HealthModule,
@@ -69,7 +77,7 @@ import { StorageModule } from './shared/storage/storage.module';
   providers: [
     // Order matters: these run in registration order, which is the stack documented in
     // AUTHORIZATION.md §2 — rate limit, then authenticate, then check the role.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: IdentifierThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

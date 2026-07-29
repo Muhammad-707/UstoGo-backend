@@ -34,11 +34,11 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ **F-02 Users**: `/users/me` read and update, avatar, deactivate, cities
 - ✅ **F-13 Files**: presign, confirm, S3/MinIO provider, owner-scoped read URLs, cleanup job
 - ✅ Admin bootstrap CLI (`admin:create`)
-- 🟨 Rate limiting (Throttler; Redis storage deferred to B-77)
+- ✅ Rate limiting (Throttler; Redis-backed, identifier-scoped per `AUTHENTICATION.md` §9)
 - ✅ CI pipeline: lint, typecheck, test, audit, secret scan
 - ✅ Test harness: Testcontainers, auth helpers, authz matrix helper
 
-**Exit criteria:** a client and a master can register, log in, rotate tokens and manage their own profile; ✅ auth has 100% branch coverage; ✅ CI is green. **Met — tagged `v0.1.0`.** Rate-limit storage stays per-instance in memory rather than Redis-backed, which is not an exit criterion; deferred as **B-77**, blocked on open decision **D-5**.
+**Exit criteria:** a client and a master can register, log in, rotate tokens and manage their own profile; ✅ auth has 100% branch coverage; ✅ CI is green. **Met — tagged `v0.1.0`.**
 
 ---
 

@@ -23,6 +23,7 @@ import type { AppRequest } from '@common/types/app-request.type';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
 import { THROTTLE } from '../constants/throttle.constants';
+import { ThrottleIdentifier } from '../decorators/throttle-identifier.decorator';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -103,6 +104,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: THROTTLE.LOGIN })
+  @ThrottleIdentifier('ip-email')
   @ApiOperation({
     summary: 'Log in',
     description:
@@ -129,6 +131,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: THROTTLE.REFRESH })
+  @ThrottleIdentifier('refresh-user')
   @ApiOperation({
     summary: 'Rotate the token pair',
     description:
@@ -181,6 +184,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: THROTTLE.FORGOT_PASSWORD })
+  @ThrottleIdentifier('email')
   @ApiOperation({
     summary: 'Request a password reset link',
     description:
