@@ -20,7 +20,8 @@
 | Business features   | 🟨 F-02 Users and F-13 Files done; catalogue and bookings to come   |
 | Common layer        | ✅ Complete — envelope, validation, correlation, logging            |
 | Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup     |
-| Tests               | 🟨 341 unit tests; no integration or e2e harness yet                |
+| Tests               | 🟨 359 unit tests; no integration or e2e harness yet                |
+| Operations CLI      | ✅ `admin:create` — the only path to an administrator               |
 | CI/CD               | ⬜ Not started                                                      |
 | Deployment          | ⬜ Not started                                                      |
 
@@ -31,6 +32,8 @@ All nine `/auth` endpoints are live and were driven end to end against the runni
 F-13 Files closes the last business feature in Phase 1. Uploads go straight from the client to the object store — a binary never enters the API process — and a file is unusable until the server has HEADed it and read its real content type and size, because the declared type and the extension are both attacker-controlled. `PATCH /users/me/avatar` therefore attaches verified bytes rather than accepting any, which is what completes FR-3.3 and with it F-02.
 
 One defect was found and fixed during review rather than after: `GET /files/:id/url` originally signed a read URL for any confirmed id, so any authenticated user could have walked ids and read another master's certificates. It is now scoped to the uploader and returns 404 for a foreign file. Files that are meant to be seen by others are signed by the module owning that projection, which has already authorised the caller.
+
+`npm run cli -- admin:create` closes the gap left by there being no admin registration endpoint and no seeded administrator. The password is entered interactively, never accepted as an argument, and asked for twice. Driven against the running stack: the created account logs in, `GET /users/me` serves an administrator that has no role profile, and every rejection path — duplicate address, mismatched entries, weak password, malformed email, truncated input — exits non-zero with a message rather than a stack trace.
 
 Three gaps, none a blocker:
 
@@ -45,7 +48,7 @@ Three gaps, none a blocker:
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓▓▓▓░ 85%  |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓▓▓▓░ 88%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
@@ -121,7 +124,7 @@ Three gaps, none a blocker:
 
 | Metric                               | Target              | Current                           |
 | ------------------------------------ | ------------------- | --------------------------------- |
-| Line coverage                        | ≥ 80%               | 341 unit tests green              |
+| Line coverage                        | ≥ 80%               | 359 unit tests green              |
 | Service/guard coverage               | ≥ 90%               | Met outside the gaps listed in §1 |
 | Auth & state machine branch coverage | 100%                | Not met — see §1                  |
 | Endpoints implemented                | ~95                 | 19                                |
@@ -154,11 +157,10 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-1. `npm run cli -- admin:create` with an interactive password prompt — `TODO.md` §1.10. No admin registration endpoint exists by design, so this command is currently the only way to create one.
-2. Testcontainers harness (`test-app.factory.ts`, `auth.helper.ts`, `authz-matrix.helper.ts`) and the first e2e suites — §1.10. This is what closes the auth controller's 0% and makes the six-case authorization matrix enforceable rather than aspirational.
-3. GitHub Actions pipeline and coverage thresholds in `jest.config.ts` — §1.10.
-4. Close the remaining auth branches to the mandated 100% — §1.7.
-5. Phase 1 exit review and tag `v0.1.0` — §1.11.
+1. Testcontainers harness (`test-app.factory.ts`, `auth.helper.ts`, `authz-matrix.helper.ts`) and the first e2e suites — §1.10. This is what closes the auth controller's 0% and makes the six-case authorization matrix enforceable rather than aspirational.
+2. GitHub Actions pipeline and coverage thresholds in `jest.config.ts` — §1.10.
+3. Close the remaining auth branches to the mandated 100% — §1.7.
+4. Phase 1 exit review and tag `v0.1.0` — §1.11.
 
 Detailed task list: `TODO.md`.
 

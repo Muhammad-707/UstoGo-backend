@@ -33,7 +33,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done
 - ✅ **F-01 Auth**: register (client/master), login, refresh with rotation and reuse detection, logout, logout-all, forgot/reset password, change password
 - ✅ **F-02 Users**: `/users/me` read and update, deactivate, cities (avatar lands with F-13)
 - ⬜ **F-13 Files**: presign, confirm, S3/MinIO provider, cleanup job
-- ⬜ Admin bootstrap CLI (`admin:create`)
+- ✅ Admin bootstrap CLI (`admin:create`)
 - 🟨 Rate limiting (Throttler; Redis storage deferred to B-77)
 - ⬜ CI pipeline: lint, typecheck, test, audit, secret scan
 - ⬜ Test harness: Testcontainers, auth helpers, authz matrix helper

@@ -27,9 +27,12 @@ cp .env.example .env          # local defaults work as-is
 npm ci
 docker compose up -d          # postgres · minio · redis · mailpit
 npm run prisma:migrate:dev
-npm run prisma:seed           # cities, categories, a dev admin
+npm run prisma:seed           # reference data only: cities, categories
+npm run cli -- admin:create --email=you@example.com   # prompts for the password
 npm run start:dev
 ```
+
+The administrator is created by the CLI, not by the seed. A seeded admin with a known password is the admin registration path `PROJECT_RULES.md` forbids, wearing a different hat — and the password that reaches a shared environment is whichever one was committed. `admin:create` refuses `--password` for the same reason: an argv value lands in `ps`, in shell history and in CI logs.
 
 | Service       | URL                            |
 | ------------- | ------------------------------ |

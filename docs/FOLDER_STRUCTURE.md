@@ -124,7 +124,10 @@ src/
 │
 ├── health/
 └── cli/
+    ├── main.cli.ts             # entry point: argv parsing, exit codes
     ├── cli.module.ts
+    ├── cli.exceptions.ts       # CommandFailedException — operator error, not a defect
+    ├── prompt.ts               # stdin behind an interface, so commands test without a TTY
     └── commands/
         └── create-admin.command.ts
 ```
