@@ -9,6 +9,7 @@ export const SOFT_DELETABLE_MODELS: ReadonlySet<string> = new Set([
   'ClientProfile',
   'MasterProfile',
   'File',
+  'Category',
 ]);
 
 /**

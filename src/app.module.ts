@@ -16,6 +16,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GLOBAL_THROTTLE_NAME } from './modules/auth/constants/throttle.constants';
 import { IdentifierThrottlerGuard } from './modules/auth/guards/identifier-throttler.guard';
+import { CategoriesModule } from './modules/categories/categories.module';
 import { FilesModule } from './modules/files/files.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -74,6 +75,7 @@ import { StorageModule } from './shared/storage/storage.module';
     UsersModule,
     FilesModule,
     AuditModule,
+    CategoriesModule,
     JobsModule,
   ],
   providers: [

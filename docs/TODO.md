@@ -119,7 +119,7 @@ audit has to exist before the first privileged mutation it is meant to cover, or
 would ship its admin routes unaudited and need a retrofit.
 
 - [x] F-16 Audit: `AuditLog` model, `AuditInterceptor` with redaction, `GET /admin/audit-logs`
-- [ ] F-05 Categories: model, tree endpoint, admin CRUD, depth/leaf rules, caching, seed taxonomy
+- [x] F-05 Categories: model, tree endpoint, admin CRUD, depth/leaf rules, caching
 - [ ] F-03 Masters: profile fields, category attachment, certificates, submit/resubmit, public projection
 - [ ] F-04 Moderation: approve/reject/activate/deactivate with readiness checks, notifications, audit
 - [ ] F-06 Services: CRUD, leaf-category and pricing rules, soft delete

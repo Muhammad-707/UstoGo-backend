@@ -149,15 +149,16 @@ Deactivation hides the master from search and blocks new bookings; existing `ACC
 
 ### FR-5.1 Category tree
 
-`GET /api/v1/categories` — public, returns the active tree with `id`, `slug`, `name`, `iconKey`, `children`, `depth`, `isLeaf`. Cached for 5 minutes.
+`GET /api/v1/categories` — public, returns the active tree with `id`, `slug`, `name`, `iconFileId`, `children`, `depth`, `isLeaf`. Cached for 5 minutes (in-process; Redis-backed sharing across instances is B-60). `iconFileId` rather than the `iconKey` this originally specified — `UserResponseDto.avatarFileId` is the existing precedent for exposing the id and leaving URL resolution to a separate concern, and `iconKey` would have meant inventing a public-file-URL mechanism that exists nowhere else in the codebase.
 
 ### FR-5.2 Category administration
 
 `POST|PATCH|DELETE /api/v1/admin/categories`.
 
-- Creating a child of a depth-3 category → `422 CATEGORY_DEPTH_EXCEEDED`.
-- Deleting a category that has active services or children → `409 CATEGORY_IN_USE`; deactivation is the supported path.
-- Slug is unique and immutable after creation.
+- Creating a child of a depth-3 category, or reparenting one so a descendant would exceed depth 3 → `422 CATEGORY_DEPTH_EXCEEDED`.
+- Reparenting a category under itself or one of its own descendants → `422 CATEGORY_INVALID_PARENT`. Reparenting recomputes `depth` for the whole subtree in one transaction (`DATABASE.md` §5.1).
+- Deleting a category that has children → `409 CATEGORY_IN_USE`; deactivation is the supported path. The equivalent check against active services lands with F-06, which is what creates the first service a category could reference.
+- Slug is unique and immutable after creation — accepted only at creation, absent from the update DTO entirely.
 
 ### FR-5.3 Service CRUD (master)
 

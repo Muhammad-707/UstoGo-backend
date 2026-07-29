@@ -61,7 +61,7 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 2 — Supply Side         | Audit, categories, masters, moderation, services | 🟨 In progress | ▓░░░░░░░░░ 10%  |
+| 2 — Supply Side         | Audit, categories, masters, moderation, services | 🟨 In progress | ▓▓░░░░░░░░ 20%  |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜             | ░░░░░░░░░░ 0%   |
@@ -78,7 +78,7 @@ No route calls `@Audit()` yet — Categories is what actually needs it, and land
 | F-02 | Users & profiles         | `users`                      | 1     | ✅     |
 | F-13 | File storage             | `files`                      | 1     | ✅     |
 | F-16 | Audit log                | `audit`                      | 2     | ✅     |
-| F-05 | Categories               | `categories`                 | 2     | ⬜     |
+| F-05 | Categories               | `categories`                 | 2     | ✅     |
 | F-03 | Master profile           | `masters`                    | 2     | ⬜     |
 | F-04 | Master moderation        | `admin`                      | 2     | ⬜     |
 | F-06 | Services                 | `services`                   | 2     | ⬜     |

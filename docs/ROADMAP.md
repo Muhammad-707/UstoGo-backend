@@ -50,7 +50,7 @@ Ordered per `FEATURES.md`'s dependency graph, not the order first drafted here: 
 has to exist before the first privileged mutation it is meant to cover.
 
 - ✅ **F-16 Audit**: `AuditLog`, audit interceptor, admin read endpoint
-- ⬜ **F-05 Categories**: public tree, admin CRUD, depth and leaf rules, caching
+- ✅ **F-05 Categories**: public tree, admin CRUD, depth and leaf rules, caching
 - ⬜ **F-03 Masters**: professional profile, category attachment, certificates, submit/resubmit, public projection
 - ⬜ **F-04 Moderation**: approve, reject, activate, deactivate with readiness checks, notifications and audit
 - ⬜ **F-06 Services**: master-scoped CRUD with pricing and duration rules
