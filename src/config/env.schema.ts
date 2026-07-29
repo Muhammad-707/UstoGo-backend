@@ -53,6 +53,12 @@ export const envSchema = z
     JWT_AUDIENCE: z.string().min(1).default('ustogo-clients'),
     BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
     PASSWORD_RESET_TTL: duration('30m'),
+    // Where the emailed reset link points. The API never serves this page — it belongs
+    // to the client application, which posts the token back to /auth/reset-password.
+    PASSWORD_RESET_URL: connectionUrl(
+      ['http:', 'https:'],
+      'must be an http:// or https:// URL',
+    ).default('http://localhost:3000/reset-password'),
 
     // ---- Object storage ----
     S3_ENDPOINT: connectionUrl(['http:', 'https:'], 'must be an http:// or https:// URL'),

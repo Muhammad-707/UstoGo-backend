@@ -64,18 +64,19 @@ Working agreement: tasks are executed top to bottom. A task is checked only when
 
 ### 1.7 F-01 Authentication
 
-- [ ] `User`, `RefreshToken`, `PasswordResetToken` models + migration
-- [ ] `POST /auth/register/client`
-- [ ] `POST /auth/register/master` (creates `MasterProfile` as `PENDING`)
-- [ ] `POST /auth/login` with uniform failure + dummy bcrypt comparison
-- [ ] `POST /auth/refresh` with rotation, family tracking and reuse detection
-- [ ] `POST /auth/logout`, `POST /auth/logout-all`
-- [ ] `POST /auth/forgot-password` (always 202), `POST /auth/reset-password`
-- [ ] `PATCH /auth/password` revoking other sessions
-- [ ] `JwtStrategy` re-reading user state from the database
-- [ ] `JwtAuthGuard` registered globally, `RolesGuard`
-- [ ] Throttling per `API.md` §13
-- [ ] **100% branch coverage** — full case list in `AUTHENTICATION.md` §12
+- [x] `User`, `RefreshToken`, `PasswordResetToken` models + migration
+- [x] `POST /auth/register/client`
+- [x] `POST /auth/register/master` (creates `MasterProfile` as `PENDING`)
+- [x] `POST /auth/login` with uniform failure + dummy bcrypt comparison
+- [x] `POST /auth/refresh` with rotation, family tracking and reuse detection
+- [x] `POST /auth/logout`, `POST /auth/logout-all`
+- [x] `POST /auth/forgot-password` (always 202), `POST /auth/reset-password`
+- [x] `PATCH /auth/password` revoking other sessions
+- [x] `JwtStrategy` re-reading user state from the database
+- [x] `JwtAuthGuard` registered globally, `RolesGuard`
+- [x] Throttling: the `API.md` §13 limits, keyed by IP
+- [ ] Throttling: identifier-scoped keys (IP+email, email, userId) and Redis storage — blocked on open decision **D-5**
+- [ ] **100% branch coverage** — `token.service`, `password-reset.service` and `roles.guard` are at 100%; `auth.service` is at 90%, `jwt-auth.guard` at 89%, `password.service` at 54% (thin bcrypt wrapper), and the controller at 0%. The controller is covered by the e2e suite in §1.10; the rest needs the remaining branches.
 
 ### 1.8 F-02 Users
 

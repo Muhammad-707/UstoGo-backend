@@ -9,6 +9,7 @@ export type JwtConfig = {
   readonly audience: string;
   readonly bcryptRounds: number;
   readonly passwordResetTtl: string;
+  readonly passwordResetUrl: string;
 };
 
 export const buildJwtConfig = (env: Env): JwtConfig =>
@@ -21,4 +22,5 @@ export const buildJwtConfig = (env: Env): JwtConfig =>
     audience: env.JWT_AUDIENCE,
     bcryptRounds: env.BCRYPT_ROUNDS,
     passwordResetTtl: env.PASSWORD_RESET_TTL,
+    passwordResetUrl: env.PASSWORD_RESET_URL,
   });

@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-29
 **Current phase:** Phase 1 — Platform Foundation
 **Version:** 0.1.0 (in development)
-**Overall progress:** ▓▓▓░░░░░░░ 29% (platform plumbing complete; the API is observable and documented)
+**Overall progress:** ▓▓▓▓░░░░░░ 35% (authentication works end to end)
 
 ---
 
@@ -16,18 +16,22 @@
 | Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs |
 | Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered  |
 | Database schema     | 🟨 §2–4 migrated and seeded; catalogue and bookings still to come |
-| Authentication      | ⬜ Not started                                                    |
+| Authentication      | ✅ Complete — registration, login, rotation, reset; 283 tests     |
 | Business features   | ⬜ Not started                                                    |
 | Common layer        | ✅ Complete — envelope, validation, correlation, logging          |
-| Tests               | 🟨 178 unit tests; no integration or e2e harness yet              |
+| Tests               | 🟨 283 unit tests; no integration or e2e harness yet              |
 | CI/CD               | ⬜ Not started                                                    |
 | Deployment          | ⬜ Not started                                                    |
 
 The application boots, connects to PostgreSQL, serves `/health` and `/health/ready`, and publishes Swagger at `/api/docs`. Every request passes through the correlation middleware, the validation pipe, the timeout and logging interceptors and the global exception filter, so an unknown path returns the documented error envelope rather than a framework default. `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` are green.
 
-No **business** routes exist yet — the first is `POST /auth/register/client` in §1.7.
+All nine `/auth` endpoints are live and were driven end to end against the running stack: registration, login with an indistinguishable failure for unknown-email and wrong-password, refresh rotation, reuse detection revoking the family, logout, password change and a full reset cycle including the email arriving in Mailpit.
 
-One known gap, not a blocker: Redis and Mailpit are validated at boot but nothing connects to them yet. Each is wired by the module that consumes it — throttling in §1.7, mail with password reset. The object store is now probed for reachability by readiness, though a credentialed check arrives with `StorageProvider` in §1.9.
+Three gaps, none a blocker:
+
+- **Auth is not yet at the mandated 100% branch coverage.** `token.service`, `password-reset.service` and `roles.guard` are at 100%; `auth.service` is at 90%, `jwt-auth.guard` at 89%, `password.service` at 54% (a thin bcrypt wrapper), and the controller at 0%. The controller is covered by the e2e suite in §1.10. This is an explicit Phase 1 exit criterion and remains open.
+- **Rate limits are keyed by IP only, and stored in memory.** `AUTHENTICATION.md` §9 keys login on IP+email, forgot-password on email and refresh on userId, with Redis storage so limits are global rather than per-instance. Blocked on open decision **D-5**; recorded as B-77.
+- Redis is validated at boot but nothing connects to it yet. The object store is probed for reachability by readiness; a credentialed check arrives with `StorageProvider` in §1.9.
 
 ---
 
@@ -36,7 +40,7 @@ One known gap, not a blocker: Redis and Mailpit are validated at boot but nothin
 | Phase                   | Scope                                            | Status         | Progress        |
 | ----------------------- | ------------------------------------------------ | -------------- | --------------- |
 | 0 — Documentation       | Full `docs/` set                                 | ✅ Done        | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓░░░░ 55%  |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | 🟨 In progress | ▓▓▓▓▓▓▓░░░ 64%  |
 | 2 — Supply Side         | Categories, masters, moderation, services, audit | ⬜             | ░░░░░░░░░░ 0%   |
 | 3 — Discovery           | Schedule, availability, search                   | ⬜             | ░░░░░░░░░░ 0%   |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ⬜             | ░░░░░░░░░░ 0%   |
@@ -50,7 +54,7 @@ One known gap, not a blocker: Redis and Mailpit are validated at boot but nothin
 | ID   | Feature                  | Module                       | Phase | Status |
 | ---- | ------------------------ | ---------------------------- | ----- | ------ |
 | F-17 | Platform & cross-cutting | `common`, `config`, `prisma` | 1     | ⬜     |
-| F-01 | Authentication           | `auth`                       | 1     | ⬜     |
+| F-01 | Authentication           | `auth`                       | 1     | ✅     |
 | F-02 | Users & profiles         | `users`                      | 1     | ⬜     |
 | F-13 | File storage             | `files`                      | 1     | ⬜     |
 | F-05 | Categories               | `categories`                 | 2     | ⬜     |

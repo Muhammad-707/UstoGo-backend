@@ -12,4 +12,11 @@ export type AuthenticatedUser = {
   readonly id: string;
   readonly email: string;
   readonly role: UserRole;
+  /**
+   * Refresh-token family id, from the `sid` claim. Identifies *this session* rather
+   * than this token, which is what lets a password change revoke every other device
+   * while sparing the one the change was made on — the token itself rotates, the
+   * family does not.
+   */
+  readonly sessionId: string;
 };

@@ -67,6 +67,8 @@ JWT_REFRESH_TTL=30d
 JWT_ISSUER=ustogo-api
 JWT_AUDIENCE=ustogo-clients
 BCRYPT_ROUNDS=12
+PASSWORD_RESET_TTL=30m
+PASSWORD_RESET_URL=https://ustogo.app/reset-password
 
 # Storage
 S3_ENDPOINT=https://s3.eu-central-1.amazonaws.com
