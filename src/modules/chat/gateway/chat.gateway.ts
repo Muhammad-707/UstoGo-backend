@@ -126,7 +126,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const payload = await this.jwt.verifyAsync<JwtPayload>(token, {
-      secret: this.config.jwt.accessSecret,
+      secret: this.config.jwt.accessPublicKey,
+      algorithms: ['RS256'],
       issuer: this.config.jwt.issuer,
       audience: this.config.jwt.audience,
       clockTolerance: AUTH.CLOCK_SKEW_SECONDS,

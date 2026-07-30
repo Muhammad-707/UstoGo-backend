@@ -8,7 +8,7 @@ import { JwtStrategy } from '../strategies/jwt.strategy';
 
 const CONFIG = {
   jwt: {
-    accessSecret: 'x'.repeat(64),
+    accessPublicKey: 'x'.repeat(64),
     issuer: 'ustogo-api',
     audience: 'ustogo-clients',
   },

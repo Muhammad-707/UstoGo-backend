@@ -19,9 +19,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.jwt.accessSecret,
+      secretOrKey: config.jwt.accessPublicKey,
+      // RS256 only — without this, jsonwebtoken's "none"/algorithm-confusion class of
+      // bug becomes reachable: a token whose header claims HS256 would otherwise be
+      // verified by HMAC-ing the *public* key as if it were a shared secret, which an
+      // attacker can compute themselves since the public key is, by design, public.
+      algorithms: ['RS256'],
       // Verified, not merely present (AUTHENTICATION.md §2). Without these, a token
-      // minted by any other service sharing the secret would be accepted here.
+      // minted by any other service holding a trusted key would be accepted here.
       issuer: config.jwt.issuer,
       audience: config.jwt.audience,
       // passport-jwt forwards these straight to jsonwebtoken; clock tolerance is not a

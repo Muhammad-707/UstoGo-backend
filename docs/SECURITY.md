@@ -183,7 +183,7 @@ if (crypto.timingSafeEqual(Buffer.from(hash(token)), Buffer.from(stored))) { …
 4. **Notify** — affected users within 72 hours where personal data is implicated
 5. **Remediate** — patch, add a regression test, and record the incident in `CHANGELOG.md` under Security
 
-**Compromised JWT secret:** rotating `JWT_ACCESS_SECRET` invalidates every access token instantly; refresh tokens are database-backed and unaffected, so users transparently recover on their next refresh. This asymmetry is intentional and is the reason refresh tokens are not JWTs.
+**Compromised JWT signing key:** rotating `JWT_ACCESS_PRIVATE_KEY`/`JWT_ACCESS_PUBLIC_KEY` (RS256, Phase 6) invalidates every access token instantly; refresh tokens are database-backed and unaffected, so users transparently recover on their next refresh. This asymmetry is intentional and is the reason refresh tokens are not JWTs. RS256 additionally means a compromised _public_ key (config that many more services and log lines could plausibly leak) is not itself sufficient to forge a token — only the private key can sign.
 
 ---
 

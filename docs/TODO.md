@@ -170,7 +170,7 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] Device/session list with per-device revocation: `GET /auth/sessions` folds `RefreshToken` rows into one row per family (device), most recently active first; `DELETE /auth/sessions/:id` revokes a family, `404 SESSION_NOT_FOUND` for an unknown or foreign one
 - [x] Idempotency keys on mutating endpoints: `IdempotencyKey` model + `IdempotencyInterceptor` (registered globally, no-op without `@Idempotent()`, same precedent as `AuditInterceptor`); applied to `POST /bookings` and `POST /admin/notifications/broadcast`; optional `Idempotency-Key` header replays the original response, `409 IDEMPOTENCY_KEY_REUSED`/`IDEMPOTENCY_KEY_IN_PROGRESS` otherwise
 - [x] Personal data export and anonymised deletion: `GET /users/me/export` (account, bookings, reviews, notifications, v1 scope of `BACKLOG.md` B-70); `DELETE /users/me` now overwrites `email`/`phone`/`firstName`/`lastName`/`defaultAddress`/`bio`/avatar rather than only soft-deleting
-- [ ] RS256 migration for access tokens
+- [x] RS256 migration for access tokens: `JWT_ACCESS_PRIVATE_KEY`/`JWT_ACCESS_PUBLIC_KEY` (base64 PEM) replace `JWT_ACCESS_SECRET`; `JwtModule`, `JwtStrategy` and `ChatGateway`'s handshake verification all moved from HS256 to RS256 with `algorithms: ['RS256']` pinned explicitly
 - [ ] External penetration test and remediation
 - [ ] Backup restore rehearsal (RTO 1 h, RPO 15 min)
 - [ ] Production runbook and on-call rotation

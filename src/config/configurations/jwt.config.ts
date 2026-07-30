@@ -1,7 +1,8 @@
 import type { Env } from '../env.schema';
 
 export type JwtConfig = {
-  readonly accessSecret: string;
+  readonly accessPrivateKey: string;
+  readonly accessPublicKey: string;
   readonly refreshSecret: string;
   readonly accessTtl: string;
   readonly refreshTtl: string;
@@ -17,9 +18,13 @@ export type JwtConfig = {
   readonly twoFactorChallengeTtl: string;
 };
 
+/** Base64 in the environment, PEM everywhere this config is actually used. */
+const decodePem = (base64: string): string => Buffer.from(base64, 'base64').toString('utf8');
+
 export const buildJwtConfig = (env: Env): JwtConfig =>
   Object.freeze({
-    accessSecret: env.JWT_ACCESS_SECRET,
+    accessPrivateKey: decodePem(env.JWT_ACCESS_PRIVATE_KEY),
+    accessPublicKey: decodePem(env.JWT_ACCESS_PUBLIC_KEY),
     refreshSecret: env.JWT_REFRESH_SECRET,
     accessTtl: env.JWT_ACCESS_TTL,
     refreshTtl: env.JWT_REFRESH_TTL,

@@ -62,8 +62,10 @@ CORS_ORIGINS=https://ustogo.app,https://admin.ustogo.app
 DATABASE_URL=postgresql://user:pass@host:5432/ustogo?schema=public&connection_limit=20
 DATABASE_POOL_SIZE=20
 
-# JWT — independent 64-byte random values
-JWT_ACCESS_SECRET=…
+# JWT — RS256 access-token keypair (base64 PEM, see .env.example for the openssl
+# commands) plus an independent 64-byte random refresh secret
+JWT_ACCESS_PRIVATE_KEY=…
+JWT_ACCESS_PUBLIC_KEY=…
 JWT_REFRESH_SECRET=…
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_TTL=30d
@@ -286,7 +288,7 @@ Caching is applied only where measured: category tree (5 min), search results (6
 
 **Suspected credential compromise**
 
-1. Rotate `JWT_ACCESS_SECRET` — every access token dies instantly
+1. Rotate `JWT_ACCESS_PRIVATE_KEY`/`JWT_ACCESS_PUBLIC_KEY` — every access token dies instantly
 2. Revoke the affected refresh token families
 3. Review `AuditLog` and 401/403 patterns for the blast radius
 4. Notify affected users within 72 hours if personal data is implicated

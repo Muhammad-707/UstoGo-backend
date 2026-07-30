@@ -30,8 +30,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     JwtModule.registerAsync({
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => ({
-        secret: config.jwt.accessSecret,
+        privateKey: config.jwt.accessPrivateKey,
+        publicKey: config.jwt.accessPublicKey,
         signOptions: {
+          algorithm: 'RS256',
           // Seconds rather than the `15m` string: jsonwebtoken accepts both, but the
           // API also reports expiresIn as a number, and deriving both from one call
           // keeps the real lifetime and the advertised one from drifting.

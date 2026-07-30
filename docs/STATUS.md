@@ -116,6 +116,8 @@ Found and fixed during the migration, not after: `npx prisma migrate dev --name 
 
 **Personal data export and anonymised deletion** closes the v1 scope of `BACKLOG.md` B-70 (the full async/downloadable self-service export stays in the backlog; this is a synchronous JSON read). `GET /users/me/export` (`DataExportService`, `UsersModule`) returns the caller's own account/profile plus every booking, review and notification they are the subject of, queried directly rather than through each feature module's service — the same reason `AdminModule`'s dashboard (F-15) reads `PrismaService` directly instead of importing every module it reports on. `DELETE /users/me` no longer only soft-deletes: `email`/`phone`/`firstName`/`lastName`/`defaultAddress`/`bio` are now overwritten (`email` to a deterministic `deleted-<id>@deleted.invalid` placeholder, kept `NOT NULL` per `DATABASE.md` §3.1) and the avatar is released through the same `FilesService.softDelete` path `setAvatar` already uses for a replaced one — a soft-deleted row is still a row an operator or a database dump can read, so "deleted" now means the personal data is actually gone rather than merely filtered out of normal queries. This is also what implements BR-5's "redacted placeholder" requirement: a deleted author's name reads "Deleted User" wherever it is displayed, as a consequence of the overwrite rather than a separate display-layer redaction step nothing currently implements. 913 tests total (705 unit + 208 e2e).
 
+**RS256 migration for access tokens** replaces the single `JWT_ACCESS_SECRET` (HS256) with a private/public keypair (`JWT_ACCESS_PRIVATE_KEY`/`JWT_ACCESS_PUBLIC_KEY`, base64 PKCS8/SPKI PEM) — `JwtModule` signs with the private key, `JwtStrategy` and `ChatGateway`'s handshake verification both verify with the public key alone, and `algorithms: ['RS256']` is pinned explicitly everywhere a token is verified, closing the algorithm-confusion class of bug where a token claiming HS256 gets HMAC'd against a key that was never meant to be a shared secret. `JWT_REFRESH_SECRET` is untouched — refresh tokens are opaque, database-backed values, never JWTs, so RS256 has nothing to migrate there. 914 tests total (706 unit + 208 e2e).
+
 ---
 
 ## 2. Phase Progress
@@ -128,7 +130,7 @@ Found and fixed during the migration, not after: `npx prisma migrate dev --name 
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓▓▓░░░░░ 56%  |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓▓▓▓░░░░ 67%  |
 
 ---
 
@@ -199,7 +201,7 @@ Found and fixed during the migration, not after: `npx prisma migrate dev --name 
 
 | Metric                               | Target              | Current                                                                                                                                                                                                                                              |
 | ------------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 913 tests green (705 unit + 208 e2e); pre-existing gaps below the 90%-lines service floor in `masters-search.service.ts`, `search.service.ts`, `services.service.ts`, `conversations.service.ts`, `profile-lookup.util.ts` (none touched by Phase 6) |
+| Line coverage                        | ≥ 80%               | 914 tests green (706 unit + 208 e2e); pre-existing gaps below the 90%-lines service floor in `masters-search.service.ts`, `search.service.ts`, `services.service.ts`, `conversations.service.ts`, `profile-lookup.util.ts` (none touched by Phase 6) |
 | Service/guard coverage               | ≥ 90%               | Met                                                                                                                                                                                                                                                  |
 | Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                                                                                                                                                                                                      |
 | Endpoints implemented                | ~95                 | 64                                                                                                                                                                                                                                                   |
@@ -212,7 +214,7 @@ Found and fixed during the migration, not after: `npx prisma migrate dev --name 
 
 ## 6. Blockers
 
-None. Phase 6 (Hardening & Launch) is in progress — email verification, two-factor admin auth, the device/session list, idempotency keys and personal data export/anonymised deletion are done; RS256 migration for access tokens is next.
+None. Phase 6 (Hardening & Launch) is in progress — email verification, two-factor admin auth, the device/session list, idempotency keys, personal data export/anonymised deletion and the RS256 migration are done; external penetration test and remediation is next (needs a scheduled engagement, not just code).
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -234,7 +236,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-**Phase 6 — Hardening & Launch** is in progress. Email verification, admin two-factor authentication, the device/session list, idempotency keys and personal data export/anonymised deletion are done; next up is the RS256 migration for access tokens, per `docs/TODO.md`/`ROADMAP.md`.
+**Phase 6 — Hardening & Launch** is in progress. Email verification, admin two-factor authentication, the device/session list, idempotency keys, personal data export/anonymised deletion and the RS256 migration are done; everything left (pentest, restore rehearsal, runbook, v1.0.0) needs a human decision or a scheduled engagement rather than more code, per `docs/TODO.md`/`ROADMAP.md`.
 
 Detailed task list: `TODO.md`.
 

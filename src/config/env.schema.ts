@@ -17,6 +17,25 @@ const boolish = (fallback: 'true' | 'false') =>
     .default(fallback)
     .transform((value) => value === 'true');
 
+// RS256 access-token keys travel as base64 in a single env var — a raw multi-line PEM
+// breaks most .env parsers and shell exports. Validated by round-tripping the decode
+// rather than trusting the caller, since a malformed key would otherwise surface as an
+// opaque jsonwebtoken error at the first sign attempt instead of at boot.
+const base64Pem = (label: 'PRIVATE KEY' | 'PUBLIC KEY') =>
+  z
+    .string()
+    .min(1)
+    .refine((value) => {
+      try {
+        const decoded = Buffer.from(value, 'base64').toString('utf8');
+        return (
+          decoded.includes(`-----BEGIN ${label}-----`) && decoded.includes(`-----END ${label}-----`)
+        );
+      } catch {
+        return false;
+      }
+    }, `must be a base64-encoded PEM ${label}`);
+
 // Scheme is checked here rather than by chaining .refine() onto z.url(): a chained
 // refinement still runs after the URL check fails, so one bad value reports two issues.
 // Parsing with the URL constructor is also stricter than z.url()'s pattern match.
@@ -45,7 +64,11 @@ export const envSchema = z
     DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(100).default(20),
 
     // ---- JWT (AUTHENTICATION.md §11) ----
-    JWT_ACCESS_SECRET: z.string().min(32, 'must be at least 32 characters'),
+    // Phase 6: access tokens moved from HS256 (one shared secret) to RS256 (a private
+    // key that signs, a public key that verifies) — a service that only needs to verify
+    // tokens, or a future key-rotation setup, never needs the private key at all.
+    JWT_ACCESS_PRIVATE_KEY: base64Pem('PRIVATE KEY'),
+    JWT_ACCESS_PUBLIC_KEY: base64Pem('PUBLIC KEY'),
     JWT_REFRESH_SECRET: z.string().min(32, 'must be at least 32 characters'),
     JWT_ACCESS_TTL: duration('15m'),
     JWT_REFRESH_TTL: duration('30d'),
@@ -108,13 +131,11 @@ export const envSchema = z
     SWAGGER_ENABLED: boolish('false'),
   })
   .superRefine((env, ctx) => {
-    // A shared secret means a refresh token is also a valid access token: an attacker
-    // holding one holds both, and rotating either forces rotating the other.
-    if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
+    if (env.JWT_ACCESS_PRIVATE_KEY === env.JWT_ACCESS_PUBLIC_KEY) {
       ctx.addIssue({
         code: 'custom',
-        path: ['JWT_REFRESH_SECRET'],
-        message: 'must differ from JWT_ACCESS_SECRET',
+        path: ['JWT_ACCESS_PUBLIC_KEY'],
+        message: 'must differ from JWT_ACCESS_PRIVATE_KEY',
       });
     }
 

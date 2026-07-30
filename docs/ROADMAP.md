@@ -113,7 +113,7 @@ has to exist before the first privileged mutation it is meant to cover.
 - ✅ Device/session list with per-device revocation
 - ✅ Idempotency keys on mutating endpoints
 - ✅ Personal data export and anonymised deletion
-- ⬜ RS256 migration for access tokens
+- ✅ RS256 migration for access tokens
 - ⬜ External penetration test and remediation
 - ⬜ Backup restore rehearsal (RTO 1 h, RPO 15 min)
 - ⬜ Production runbook and on-call rotation

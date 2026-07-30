@@ -51,31 +51,38 @@ describe('parseEnv', () => {
   });
 
   describe('secrets', () => {
-    it('rejects a missing secret', () => {
-      expectIssue(validEnv({ JWT_ACCESS_SECRET: undefined }), 'JWT_ACCESS_SECRET');
+    it('rejects a missing access private key', () => {
+      expectIssue(validEnv({ JWT_ACCESS_PRIVATE_KEY: undefined }), 'JWT_ACCESS_PRIVATE_KEY');
     });
 
-    it('rejects a secret shorter than 32 characters', () => {
+    it('rejects a refresh secret shorter than 32 characters', () => {
       expectIssue(
-        validEnv({ JWT_ACCESS_SECRET: 'short' }),
-        'JWT_ACCESS_SECRET: must be at least 32 characters',
+        validEnv({ JWT_REFRESH_SECRET: 'short' }),
+        'JWT_REFRESH_SECRET: must be at least 32 characters',
       );
     });
 
-    it('rejects a refresh secret identical to the access secret', () => {
-      const secret = 'c'.repeat(64);
+    it('rejects a value that does not decode to a PEM private key', () => {
+      expectIssue(
+        validEnv({ JWT_ACCESS_PRIVATE_KEY: Buffer.from('not a pem').toString('base64') }),
+        'JWT_ACCESS_PRIVATE_KEY: must be a base64-encoded PEM PRIVATE KEY',
+      );
+    });
+
+    it('rejects an access public key identical to the private key', () => {
+      const env = validEnv();
 
       expectIssue(
-        validEnv({ JWT_ACCESS_SECRET: secret, JWT_REFRESH_SECRET: secret }),
-        'JWT_REFRESH_SECRET: must differ from JWT_ACCESS_SECRET',
+        validEnv({ JWT_ACCESS_PUBLIC_KEY: env.JWT_ACCESS_PRIVATE_KEY }),
+        'JWT_ACCESS_PUBLIC_KEY: must differ from JWT_ACCESS_PRIVATE_KEY',
       );
     });
 
     it('never echoes a secret value into the failure report', () => {
-      const secret = 'super-secret-value-that-is-too-short';
+      const secret = 'too-short';
 
       try {
-        parseEnv(validEnv({ JWT_ACCESS_SECRET: secret, JWT_REFRESH_SECRET: secret }));
+        parseEnv(validEnv({ JWT_REFRESH_SECRET: secret }));
         throw new Error('expected parseEnv to reject');
       } catch (error) {
         expect(error).toBeInstanceOf(InvalidEnvironmentException);
@@ -173,7 +180,7 @@ describe('parseEnv', () => {
       try {
         parseEnv(
           validEnv({
-            JWT_ACCESS_SECRET: undefined,
+            JWT_ACCESS_PRIVATE_KEY: undefined,
             DATABASE_URL: 'not-a-url',
             S3_BUCKET: undefined,
           }),
@@ -183,7 +190,7 @@ describe('parseEnv', () => {
         const { issues } = error as InvalidEnvironmentException;
 
         expect(issues).toHaveLength(3);
-        expect(issues.join('\n')).toContain('JWT_ACCESS_SECRET');
+        expect(issues.join('\n')).toContain('JWT_ACCESS_PRIVATE_KEY');
         expect(issues.join('\n')).toContain('DATABASE_URL');
         expect(issues.join('\n')).toContain('S3_BUCKET');
       }
