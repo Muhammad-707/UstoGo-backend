@@ -20,6 +20,7 @@
     "prisma:migrate:reset": "prisma migrate reset",
     "prisma:seed": "prisma db seed",
     "seed:scale": "ts-node -P tsconfig.json prisma/seed/scale.seed.ts",
+    "backup:rehearse": "bash scripts/backup-restore-rehearsal.sh",
     "prisma:studio": "prisma studio",
     "swagger:export": "ts-node -r tsconfig-paths/register -P tsconfig.json src/bootstrap/export-openapi.ts",
     "cli": "ts-node -r tsconfig-paths/register -P tsconfig.json src/cli/main.cli.ts",

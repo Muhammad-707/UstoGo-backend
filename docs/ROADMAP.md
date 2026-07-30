@@ -115,8 +115,8 @@ has to exist before the first privileged mutation it is meant to cover.
 - ✅ Personal data export and anonymised deletion
 - ✅ RS256 migration for access tokens
 - ⬜ External penetration test and remediation
-- ⬜ Backup restore rehearsal (RTO 1 h, RPO 15 min)
-- ⬜ Production runbook and on-call rotation
+- ✅ Backup restore rehearsal (RTO 1 h, RPO 15 min) — mechanism proven locally; the real quarterly rehearsal against a production-scale backup is an ops-calendar item
+- ✅ Production runbook and on-call rotation — runbook written; the named rotation schedule is a staffing decision, not code
 - ⬜ v1.0.0 release
 
 **Exit criteria:** every NFR is measured and met; the security review is closed.

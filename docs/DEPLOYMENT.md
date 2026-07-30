@@ -255,6 +255,8 @@ Production deploys are tag-triggered and manually approved. Continuous deploymen
 
 A backup that has never been restored is a hypothesis, not a backup. The rehearsal is what makes the RTO number real.
 
+`npm run backup:rehearse` (`scripts/backup-restore-rehearsal.sh`, Phase 6) dumps the running Postgres container, restores it into a throwaway database on the same instance, and verifies row counts on `users`/`cities`/`categories`/`bookings`/`reviews`/`notifications` match — the same check a real cross-instance restore needs, minus the network transfer. Run against the local dev stack (22 seeded rows, no scale data): completed end to end in 2 seconds, every sampled table matched. That timing is not the production number — it proves the mechanism, not the 1-hour RTO at production data volume, which is what the quarterly rehearsal against a real backup exists to measure. Local/staging only; never point it at a production instance.
+
 ---
 
 ## 10. Scaling
@@ -298,6 +300,29 @@ Caching is applied only where measured: category tree (5 min), search results (6
 1. Check job metrics and the last success timestamp
 2. Verify the advisory lock is not stuck from a hard-killed instance
 3. Jobs are idempotent — safe to trigger manually
+
+**Admin locked out by 2FA (Phase 6)**
+
+1. Confirm the request is genuinely from the account holder, not a social-engineering attempt — this is the one path that can disable another admin's protection
+2. `UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL WHERE id = '<id>'` directly against the database — there is no API path around a lost authenticator app by design, since inventing one would be the same bypass an attacker would want
+3. Record the action in `AuditLog` by hand (actor, reason, ticket reference) since a raw SQL statement does not go through `AuditInterceptor`
+4. Have the admin immediately re-enroll via `POST /auth/2fa/setup`
+
+**A client reports a stuck `Idempotency-Key` (Phase 6)**
+
+1. `409 IDEMPOTENCY_KEY_IN_PROGRESS` repeating past a few seconds means the original request's handler crashed after inserting the placeholder without reaching `complete`/`abandon` — check the app logs for that request id
+2. `DELETE FROM idempotency_keys WHERE user_id = '<id>' AND key = '<key>' AND response_status IS NULL` clears the placeholder so the client's retry (same key) proceeds normally
+3. Rows expire after 24h on their own; this is only needed if a client is stuck sooner than that
+
+---
+
+## On-Call Rotation
+
+A named schedule (who, which week, escalation contact) is an operational decision for whoever runs production, not something this repository can generate — it is deliberately not filled in here. What the codebase provides:
+
+- **Alert routing** targets a channel/pager configured via `SENTRY_DSN` and the alert thresholds in §8; wiring that channel to an actual rotation tool (PagerDuty, Opsgenie, or a shared calendar) is the remaining step before go-live.
+- **Escalation path**: on-call engineer → whoever owns the affected module (see `docs/MODULES.md` for ownership boundaries) → tech lead, for anything the runbook above does not cover.
+- **Handoff**: the outgoing on-call reviews open incidents and any `AuditLog`/Sentry items from their shift with the incoming one; nothing here tracks that automatically.
 
 ---
 

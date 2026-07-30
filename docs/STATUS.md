@@ -118,6 +118,10 @@ Found and fixed during the migration, not after: `npx prisma migrate dev --name 
 
 **RS256 migration for access tokens** replaces the single `JWT_ACCESS_SECRET` (HS256) with a private/public keypair (`JWT_ACCESS_PRIVATE_KEY`/`JWT_ACCESS_PUBLIC_KEY`, base64 PKCS8/SPKI PEM) — `JwtModule` signs with the private key, `JwtStrategy` and `ChatGateway`'s handshake verification both verify with the public key alone, and `algorithms: ['RS256']` is pinned explicitly everywhere a token is verified, closing the algorithm-confusion class of bug where a token claiming HS256 gets HMAC'd against a key that was never meant to be a shared secret. `JWT_REFRESH_SECRET` is untouched — refresh tokens are opaque, database-backed values, never JWTs, so RS256 has nothing to migrate there. 914 tests total (706 unit + 208 e2e).
 
+**Backup restore rehearsal and the production runbook** close everything in Phase 6 that is implementable in-repo. `scripts/backup-restore-rehearsal.sh` (`npm run backup:rehearse`) dumps the running Postgres container, restores it into a throwaway database on the same instance, and verifies row counts on six tables match — run once against the local dev stack (22 seeded rows), completed in 2 seconds with every table matching. That number is not the production RTO; it proves the mechanism the quarterly rehearsal against a real backup exists to exercise repeatedly, per `DEPLOYMENT.md` §9's own framing ("a backup that has never been restored is a hypothesis"). `DEPLOYMENT.md` §11's runbook gained two Phase 6 incident scenarios — an admin locked out by 2FA (direct SQL, no API bypass exists by design, since inventing one would be the same hole an attacker wants) and a stuck `Idempotency-Key` — plus a new On-Call Rotation section documenting the escalation path. The named weekly schedule itself is deliberately left blank: it is a staffing decision for whoever runs production, not something a repository can generate.
+
+Two Phase 6 items remain, and neither is closable by writing more code: **external penetration test and remediation** needs a scheduled third-party engagement against a deployed environment, and **v1.0.0** is the tag that follows once that engagement's findings are closed — `DEPLOYMENT.md` §12's pre-launch checklist names both explicitly. Everything else in the checklist that code can satisfy already does.
+
 ---
 
 ## 2. Phase Progress
@@ -130,7 +134,7 @@ Found and fixed during the migration, not after: `npx prisma migrate dev --name 
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓▓▓▓░░░░ 67%  |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓▓▓▓▓▓░░ 80%  |
 
 ---
 
@@ -214,7 +218,7 @@ Found and fixed during the migration, not after: `npx prisma migrate dev --name 
 
 ## 6. Blockers
 
-None. Phase 6 (Hardening & Launch) is in progress — email verification, two-factor admin auth, the device/session list, idempotency keys, personal data export/anonymised deletion and the RS256 migration are done; external penetration test and remediation is next (needs a scheduled engagement, not just code).
+**External penetration test and remediation is blocked on a scheduled third-party engagement** — every other Phase 6 item implementable in-repo (email verification, 2FA, session list, idempotency keys, data export/anonymised deletion, RS256, backup rehearsal, runbook) is done. `v1.0.0` follows once that engagement's findings are closed.
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -236,7 +240,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-**Phase 6 — Hardening & Launch** is in progress. Email verification, admin two-factor authentication, the device/session list, idempotency keys, personal data export/anonymised deletion and the RS256 migration are done; everything left (pentest, restore rehearsal, runbook, v1.0.0) needs a human decision or a scheduled engagement rather than more code, per `docs/TODO.md`/`ROADMAP.md`.
+**Phase 6 — Hardening & Launch** is in progress. Everything implementable in-repo is done: email verification, admin two-factor authentication, the device/session list, idempotency keys, personal data export/anonymised deletion, the RS256 migration, the backup restore rehearsal and the production runbook. What remains — the external penetration test and the `v1.0.0` tag that follows it — needs a scheduled engagement, not more code, per `docs/TODO.md`/`ROADMAP.md`.
 
 Detailed task list: `TODO.md`.
 
