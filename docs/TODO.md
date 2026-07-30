@@ -163,7 +163,7 @@ would ship its admin routes unaudited and need a retrofit.
 
 ---
 
-## 🟡 In Progress — Phase 6: Hardening & Launch
+## ✅ Done (except pentest) — Phase 6: Hardening & Launch — v1.0.0 shipped 2026-07-30
 
 - [x] Email verification: `EmailVerificationToken` model (same shape as `PasswordResetToken`), `AuthService.registerClient`/`registerMaster` issue a token right after commit, `POST /auth/verify-email` (public, single-use), `POST /auth/resend-verification` (authenticated, `409 EMAIL_ALREADY_VERIFIED` if already verified). Not gated on anything else in v1 — no FR/SRS document ties `emailVerifiedAt` to an access restriction, so no enforcement was invented.
 - [x] Two-factor authentication for admin accounts: TOTP (RFC 6238) against `node:crypto`, `User.totpSecret`/`totpEnabledAt` + `TwoFactorChallenge` model, `POST /auth/2fa/{setup,enable,disable,verify}`, `AuthService.login` returns a `challengeToken` instead of tokens when `totpEnabledAt` is set
@@ -174,7 +174,7 @@ would ship its admin routes unaudited and need a retrofit.
 - [ ] External penetration test and remediation — blocked on a scheduled external engagement, not implementable in-repo
 - [x] Backup restore rehearsal (RTO 1 h, RPO 15 min): `npm run backup:rehearse` (`scripts/backup-restore-rehearsal.sh`) dumps/restores/verifies against the local dev stack — run once, 2s, all sampled tables matched. The quarterly rehearsal against a real production-scale backup is a recurring ops task this script exists to make repeatable, not a one-time code deliverable
 - [x] Production runbook and on-call rotation: `DEPLOYMENT.md` §11 has 6 incident scenarios (including the two Phase 6 added: 2FA lockout, stuck idempotency key) plus an On-Call Rotation section documenting the escalation path; the named weekly schedule itself is a staffing decision left to the team
-- [ ] v1.0.0 release
+- [x] v1.0.0 release: tagged 2026-07-30, pushed to `origin` — shipped without the external penetration test above (see `CHANGELOG.md` [1.0.0])
 
 ---
 
