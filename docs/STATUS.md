@@ -1,29 +1,29 @@
 # Project Status — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Current phase:** Phase 5 — Engagement & Operations, next up (Phase 4 complete)
-**Version:** 0.1.2
-**Overall progress:** ▓▓▓▓▓▓▓▓░░ 76% (the full client journey — search → book → accept → complete → review — works end to end, and double-booking is provably impossible)
+**Current phase:** Phase 5 — Engagement & Operations, in progress (F-12 Chat, F-14 Banners, F-15 Dashboard done)
+**Version:** 0.1.5
+**Overall progress:** ▓▓▓▓▓▓▓▓▓░ 85% (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, and an admin can see the whole platform's health in one call)
 
 ---
 
 ## 1. Snapshot
 
-| Area                | State                                                                       |
-| ------------------- | --------------------------------------------------------------------------- |
-| Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                              |
-| Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks               |
-| Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs           |
-| Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered            |
-| Database schema     | 🟨 §2–4, §7, §8, §10, §11 and §13 migrated and seeded; chat/banners to come |
-| Authentication      | ✅ Complete — registration, login, rotation, reset; 100% branch coverage    |
-| Business features   | 🟨 F-01–F-11, F-13, F-16 done; F-12 chat and F-14/15 to come                |
-| Common layer        | ✅ Complete — envelope, validation, correlation, logging                    |
-| Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup             |
-| Tests               | ✅ 674 tests (569 unit + 105 e2e); Testcontainers harness live              |
-| Operations CLI      | ✅ `admin:create` — the only path to an administrator                       |
-| CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks   |
-| Deployment          | ⬜ Not started                                                              |
+| Area                | State                                                                        |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Documentation       | ✅ Complete — 32 documents, v1 baseline frozen                               |
+| Repository scaffold | ✅ Complete — NestJS 11, strict TypeScript, lint/format/hooks                |
+| Local environment   | ✅ Complete — compose stack healthy in ~9s, image builds and runs            |
+| Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered             |
+| Database schema     | 🟨 §2–4, §7–§13 migrated and seeded; F-15 dashboard has no schema of its own |
+| Authentication      | ✅ Complete — registration, login, rotation, reset; 100% branch coverage     |
+| Business features   | 🟨 F-01–F-16 done except broadcast notifications/metrics/load tests          |
+| Common layer        | ✅ Complete — envelope, validation, correlation, logging                     |
+| Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup              |
+| Tests               | ✅ 807 tests (635 unit + 172 e2e); Testcontainers harness live               |
+| Operations CLI      | ✅ `admin:create` — the only path to an administrator                        |
+| CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks    |
+| Deployment          | ⬜ Not started                                                               |
 
 The application boots, connects to PostgreSQL, serves `/health` and `/health/ready`, and publishes Swagger at `/api/docs`. Every request passes through the correlation middleware, the validation pipe, the timeout and logging interceptors and the global exception filter, so an unknown path returns the documented error envelope rather than a framework default. `npm run lint`, `npm run typecheck`, `npm run build`, `npm test` and `npm run test:e2e` are all green; `npm run test:cov` runs both levels together and clears every coverage threshold in `jest.all.config.ts`.
 
@@ -65,6 +65,33 @@ Concurrency is proven, not assumed: `test/e2e/bookings.e2e-spec.ts` inserts two 
 
 674 tests total (569 unit + 105 e2e), `test:cov` green. Two pre-existing coverage gaps were found but not caused by this phase and are left for whoever owns that area next: `masters-search.service.ts` and `search.service.ts`/`services.service.ts` sit below the 90%-lines service floor.
 
+**F-12 Chat opens Phase 5.** `Conversation`/`Message`/`MessageAttachment` land per `DATABASE.md` §9, and `ChatModule` follows the same shape as `ReviewsModule`: a REST API that is the single writer, a domain-events file, named exceptions carrying the registry's `CONVERSATION_NOT_FOUND` (404) / `NO_SHARED_BOOKING` (403) / `MESSAGE_TOO_LONG` (422) codes, and a `NotificationsModule` listener reached only through `chat.message.sent`, never a direct call. Two judgment calls were made where the docs specify the contract but not every edge, per `CLAUDE.md` §3:
+
+- **"Non-expired booking" is read as "any booking whose status is not `EXPIRED`"**, not "currently active." `POST /conversations` checks `Booking.status !== EXPIRED` between the pair, full stop — `REJECTED` and every `CANCELLED_*` still qualify, because each represents a real negotiation the two parties already had, and chat is exactly where "can we reschedule?" or "why was this rejected?" belongs. Only a `PENDING` booking that the expiry job has since flipped to `EXPIRED` is excluded, since that booking never became a real engagement. Proven in `test/e2e/chat.e2e-spec.ts`: an `EXPIRED`-only history blocks conversation creation, a `CANCELLED_BY_CLIENT` history does not.
+- **`attachmentKeys` in the `POST .../messages` body is an array of the caller's own `File` ids, not raw storage keys.** `API.md`/`FUNCTIONAL_REQUIREMENTS.md` name the field `attachmentKeys`, but resolving a message attachment the same ownership-scoped way `FilesService.getAttachable`/`GET /files/:id/url` already do — by id, checked against the uploader — was the explicit instruction for this feature, and a raw key is exactly the client-supplied handle `FilesService`'s own docs warn against trusting to mint access. The frozen field name is kept; what it carries is documented in `send-message.dto.ts`.
+
+A third default, not really ambiguous but worth recording: **admin chat access has no in-app "flagged dispute" mechanism.** `USER_ROLES.md`/`BR-63` describe admin reads as restricted to a flagged dispute, but dispute arbitration is explicitly out of v1 scope (`BACKLOG.md`), so there is no flag column to gate on. `GET /admin/conversations/:id/messages` is reachable by any admin for any conversation and every call is audited via `AuditAction.CONVERSATION_ACCESSED` — the flagging itself is a support process outside this API, and the audit trail is what makes that acceptable rather than a blank check.
+
+Cursor pagination is new to the codebase — every other list endpoint pages by `page`/`limit`. `GET /conversations/:id/messages` needed newest-first cursor pagination per `DATABASE.md` §9.2's `(conversationId, createdAt DESC)` index, so `CursorPaginatedDto`/`ApiCursorPaginatedResponse` were added alongside the existing `PaginatedDto`/`ApiPaginatedResponse` rather than replacing them — every other endpoint keeps page/limit, which is the right fit when a client needs to jump to page 5, and cursor pagination is reserved for the one endpoint where a page number is meaningless (new messages keep arriving above whatever "page 1" meant a second ago).
+
+The `/chat` Socket.io namespace is a broadcast-only layer over the REST writes, as `FUNCTIONAL_REQUIREMENTS.md` §10 and `ARCHITECTURE.md` §7 specify: `ChatGateway` never creates a `Message`, it only relays the `MessageSentEvent`/`MessagesReadEvent` `MessagesService` emits after its transaction commits. Rooms are keyed by conversation id (`ARCHITECTURE.md` §7, verbatim), joined on connect from `ConversationsService.idsFor`. The handshake verifies the same access token REST does — `ChatGateway` is injected `JwtStrategy` itself (now exported from `AuthModule` alongside `JwtModule`) so an expired, forged, or since-blocked-account token is rejected identically on both transports, including the live re-read of account status. `@JwtAuthGuard`/`RolesGuard` are global `APP_GUARD`s built for the HTTP `ExecutionContext` shape and do not understand a websocket one, so the gateway is marked `@Public()` and relies on `handleConnection`'s own check instead — documented in the gateway itself, not assumed. A `RedisIoAdapter` (`@socket.io/redis-adapter`, duplicating `RedisService`'s connection for the pub/sub pair) fans events out across instances the same way `RedisThrottlerStorage` already does for rate limiting; wired in `main.ts` before `listen()`.
+
+Found and fixed during the migration, not after: `npx prisma migrate dev` proposed dropping `master_profiles.search_vector` — a generated column added by raw SQL in a prior migration and deliberately absent from `schema.prisma` (`DATABASE.md` §3.3), which Prisma's diff cannot see and so treats as drift. The destructive `DROP COLUMN`/`DROP INDEX` was removed from `20260729233750_add_chat/migration.sql` by hand before the migration reached a shared branch; a fresh `prisma migrate deploy` (as the e2e harness runs on every test boot) was used to confirm the corrected file replays cleanly with the column intact.
+
+784 tests total (621 unit + 163 e2e), including a real Socket.io client against the running e2e app (`socket.io-client`) proving the handshake rejects a missing/malformed token and that `message:new` reaches both participants' sockets but not a third party's.
+
+**F-14 Banners** followed `CategoriesModule` as its direct structural template — admin CRUD plus a public read, same `@Audit()`/DTO/response-mapping shape — since `docs/CLAUDE.md`'s own guidance named it as the closest precedent. The public `GET /banners?position=` filter (`isActive` AND the current instant inside `[startsAt, endsAt]`, either bound optional, `DATABASE.md` §12) is expressed twice on purpose: once as a pure, exhaustively unit-tested predicate (`domain/active-window.util.ts`) and once as the equivalent Prisma `where` in `BannersService.listPublic` — the former is what proves the rule is right, the latter is what actually runs. Two judgment calls worth flagging: (1) `CreateBannerDto.imageKey` keeps the literal FR-11.2 field name but its value is a confirmed `File` id, not a raw storage key — the same choice F-12 made for `SendMessageDto.attachmentKeys`, kept for consistency rather than re-litigated; (2) the shared `IsAfterField` validator rejects a missing sibling, which is correct for the required pairs it already guards but wrong for a `startsAt`/`endsAt` pair that is each independently optional, so a small sibling validator (`IsAfterFieldIfPresent`) was added rather than changing the shared one and risking its existing (locked) test coverage elsewhere.
+
+**F-15 Admin dashboard closes Phase 5's feature list.** `GET /admin/dashboard?from=&to=` is the one route in `AdminModule` (MODULES.md's composition module, sitting alone at the top of `ARCHITECTURE.md` §4's graph) — it queries `PrismaService` directly rather than importing every feature module, since FR-11.1 is a pure aggregate read with no business rule to delegate to. Three judgment calls, per `CLAUDE.md` §3 (FR-11.1 gives the fields, not every formula or default):
+
+- **`from`/`to` are independently optional**, and no document times a default the way FR-6.3 times availability. A missing bound resolves to a 30-day window anchored on whichever bound was given, or on `now` if neither was (`domain/dashboard-range.util.ts`), capped at 366 days. The cap reuses the existing `DATE_RANGE_TOO_LARGE` code — a service-level check, not a DTO one, following `schedule`'s own precedent for the same reason: a DTO-level check only ever produces the generic `VALIDATION_FAILED`.
+- **`bookings.cancelled` folds `REJECTED` in with the three `CANCELLED_BY_*` reasons.** API.md §12's response shape has six booking-status keys for nine `BookingStatus` values; a master's pre-acceptance decline and a post-acceptance walk-away are different events, but the shape has no separate slot for the former, so it joins the cancellation bucket rather than silently vanishing from the total.
+- **`acceptanceRate` is computed from `Booking.acceptedAt IS NOT NULL`, not from the status bucket above.** A booking that was accepted and later cancelled still counts as having been accepted — deriving it from `bookings.cancelled` instead would make the two rates disagree with what the bucket counts actually show.
+
+Masters are reported across four buckets, not the three `ApprovalStatus` values: `approved` is `approvalStatus=APPROVED AND isActive=true`; a moderator's deactivation is invisible in `ApprovalStatus` itself, so `inactive` (`approvalStatus=APPROVED AND isActive=false`) is a separate bucket rather than being silently counted as `approved`. The top-10-categories aggregate groups `Booking` by `serviceId` (categories are not a direct booking column) and resolves each service's category in a second bounded query — a booking against a since-soft-deleted service is excluded from the ranking, since the service lookup honours the same soft-delete filter as everywhere else. The daily series is one raw `generate_series` query LEFT JOINed against two `date_trunc('day', …)` aggregates, zero-filled for days with no activity; found and fixed before this reached a shared branch, running the generated SQL directly against Postgres (not just Prisma's type-check) surfaced `column reference "day" is ambiguous` from the series alias colliding with the joined subqueries' own `day` column, fixed by aliasing the series as `series(day)` and qualifying every reference.
+
+807 tests total (635 unit + 172 e2e).
+
 ---
 
 ## 2. Phase Progress
@@ -76,7 +103,7 @@ Concurrency is proven, not assumed: `test/e2e/bookings.e2e-spec.ts` inserts two 
 | 2 — Supply Side         | Audit, categories, masters, moderation, services | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ⬜      | ░░░░░░░░░░ 0%   |
+| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | 🟨      | ▓▓▓▓▓▓▓░░░ 75%  |
 | 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ⬜      | ░░░░░░░░░░ 0%   |
 
 ---
@@ -99,9 +126,9 @@ Concurrency is proven, not assumed: `test/e2e/bookings.e2e-spec.ts` inserts two 
 | F-09 | Booking lifecycle        | `bookings`                   | 4     | ✅     |
 | F-11 | Notifications            | `notifications`              | 4     | ✅     |
 | F-10 | Reviews & ratings        | `reviews`                    | 4     | ✅     |
-| F-12 | Messaging                | `chat`                       | 5     | ⬜     |
-| F-14 | Banners                  | `banners`                    | 5     | ⬜     |
-| F-15 | Admin dashboard          | `admin`                      | 5     | ⬜     |
+| F-12 | Messaging                | `chat`                       | 5     | ✅     |
+| F-14 | Banners                  | `banners`                    | 5     | ✅     |
+| F-15 | Admin dashboard          | `admin`                      | 5     | ✅     |
 
 ---
 
@@ -146,24 +173,24 @@ Concurrency is proven, not assumed: `test/e2e/bookings.e2e-spec.ts` inserts two 
 
 ## 5. Metrics
 
-| Metric                               | Target              | Current                                                        |
-| ------------------------------------ | ------------------- | -------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 574 tests green (476 unit + 98 e2e); `test:cov` thresholds met |
-| Service/guard coverage               | ≥ 90%               | Met                                                            |
-| Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                |
-| Endpoints implemented                | ~95                 | 50                                                             |
-| Endpoints documented in Swagger      | 100% of implemented | 100% (`openapi.json` regenerated with every route)             |
-| Files over 300 lines                 | 0                   | 0                                                              |
-| `any` occurrences                    | 0                   | 0                                                              |
-| Open high/critical vulnerabilities   | 0                   | 0 (`npm audit --omit=dev --audit-level=high`)                  |
+| Metric                               | Target              | Current                                                         |
+| ------------------------------------ | ------------------- | --------------------------------------------------------------- |
+| Line coverage                        | ≥ 80%               | 807 tests green (635 unit + 172 e2e); `test:cov` thresholds met |
+| Service/guard coverage               | ≥ 90%               | Met                                                             |
+| Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                 |
+| Endpoints implemented                | ~95                 | 64                                                              |
+| Endpoints documented in Swagger      | 100% of implemented | 100% (`openapi.json` regenerated with every route)              |
+| Files over 300 lines                 | 0                   | 0                                                               |
+| `any` occurrences                    | 0                   | 0                                                               |
+| Open high/critical vulnerabilities   | 0                   | 0 (`npm audit --omit=dev --audit-level=high`)                   |
 
 ---
 
 ## 6. Blockers
 
-None. Phase 4 can begin immediately.
+None. Broadcast notifications, Prometheus metrics and load tests are what remain of Phase 5.
 
-One known e2e flake, not a regression: `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full 9–10 file e2e suite runs together (never in isolation or smaller batches) — `AuditInterceptor` writes are fire-and-forget by design (`STATUS.md` Phase 2 notes), and heavy parallel Testcontainers startup is enough CPU contention to occasionally lose that race. Fixing it properly means awaiting the audit write in the interceptor, which is a real design change outside Phase 3's scope.
+Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
 ---
 
@@ -183,7 +210,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-Phase 3 (Discovery) is closed: F-07 Schedule (`WorkingDay`/`ScheduleException`, `AvailabilityCalculator`, the availability endpoint) and F-08 Search (a dedicated `SearchModule`, real `tsvector` full-text, a real price aggregate, category descendants, `availableOn`) are all in place, with an automated performance pass (index verification + no-N+1 query-count assertion) and manual k6 baselines for the p95 targets. Next up is **Phase 4 — The Transaction**: booking creation, the state machine, notifications and reviews (`docs/TODO.md`, `ROADMAP.md`).
+Phase 4 (The Transaction) is closed: bookings, notifications and reviews all work end to end. Phase 5 (Engagement & Ops) is under way — F-12 Chat, F-14 Banners and F-15 Admin dashboard are done; what remains is **broadcast notifications, Prometheus metrics and load tests** (`docs/TODO.md`, `ROADMAP.md`).
 
 Detailed task list: `TODO.md`.
 

@@ -12,6 +12,9 @@ export const SOFT_DELETABLE_MODELS: ReadonlySet<string> = new Set([
   'Category',
   'Certificate',
   'Service',
+  'Conversation',
+  'Message',
+  'Banner',
 ]);
 
 /**

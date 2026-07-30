@@ -39,6 +39,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   ],
   controllers: [AuthController],
   providers: [AuthService, TokenService, PasswordService, PasswordResetService, JwtStrategy],
-  exports: [AuthService, TokenService],
+  // `JwtModule` and `JwtStrategy` are exported so `ChatGateway` can verify a socket
+  // handshake's access token the exact same way `JwtAuthGuard`/`JwtStrategy` verify
+  // one on a REST request — same secret, same issuer/audience checks, same re-read
+  // of the account from the database — rather than duplicating that logic.
+  exports: [AuthService, TokenService, JwtModule, JwtStrategy],
 })
 export class AuthModule {}

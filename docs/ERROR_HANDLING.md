@@ -199,6 +199,12 @@ Codes are unique across the API and are exported as a single const object consum
 | `NO_SHARED_BOOKING`      | 403    |
 | `MESSAGE_TOO_LONG`       | 422    |
 
+### Banners
+
+| Code               | Status |
+| ------------------ | ------ |
+| `BANNER_NOT_FOUND` | 404    |
+
 ### Generic
 
 | Code                    | Status |

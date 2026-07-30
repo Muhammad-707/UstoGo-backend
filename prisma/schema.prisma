@@ -179,6 +179,8 @@ model User {
   verifiedCertificates Certificate[]        @relation("CertificateVerifiedBy")
   notifications        Notification[]
   hiddenReviews        Review[]             @relation("ReviewHiddenBy")
+  messages             Message[]
+  createdBanners       Banner[]
 
   @@index([role, status])
   @@index([createdAt])
@@ -202,8 +204,9 @@ model ClientProfile {
   city   City? @relation(fields: [cityId], references: [id], onDelete: Restrict)
   avatar File? @relation("ClientAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
 
-  bookings Booking[]
-  reviews  Review[]
+  bookings      Booking[]
+  reviews       Review[]
+  conversations Conversation[]
 
   @@index([cityId])
   @@map("client_profiles")
@@ -249,6 +252,7 @@ model MasterProfile {
   bookings           Booking[]
   reviews            Review[]
   reviewReplies      ReviewReply[]
+  conversations      Conversation[]
 
   @@index([approvalStatus, isActive])
   @@index([cityId])
@@ -441,11 +445,13 @@ model File {
   createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   deletedAt        DateTime?   @map("deleted_at") @db.Timestamptz(3)
 
-  uploadedBy    User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
-  clientAvatars ClientProfile[] @relation("ClientAvatar")
-  masterAvatars MasterProfile[] @relation("MasterAvatar")
-  categoryIcons Category[]
-  certificates  Certificate[]
+  uploadedBy         User?               @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  clientAvatars      ClientProfile[]     @relation("ClientAvatar")
+  masterAvatars      MasterProfile[]     @relation("MasterAvatar")
+  categoryIcons      Category[]
+  certificates       Certificate[]
+  messageAttachments MessageAttachment[]
+  banners            Banner[]
 
   @@index([uploadedByUserId])
   @@index([isConfirmed, createdAt])
@@ -527,38 +533,38 @@ model Category {
 /// the `SERIALIZABLE` transaction in `BookingsService.accept` is the application-layer
 /// one — both exist, and either alone would be insufficient.
 model Booking {
-  id                  String        @id @default(uuid()) @db.Uuid
-  bookingNumber       String        @unique @map("booking_number") @db.VarChar(20)
-  clientProfileId     String        @map("client_profile_id") @db.Uuid
-  masterProfileId     String        @map("master_profile_id") @db.Uuid
-  serviceId           String        @map("service_id") @db.Uuid
-  status              BookingStatus @default(PENDING)
-  scheduledAt         DateTime      @map("scheduled_at") @db.Timestamptz(3)
-  endsAt              DateTime      @map("ends_at") @db.Timestamptz(3)
-  durationMinutes     Int           @map("duration_minutes")
-  serviceTitle        String        @map("service_title") @db.VarChar(200)
-  price               Decimal       @db.Decimal(12, 2)
-  priceType           PriceType     @map("price_type")
-  currency            String        @db.Char(3)
-  addressLine         String        @map("address_line") @db.VarChar(500)
-  addressDistrict     String        @map("address_district") @db.VarChar(150)
-  latitude            Decimal?      @db.Decimal(9, 6)
-  longitude           Decimal?      @db.Decimal(9, 6)
-  clientNote          String?       @map("client_note")
-  acceptedAt          DateTime?     @map("accepted_at") @db.Timestamptz(3)
-  startedAt           DateTime?     @map("started_at") @db.Timestamptz(3)
-  completedAt         DateTime?     @map("completed_at") @db.Timestamptz(3)
-  cancelledAt         DateTime?     @map("cancelled_at") @db.Timestamptz(3)
-  cancellationReason  String?       @map("cancellation_reason") @db.VarChar(500)
-  cancelledByType     ActorType?    @map("cancelled_by_type")
-  isLateCancellation  Boolean       @default(false) @map("is_late_cancellation")
-  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt           DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  id                 String        @id @default(uuid()) @db.Uuid
+  bookingNumber      String        @unique @map("booking_number") @db.VarChar(20)
+  clientProfileId    String        @map("client_profile_id") @db.Uuid
+  masterProfileId    String        @map("master_profile_id") @db.Uuid
+  serviceId          String        @map("service_id") @db.Uuid
+  status             BookingStatus @default(PENDING)
+  scheduledAt        DateTime      @map("scheduled_at") @db.Timestamptz(3)
+  endsAt             DateTime      @map("ends_at") @db.Timestamptz(3)
+  durationMinutes    Int           @map("duration_minutes")
+  serviceTitle       String        @map("service_title") @db.VarChar(200)
+  price              Decimal       @db.Decimal(12, 2)
+  priceType          PriceType     @map("price_type")
+  currency           String        @db.Char(3)
+  addressLine        String        @map("address_line") @db.VarChar(500)
+  addressDistrict    String        @map("address_district") @db.VarChar(150)
+  latitude           Decimal?      @db.Decimal(9, 6)
+  longitude          Decimal?      @db.Decimal(9, 6)
+  clientNote         String?       @map("client_note")
+  acceptedAt         DateTime?     @map("accepted_at") @db.Timestamptz(3)
+  startedAt          DateTime?     @map("started_at") @db.Timestamptz(3)
+  completedAt        DateTime?     @map("completed_at") @db.Timestamptz(3)
+  cancelledAt        DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason String?       @map("cancellation_reason") @db.VarChar(500)
+  cancelledByType    ActorType?    @map("cancelled_by_type")
+  isLateCancellation Boolean       @default(false) @map("is_late_cancellation")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  clientProfile ClientProfile        @relation(fields: [clientProfileId], references: [id], onDelete: Restrict)
-  masterProfile MasterProfile        @relation(fields: [masterProfileId], references: [id], onDelete: Restrict)
-  service       Service              @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  clientProfile ClientProfile          @relation(fields: [clientProfileId], references: [id], onDelete: Restrict)
+  masterProfile MasterProfile          @relation(fields: [masterProfileId], references: [id], onDelete: Restrict)
+  service       Service                @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   history       BookingStatusHistory[]
   review        Review?
 
@@ -572,14 +578,14 @@ model Booking {
 
 /// §7.2. Append-only — no update or delete path exists in code, matching `AuditLog`.
 model BookingStatusHistory {
-  id           String         @id @default(uuid()) @db.Uuid
-  bookingId    String         @map("booking_id") @db.Uuid
-  fromStatus   BookingStatus? @map("from_status")
-  toStatus     BookingStatus  @map("to_status")
-  actorType    ActorType      @map("actor_type")
-  actorUserId  String?        @map("actor_user_id") @db.Uuid
-  reason       String?        @db.VarChar(500)
-  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  id          String         @id @default(uuid()) @db.Uuid
+  bookingId   String         @map("booking_id") @db.Uuid
+  fromStatus  BookingStatus? @map("from_status")
+  toStatus    BookingStatus  @map("to_status")
+  actorType   ActorType      @map("actor_type")
+  actorUserId String?        @map("actor_user_id") @db.Uuid
+  reason      String?        @db.VarChar(500)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
@@ -657,4 +663,99 @@ model Notification {
   @@index([userId, isRead, createdAt(sort: Desc)])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// §9 Messaging
+// ---------------------------------------------------------------------------
+
+/// §9.1. One conversation per (client, master) pair (BR-60); `POST /conversations`
+/// is a find-or-create on the unique pair. `lastMessageAt`/`lastMessagePreview` are
+/// denormalised for the list view and written only inside the transaction that
+/// creates the message they summarise.
+model Conversation {
+  id                 String    @id @default(uuid()) @db.Uuid
+  clientProfileId    String    @map("client_profile_id") @db.Uuid
+  masterProfileId    String    @map("master_profile_id") @db.Uuid
+  lastMessageAt      DateTime? @map("last_message_at") @db.Timestamptz(3)
+  lastMessagePreview String?   @map("last_message_preview") @db.VarChar(200)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Restrict)
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Restrict)
+  messages      Message[]
+
+  @@unique([clientProfileId, masterProfileId])
+  @@index([clientProfileId, lastMessageAt(sort: Desc)])
+  @@index([masterProfileId, lastMessageAt(sort: Desc)])
+  @@map("conversations")
+}
+
+/// §9.2. Immutable after send other than `readAt`; `DELETE /messages/:id` is a
+/// sender-side soft delete, never a hard delete.
+model Message {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  senderUserId   String    @map("sender_user_id") @db.Uuid
+  body           String    @db.VarChar(4000)
+  readAt         DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                @relation(fields: [senderUserId], references: [id], onDelete: Cascade)
+  attachments  MessageAttachment[]
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+/// §9.3. References a `File` the sender already confirmed uploading; no cascade to
+/// `File` itself — the object outlives an attachment row that stops being referenced.
+model MessageAttachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  fileId    String   @map("file_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file    File    @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+// ---------------------------------------------------------------------------
+// §12 Banners
+// ---------------------------------------------------------------------------
+
+/// §12. References a `File` the admin already confirmed uploading with purpose
+/// `BANNER`. Public reads filter to `isActive` and the current instant falling
+/// inside [`startsAt`, `endsAt`] (either bound optional) — enforced in
+/// `BannersService`, not here, because Prisma cannot express `now()` in a `@@index`
+/// predicate; the index below only orders the candidate rows for that filter.
+model Banner {
+  id              String         @id @default(uuid()) @db.Uuid
+  title           String         @db.VarChar(200)
+  subtitle        String?        @db.VarChar(500)
+  imageFileId     String         @map("image_file_id") @db.Uuid
+  linkUrl         String?        @map("link_url") @db.VarChar(500)
+  position        BannerPosition
+  sortOrder       Int            @default(0) @map("sort_order")
+  startsAt        DateTime?      @map("starts_at") @db.Timestamptz(3)
+  endsAt          DateTime?      @map("ends_at") @db.Timestamptz(3)
+  isActive        Boolean        @default(true) @map("is_active")
+  createdByUserId String         @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(3)
+
+  image     File @relation(fields: [imageFileId], references: [id], onDelete: Restrict)
+  createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([position, isActive, sortOrder])
+  @@map("banners")
 }

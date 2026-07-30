@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Active phase:** Phase 4 — The Transaction (Phases 1–3 complete) — Phase 4 feature work complete
+**Active phase:** Phase 5 — Engagement & Ops (Phases 1–4 complete) — F-12/F-14/F-15 done; broadcast notifications, metrics and load tests remain
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -147,9 +147,15 @@ would ship its admin routes unaudited and need a retrofit.
 
 ---
 
-## 🟢 Later
+## 🟡 In Progress — Phase 5: Engagement & Ops
 
-**Phase 5** — chat REST + Socket.io gateway, banners, admin dashboard, broadcast notifications, Prometheus metrics, load tests.
+- [x] F-12 Chat: `Conversation`/`Message`/`MessageAttachment` models, find-or-create conversation gated on a shared non-expired booking (BR-60, `NO_SHARED_BOOKING`), cursor-paginated message history, send/read/sender-side-delete, attachment ownership via `FilesService`
+- [x] `/chat` Socket.io namespace: JWT handshake reusing `JwtStrategy`, Redis adapter for cross-instance fan-out, rooms keyed by conversation id, `message:new`/`message:read`/`typing`/`error` — broadcast-only over the REST writes
+- [x] `NotificationsModule` message listener (`chat.message.sent` → `MESSAGE_RECEIVED`), no direct call from `ChatModule`
+- [x] Admin audited conversation read (`GET /admin/conversations/:id/messages`, `AuditAction.CONVERSATION_ACCESSED`) — no in-app dispute flag exists in v1, so reachable by any admin, always audited
+- [x] F-14 Banners: `Banner` model (`BannerPosition`), admin CRUD (`ADMIN`-only, audited) plus public `GET /banners?position=` filtered to the active window (`isActive` AND current instant inside `[startsAt, endsAt]`, either bound optional), `imageKey` resolved to a confirmed `File` via `FilesService.getAttachable` following the F-12 `attachmentKeys` precedent
+- [x] F-15 Admin dashboard: `GET /admin/dashboard?from=&to=`, a table-less `AdminModule` querying `PrismaService` directly — user/master/booking counts, completion/cancellation/acceptance rates, review aggregate, top 10 categories by booking volume, zero-filled daily series. `from`/`to` independently optional (30-day default window, 366-day cap, `DATE_RANGE_TOO_LARGE` reused)
+- [ ] Broadcast notifications, Prometheus metrics, load tests
 
 **Phase 6** — email verification, admin 2FA, device list, idempotency keys, data export/anonymised deletion, RS256, pentest, restore rehearsal, runbook, v1.0.0.
 

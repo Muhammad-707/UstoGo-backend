@@ -7,6 +7,7 @@ import { setupSwagger, SWAGGER_PATH } from './bootstrap/swagger';
 import { AppConfigService } from './config/app-config.service';
 import { InvalidEnvironmentException } from './config/invalid-environment.exception';
 import { loadEnv } from './config/load-env';
+import { RedisIoAdapter } from './modules/chat/gateway/redis-io.adapter';
 
 /**
  * Operational probes stay off the versioned prefix. The container HEALTHCHECK
@@ -32,6 +33,12 @@ async function bootstrap(): Promise<void> {
   const { app: appConfig } = app.get(AppConfigService);
 
   app.setGlobalPrefix(appConfig.apiPrefix, { exclude: UNVERSIONED_ROUTES });
+
+  // Fans `/chat` Socket.io events out across every instance (ARCHITECTURE.md §7);
+  // must be installed before `listen()` creates the underlying `Server`.
+  const redisIoAdapter = new RedisIoAdapter(app);
+  redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   if (appConfig.swaggerEnabled) {
     setupSwagger(app);

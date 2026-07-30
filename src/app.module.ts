@@ -12,12 +12,15 @@ import { AppConfigService } from './config/app-config.service';
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GLOBAL_THROTTLE_NAME } from './modules/auth/constants/throttle.constants';
 import { IdentifierThrottlerGuard } from './modules/auth/guards/identifier-throttler.guard';
+import { BannersModule } from './modules/banners/banners.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { FilesModule } from './modules/files/files.module';
 import { MastersModule } from './modules/masters/masters.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -90,6 +93,9 @@ import { StorageModule } from './shared/storage/storage.module';
     BookingsModule,
     NotificationsModule,
     ReviewsModule,
+    ChatModule,
+    BannersModule,
+    AdminModule,
     JobsModule,
   ],
   providers: [

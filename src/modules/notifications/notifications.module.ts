@@ -4,6 +4,7 @@ import { AdminNotificationsController } from './controllers/admin-notifications.
 import { NotificationsController } from './controllers/notifications.controller';
 import { BookingNotificationsListener } from './listeners/booking-notifications.listener';
 import { MasterNotificationsListener } from './listeners/master-notifications.listener';
+import { MessageNotificationsListener } from './listeners/message-notifications.listener';
 import { ReviewNotificationsListener } from './listeners/review-notifications.listener';
 import { NotificationsService } from './services/notifications.service';
 
@@ -19,6 +20,7 @@ import { NotificationsService } from './services/notifications.service';
     BookingNotificationsListener,
     MasterNotificationsListener,
     ReviewNotificationsListener,
+    MessageNotificationsListener,
   ],
   exports: [NotificationsService],
 })
