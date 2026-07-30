@@ -17,20 +17,25 @@ const ACCOUNT = {
   masterProfile: null,
 };
 
-const build = (options: { profile?: unknown } = {}) => {
+const build = (
+  options: { profile?: unknown; masterProfile?: unknown; bookings?: unknown[] } = {},
+) => {
   const users = { findMe: jest.fn().mockResolvedValue(ACCOUNT) } as unknown as UsersService;
 
   const clientProfileDelegate = {
     findUnique: jest.fn().mockResolvedValue('profile' in options ? options.profile : { id: 'cp1' }),
   };
-  const bookingDelegate = { findMany: jest.fn().mockResolvedValue([]) };
+  const masterProfileDelegate = {
+    findUnique: jest.fn().mockResolvedValue(options.masterProfile ?? null),
+  };
+  const bookingDelegate = { findMany: jest.fn().mockResolvedValue(options.bookings ?? []) };
   const reviewDelegate = { findMany: jest.fn().mockResolvedValue([]) };
   const notificationDelegate = { findMany: jest.fn().mockResolvedValue([]) };
 
   const prisma = {
     db: {
       clientProfile: clientProfileDelegate,
-      masterProfile: { findUnique: jest.fn().mockResolvedValue(null) },
+      masterProfile: masterProfileDelegate,
       booking: bookingDelegate,
       review: reviewDelegate,
       notification: notificationDelegate,
@@ -43,6 +48,7 @@ const build = (options: { profile?: unknown } = {}) => {
     bookingDelegate,
     reviewDelegate,
     notificationDelegate,
+    masterProfileDelegate,
   };
 };
 
@@ -73,6 +79,41 @@ describe('DataExportService.export', () => {
     const { service, bookingDelegate } = build({ profile: null });
 
     const result = await service.export('u1', UserRole.CLIENT);
+
+    expect(result.bookings).toEqual([]);
+    expect(bookingDelegate.findMany).not.toHaveBeenCalled();
+  });
+
+  it('scopes bookings and reviews to the master’s own profile', async () => {
+    const { service, bookingDelegate, reviewDelegate, masterProfileDelegate } = build({
+      masterProfile: { id: 'mp1' },
+    });
+
+    await service.export('u2', UserRole.MASTER);
+
+    expect(masterProfileDelegate.findUnique).toHaveBeenCalled();
+    expect(bookingDelegate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { masterProfileId: 'mp1' } }),
+    );
+    expect(reviewDelegate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { masterProfileId: 'mp1' } }),
+    );
+  });
+
+  it('formats each booking price as a fixed-scale string', async () => {
+    const price = { toFixed: jest.fn().mockReturnValue('49.99') };
+    const { service } = build({ bookings: [{ id: 'b1', price }] });
+
+    const result = await service.export('u1', UserRole.CLIENT);
+
+    expect(result.bookings[0]).toMatchObject({ id: 'b1', price: '49.99' });
+    expect(price.toFixed).toHaveBeenCalledWith(2);
+  });
+
+  it('resolves no profile for a role with no profile at all (ADMIN)', async () => {
+    const { service, bookingDelegate } = build();
+
+    const result = await service.export('a1', UserRole.ADMIN);
 
     expect(result.bookings).toEqual([]);
     expect(bookingDelegate.findMany).not.toHaveBeenCalled();
