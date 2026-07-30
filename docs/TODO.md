@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Active phase:** Phase 5 — Engagement & Ops (Phases 1–4 complete) — F-12/F-14/F-15 done; broadcast notifications, metrics and load tests remain
+**Active phase:** Phase 5 — Engagement & Ops (Phases 1–4 complete) — F-12/F-14/F-15, broadcast notifications and metrics done; load tests remain
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -155,7 +155,9 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] Admin audited conversation read (`GET /admin/conversations/:id/messages`, `AuditAction.CONVERSATION_ACCESSED`) — no in-app dispute flag exists in v1, so reachable by any admin, always audited
 - [x] F-14 Banners: `Banner` model (`BannerPosition`), admin CRUD (`ADMIN`-only, audited) plus public `GET /banners?position=` filtered to the active window (`isActive` AND current instant inside `[startsAt, endsAt]`, either bound optional), `imageKey` resolved to a confirmed `File` via `FilesService.getAttachable` following the F-12 `attachmentKeys` precedent
 - [x] F-15 Admin dashboard: `GET /admin/dashboard?from=&to=`, a table-less `AdminModule` querying `PrismaService` directly — user/master/booking counts, completion/cancellation/acceptance rates, review aggregate, top 10 categories by booking volume, zero-filled daily series. `from`/`to` independently optional (30-day default window, 366-day cap, `DATE_RANGE_TOO_LARGE` reused)
-- [ ] Broadcast notifications, Prometheus metrics, load tests
+- [x] Broadcast notifications (`POST /admin/notifications/broadcast`, shipped with F-11 in Phase 4)
+- [x] Prometheus metrics: `GET /metrics` (`ADMIN`-protected), `MetricsInterceptor` recording request rate/error rate/latency histogram for every request, plus Node.js default metrics. DB pool and job-outcome gauges, and Grafana dashboards themselves, are not implemented — flagged in STATUS.md
+- [ ] Load tests against NFR targets
 
 **Phase 6** — email verification, admin 2FA, device list, idempotency keys, data export/anonymised deletion, RS256, pentest, restore rehearsal, runbook, v1.0.0.
 

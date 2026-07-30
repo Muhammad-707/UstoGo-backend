@@ -32,6 +32,7 @@ import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { MailModule } from './shared/mail/mail.module';
+import { MetricsModule } from './shared/metrics/metrics.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { RedisService } from './shared/redis/redis.service';
 import { StorageModule } from './shared/storage/storage.module';
@@ -53,6 +54,7 @@ import { StorageModule } from './shared/storage/storage.module';
     ConfigModule,
     CommonModule,
     LoggerModule,
+    MetricsModule,
     PrismaModule,
     MailModule,
     RedisModule,

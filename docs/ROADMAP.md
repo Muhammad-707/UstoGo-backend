@@ -98,8 +98,8 @@ has to exist before the first privileged mutation it is meant to cover.
 - ✅ Socket.io `/chat` gateway with JWT handshake and Redis adapter
 - ✅ **F-14 Banners**: admin CRUD, public active-window read
 - ✅ **F-15 Dashboard**: aggregate metrics and time series
-- ⬜ Admin broadcast notifications
-- ⬜ Prometheus metrics endpoint and dashboards
+- ✅ Admin broadcast notifications (`POST /admin/notifications/broadcast`, shipped with F-11 in Phase 4)
+- ✅ Prometheus metrics endpoint (`GET /metrics`, `ADMIN`-protected: request rate, error rate, latency histogram; DB pool/job-outcome gauges and dashboards remain)
 - ⬜ Load testing against NFR targets
 
 **Exit criteria:** operations can run the platform day-to-day without database access.
