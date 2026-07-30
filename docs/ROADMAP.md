@@ -92,12 +92,12 @@ has to exist before the first privileged mutation it is meant to cover.
 
 ---
 
-## Phase 5 — Engagement & Operations ⬜
+## Phase 5 — Engagement & Operations 🟨
 
-- ⬜ **F-12 Chat**: conversations, messages, cursor pagination, read state
-- ⬜ Socket.io `/chat` gateway with JWT handshake and Redis adapter
-- ⬜ **F-14 Banners**: admin CRUD, public active-window read
-- ⬜ **F-15 Dashboard**: aggregate metrics and time series
+- ✅ **F-12 Chat**: conversations, messages, cursor pagination, read state
+- ✅ Socket.io `/chat` gateway with JWT handshake and Redis adapter
+- ✅ **F-14 Banners**: admin CRUD, public active-window read
+- ✅ **F-15 Dashboard**: aggregate metrics and time series
 - ⬜ Admin broadcast notifications
 - ⬜ Prometheus metrics endpoint and dashboards
 - ⬜ Load testing against NFR targets
