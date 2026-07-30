@@ -92,7 +92,7 @@ has to exist before the first privileged mutation it is meant to cover.
 
 ---
 
-## Phase 5 — Engagement & Operations 🟨
+## Phase 5 — Engagement & Operations ✅
 
 - ✅ **F-12 Chat**: conversations, messages, cursor pagination, read state
 - ✅ Socket.io `/chat` gateway with JWT handshake and Redis adapter
@@ -100,7 +100,7 @@ has to exist before the first privileged mutation it is meant to cover.
 - ✅ **F-15 Dashboard**: aggregate metrics and time series
 - ✅ Admin broadcast notifications (`POST /admin/notifications/broadcast`, shipped with F-11 in Phase 4)
 - ✅ Prometheus metrics endpoint (`GET /metrics`, `ADMIN`-protected: request rate, error rate, latency histogram; DB pool/job-outcome gauges and dashboards remain)
-- ⬜ Load testing against NFR targets
+- ✅ Load testing scripts against NFR targets: `k6/simple-reads.js` (NFR-P-1) added alongside Phase 3's `k6/search.js`/`k6/availability.js`; `prisma/seed/scale.seed.ts` (`npm run seed:scale`) seeds the 50,000-master dataset NFR-P-2 measures against. Actual runs stay manual/staging-only, as the existing two scripts already were — k6 and a seeded environment are infrastructure this repo's CI does not provide.
 
 **Exit criteria:** operations can run the platform day-to-day without database access.
 

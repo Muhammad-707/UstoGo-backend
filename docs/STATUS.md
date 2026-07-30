@@ -1,8 +1,8 @@
 # Project Status — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Current phase:** Phase 5 — Engagement & Operations, in progress (F-12 Chat, F-14 Banners, F-15 Dashboard done)
-**Version:** 0.1.6
+**Current phase:** Phase 5 — Engagement & Operations, complete
+**Version:** 0.1.7
 **Overall progress:** ▓▓▓▓▓▓▓▓▓░ 85% (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, and an admin can see the whole platform's health in one call)
 
 ---
@@ -17,7 +17,7 @@
 | Configuration       | ✅ Complete — Zod-validated at boot, 34 unit tests, 100% covered             |
 | Database schema     | 🟨 §2–4, §7–§13 migrated and seeded; F-15 dashboard has no schema of its own |
 | Authentication      | ✅ Complete — registration, login, rotation, reset; 100% branch coverage     |
-| Business features   | 🟨 F-01–F-16 and metrics done; load tests remain                             |
+| Business features   | ✅ F-01–F-16 done; Phase 6 (hardening/launch) next                           |
 | Common layer        | ✅ Complete — envelope, validation, correlation, logging                     |
 | Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup              |
 | Tests               | ✅ 819 tests (640 unit + 179 e2e); Testcontainers harness live               |
@@ -94,6 +94,10 @@ Masters are reported across four buckets, not the three `ApprovalStatus` values:
 
 **Prometheus metrics** (NFR-O-4, DEPLOYMENT.md §8). `GET /metrics` — a new `MetricsModule` (`src/shared/metrics`) registers a global `MetricsInterceptor` (`APP_INTERCEPTOR`, following `AuditModule`'s own precedent for self-registering a global interceptor from inside a feature module) that records every request's method, _matched route pattern_ (never the raw path — an id in the label would give every distinct resource its own time series) and status into a `prom-client` counter and latency histogram, plus Node's own default process metrics. The endpoint is `@ApiAuth(ADMIN)`-protected the same way every other admin route is, so a scrape config carries a bearer token rather than this becoming the one route with platform-wide numbers and no auth on it. Not implemented: DB connection-pool and scheduled-job-outcome gauges (NFR-O-4 also asks for these) and the Grafana dashboards themselves — request rate/error rate/latency was the part directly reachable from the request pipeline; the rest needs instrumentation inside `PrismaModule` and each job, which is real additional scope rather than a corner cut here. 819 tests total (640 unit + 179 e2e).
 
+**Load testing closes Phase 5.** `k6/simple-reads.js` covers NFR-P-1 (p95 ≤ 200ms for `/users/me`, a single booking and the notification list, at a constant 100 rps), joining Phase 3's `k6/search.js`/`k6/availability.js`. `prisma/seed/scale.seed.ts` (`npm run seed:scale [-- <count>]`, default 50,000) batch-inserts masters/services via `createMany` so NFR-P-2's search benchmark has the 50,000-master dataset it names, rather than the dev seed's handful — it is explicitly a local/staging-only fixture, never run against a shared environment. As with the two scripts it joins, actually executing k6 against a seeded stack stays a manual/staging step; there is no CI job for it, since that needs infrastructure (k6 itself, a scaled database) this repo's pipeline does not provision.
+
+**Phase 5 is closed.** F-12 Chat, F-14 Banners, F-15 Admin dashboard, admin broadcast notifications, Prometheus metrics and the load-test scripts against every NFR-P target are all done. Phase 6 — Hardening & Launch — is next.
+
 ---
 
 ## 2. Phase Progress
@@ -105,7 +109,7 @@ Masters are reported across four buckets, not the three `ApprovalStatus` values:
 | 2 — Supply Side         | Audit, categories, masters, moderation, services | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | 🟨      | ▓▓▓▓▓▓▓▓░░ 85%  |
+| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ⬜      | ░░░░░░░░░░ 0%   |
 
 ---
@@ -190,7 +194,7 @@ Masters are reported across four buckets, not the three `ApprovalStatus` values:
 
 ## 6. Blockers
 
-None. Load testing against NFR targets is what remains of Phase 5.
+None. Phase 5 is closed; Phase 6 (Hardening & Launch) is next.
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -212,7 +216,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-Phase 4 (The Transaction) is closed: bookings, notifications and reviews all work end to end. Phase 5 (Engagement & Ops) is under way — F-12 Chat, F-14 Banners, F-15 Admin dashboard, broadcast notifications and Prometheus metrics are all done; what remains is **load testing against NFR targets** (`docs/TODO.md`, `ROADMAP.md`).
+Phase 5 (Engagement & Ops) is closed: F-12 Chat, F-14 Banners, F-15 Admin dashboard, broadcast notifications, Prometheus metrics and load-test scripts against the NFR targets are all done. **Phase 6 — Hardening & Launch** is next (`docs/TODO.md`, `ROADMAP.md`).
 
 Detailed task list: `TODO.md`.
 
