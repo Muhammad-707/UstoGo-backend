@@ -129,5 +129,5 @@ export const createTestApp = async (options: TestAppOptions = {}): Promise<TestA
 export const truncateAll = async (prisma: PrismaService): Promise<void> => {
   // A tagged template with no interpolation — the table list is a fixed literal, and
   // there is no value here for anything to inject through.
-  await prisma.$executeRaw`TRUNCATE TABLE "users", "client_profiles", "master_profiles", "refresh_tokens", "password_reset_tokens", "email_verification_tokens", "files", "audit_logs", "categories", "master_categories", "certificates", "services", "bookings", "booking_status_history", "reviews", "review_replies", "notifications", "conversations", "messages", "message_attachments", "banners" RESTART IDENTITY CASCADE`;
+  await prisma.$executeRaw`TRUNCATE TABLE "users", "client_profiles", "master_profiles", "refresh_tokens", "password_reset_tokens", "email_verification_tokens", "two_factor_challenges", "files", "audit_logs", "categories", "master_categories", "certificates", "services", "bookings", "booking_status_history", "reviews", "review_replies", "notifications", "conversations", "messages", "message_attachments", "banners" RESTART IDENTITY CASCADE`;
 };

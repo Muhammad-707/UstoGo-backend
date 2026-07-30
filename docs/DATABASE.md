@@ -97,17 +97,19 @@ enum AuditAction {
 
 ### 3.1 `User`
 
-| Column                                  | Type         | Constraints                                   | Notes                                |
-| --------------------------------------- | ------------ | --------------------------------------------- | ------------------------------------ |
-| `id`                                    | uuid         | PK                                            |                                      |
-| `email`                                 | citext       | unique where `deletedAt IS NULL`              | normalised lowercase                 |
-| `phone`                                 | varchar(20)  | unique where not null and `deletedAt IS NULL` | E.164                                |
-| `passwordHash`                          | varchar(72)  | not null                                      | bcrypt; **never selected into DTOs** |
-| `role`                                  | `UserRole`   | not null, immutable                           |                                      |
-| `status`                                | `UserStatus` | default `ACTIVE`                              |                                      |
-| `emailVerifiedAt`                       | timestamptz  | null                                          | Phase 6                              |
-| `lastLoginAt`                           | timestamptz  | null                                          |                                      |
-| `createdAt` / `updatedAt` / `deletedAt` | timestamptz  |                                               |                                      |
+| Column                                  | Type         | Constraints                                   | Notes                                                      |
+| --------------------------------------- | ------------ | --------------------------------------------- | ---------------------------------------------------------- |
+| `id`                                    | uuid         | PK                                            |                                                            |
+| `email`                                 | citext       | unique where `deletedAt IS NULL`              | normalised lowercase                                       |
+| `phone`                                 | varchar(20)  | unique where not null and `deletedAt IS NULL` | E.164                                                      |
+| `passwordHash`                          | varchar(72)  | not null                                      | bcrypt; **never selected into DTOs**                       |
+| `role`                                  | `UserRole`   | not null, immutable                           |                                                            |
+| `status`                                | `UserStatus` | default `ACTIVE`                              |                                                            |
+| `emailVerifiedAt`                       | timestamptz  | null                                          | Phase 6                                                    |
+| `totpSecret`                            | varchar(255) | null                                          | Phase 6; AES-256-GCM ciphertext, never plaintext or logged |
+| `totpEnabledAt`                         | timestamptz  | null                                          | Phase 6; gates whether login requires a TOTP challenge     |
+| `lastLoginAt`                           | timestamptz  | null                                          |                                                            |
+| `createdAt` / `updatedAt` / `deletedAt` | timestamptz  |                                               |                                                            |
 
 Indexes: `(role, status)`, `(createdAt)`, partial unique on `email`, partial unique on `phone`.
 
@@ -189,6 +191,10 @@ Hard-deleted by a nightly job once `expiresAt < now() - 30 days`.
 ### 4.3 `EmailVerificationToken` (Phase 6)
 
 `id`, `userId` (FK, cascade), `tokenHash` (unique), `expiresAt`, `usedAt?`, `createdAt`. Same shape and the same reasoning as `PasswordResetToken`: only the hash is stored, the raw token exists only in the outbound email, and issuing a new one invalidates any still-outstanding token. Sets `User.emailVerifiedAt` on consumption; nothing else in v1 is gated on that column.
+
+### 4.4 `TwoFactorChallenge` (Phase 6)
+
+`id`, `userId` (FK, cascade), `tokenHash` (unique), `expiresAt` (5 min), `usedAt?`, `createdAt`. Issued after a password verifies for an account with `User.totpEnabledAt` set; exchanged, together with a TOTP code, for a real session at `POST /auth/2fa/verify`. `User.totpSecret` (§3.1) is AES-256-GCM ciphertext, not a hash — a TOTP code has to be verified by recomputing HOTP against the plaintext secret, unlike every other token in this schema, which only ever needs a one-way comparison.
 
 ---
 

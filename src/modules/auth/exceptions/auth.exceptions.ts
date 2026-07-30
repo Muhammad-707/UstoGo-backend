@@ -126,6 +126,61 @@ export class EmailAlreadyVerifiedException extends AppException {
   }
 }
 
+/** 401. A submitted TOTP code did not match the current or adjacent time step. */
+export class InvalidTotpCodeException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.INVALID_TOTP_CODE,
+      'The verification code is invalid.',
+      HttpStatus.UNAUTHORIZED,
+    );
+  }
+}
+
+/** 409. `enable` called for an account that already has TOTP turned on. */
+export class TotpAlreadyEnabledException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.TOTP_ALREADY_ENABLED,
+      'Two-factor authentication is already enabled.',
+      HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** 409. `disable` called for an account that does not have TOTP turned on. */
+export class TotpNotEnabledException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.TOTP_NOT_ENABLED,
+      'Two-factor authentication is not enabled.',
+      HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** 409. `enable` called before `setup` issued a pending secret. */
+export class TotpSetupNotStartedException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.TOTP_SETUP_NOT_STARTED,
+      'Start enrollment with /auth/2fa/setup first.',
+      HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** 401. Unknown, expired or already used — one code for all three, as with every other token. */
+export class InvalidTwoFactorChallengeException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.INVALID_TWO_FACTOR_CHALLENGE,
+      'The two-factor challenge is invalid or has expired.',
+      HttpStatus.UNAUTHORIZED,
+    );
+  }
+}
+
 /** 404. A referenced city does not exist. */
 export class CityNotFoundException extends AppException {
   constructor() {

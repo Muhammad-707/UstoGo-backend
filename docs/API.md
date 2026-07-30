@@ -110,6 +110,10 @@ Defined once in `ERROR_HANDLING.md`:
 | PATCH  | `/auth/password`            | Any    | Change password → 204                                             |
 | POST   | `/auth/verify-email`        | Public | Confirm an emailed token, sets `emailVerifiedAt` → 204            |
 | POST   | `/auth/resend-verification` | Any    | Re-issue the verification link → 202                              |
+| POST   | `/auth/2fa/verify`          | Public | Exchange a login `challengeToken` + TOTP code for tokens → 200    |
+| POST   | `/auth/2fa/setup`           | ADMIN  | Start TOTP enrollment → 200 `{ secret, otpauthUrl }`              |
+| POST   | `/auth/2fa/enable`          | ADMIN  | Confirm enrollment with a code → 204                              |
+| POST   | `/auth/2fa/disable`         | ADMIN  | Turn TOTP off, requires a valid code → 204                        |
 
 **`AuthResponse`**
 
@@ -380,18 +384,20 @@ All routes `@Roles(ADMIN)`; all mutations audited.
 
 ## 13. Rate Limits
 
-| Scope                             | Limit                              |
-| --------------------------------- | ---------------------------------- |
-| Global per IP                     | 100 req / min                      |
-| `/auth/login`, `/auth/register/*` | 5 req / 15 min per IP + identifier |
-| `/auth/forgot-password`           | 3 req / hour per email             |
-| `/auth/refresh`                   | 30 req / hour per user             |
-| `/auth/verify-email`              | 10 req / hour per IP               |
-| `/auth/resend-verification`       | 3 req / hour per user              |
-| `/files/presign`                  | 20 req / hour per user             |
-| `POST /bookings`                  | 10 req / hour per client           |
-| `POST /reviews`                   | 10 req / day per client            |
-| Messages                          | 60 req / min per user              |
+| Scope                              | Limit                              |
+| ---------------------------------- | ---------------------------------- |
+| Global per IP                      | 100 req / min                      |
+| `/auth/login`, `/auth/register/*`  | 5 req / 15 min per IP + identifier |
+| `/auth/forgot-password`            | 3 req / hour per email             |
+| `/auth/refresh`                    | 30 req / hour per user             |
+| `/auth/verify-email`               | 10 req / hour per IP               |
+| `/auth/resend-verification`        | 3 req / hour per user              |
+| `/auth/2fa/verify`                 | 10 req / 15 min per IP             |
+| `/auth/2fa/setup\|enable\|disable` | 5 req / hour per user              |
+| `/files/presign`                   | 20 req / hour per user             |
+| `POST /bookings`                   | 10 req / hour per client           |
+| `POST /reviews`                    | 10 req / day per client            |
+| Messages                           | 60 req / min per user              |
 
 Exceeding a limit returns `429` with `Retry-After`.
 

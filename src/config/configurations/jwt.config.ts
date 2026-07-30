@@ -12,6 +12,9 @@ export type JwtConfig = {
   readonly passwordResetUrl: string;
   readonly emailVerificationTtl: string;
   readonly emailVerificationUrl: string;
+  readonly totpEncryptionKey: string;
+  readonly totpIssuer: string;
+  readonly twoFactorChallengeTtl: string;
 };
 
 export const buildJwtConfig = (env: Env): JwtConfig =>
@@ -27,4 +30,7 @@ export const buildJwtConfig = (env: Env): JwtConfig =>
     passwordResetUrl: env.PASSWORD_RESET_URL,
     emailVerificationTtl: env.EMAIL_VERIFICATION_TTL,
     emailVerificationUrl: env.EMAIL_VERIFICATION_URL,
+    totpEncryptionKey: env.TOTP_ENCRYPTION_KEY,
+    totpIssuer: env.TOTP_ISSUER,
+    twoFactorChallengeTtl: env.TWO_FACTOR_CHALLENGE_TTL,
   });

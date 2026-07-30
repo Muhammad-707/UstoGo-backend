@@ -6,11 +6,14 @@ import { durationToSeconds } from '@common/utils/duration.util';
 import { AppConfigService } from '@config/app-config.service';
 
 import { AuthController } from './controllers/auth.controller';
+import { EmailVerificationController } from './controllers/email-verification.controller';
+import { TwoFactorController } from './controllers/two-factor.controller';
 import { AuthService } from './services/auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { PasswordResetService } from './services/password-reset.service';
 import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
+import { TwoFactorService } from './services/two-factor.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 /**
@@ -38,13 +41,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, EmailVerificationController, TwoFactorController],
   providers: [
     AuthService,
     TokenService,
     PasswordService,
     PasswordResetService,
     EmailVerificationService,
+    TwoFactorService,
     JwtStrategy,
   ],
   // `JwtModule` and `JwtStrategy` are exported so `ChatGateway` can verify a socket

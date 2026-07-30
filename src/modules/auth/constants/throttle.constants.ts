@@ -15,6 +15,8 @@ export const THROTTLE = Object.freeze({
   REFRESH: { limit: 30, ttl: hours(1) },
   VERIFY_EMAIL: { limit: 10, ttl: hours(1) },
   RESEND_VERIFICATION: { limit: 3, ttl: hours(1) },
+  TWO_FACTOR_VERIFY: { limit: 10, ttl: minutes(15) },
+  TWO_FACTOR_ENROLL: { limit: 5, ttl: hours(1) },
 } as const);
 
 /** The global default from API.md §13: 100 requests per minute per IP. */

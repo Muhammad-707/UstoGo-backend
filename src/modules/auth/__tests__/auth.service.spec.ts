@@ -18,6 +18,7 @@ import { AuthService } from '../services/auth.service';
 import type { EmailVerificationService } from '../services/email-verification.service';
 import type { PasswordService } from '../services/password.service';
 import type { TokenService } from '../services/token.service';
+import type { TwoFactorService } from '../services/two-factor.service';
 
 const user = (overrides: Partial<User> = {}): User =>
   ({
@@ -27,6 +28,7 @@ const user = (overrides: Partial<User> = {}): User =>
     passwordHash: 'hash',
     role: 'CLIENT',
     status: 'ACTIVE',
+    totpEnabledAt: null,
     ...overrides,
   }) as unknown as User;
 
@@ -94,9 +96,12 @@ const build = (stubs: Stubs = {}) => {
   const emailVerification = {
     issue: jest.fn().mockResolvedValue(undefined),
   } as unknown as EmailVerificationService;
+  const twoFactor = {
+    issueChallenge: jest.fn().mockResolvedValue('challenge-raw'),
+  } as unknown as TwoFactorService;
 
   return {
-    service: new AuthService(prisma, tx, passwords, tokens, events, emailVerification),
+    service: new AuthService(prisma, tx, passwords, tokens, events, emailVerification, twoFactor),
     userDelegate,
     cityDelegate,
     clientProfileDelegate,
@@ -105,6 +110,7 @@ const build = (stubs: Stubs = {}) => {
     tokens,
     events,
     verifyAgainstDummy,
+    twoFactor,
   };
 };
 
@@ -295,6 +301,19 @@ describe('AuthService.login', () => {
     const updated = firstArg<{ data: { lastLoginAt: Date } }>(userDelegate.update);
 
     expect(updated.data.lastLoginAt).toBeInstanceOf(Date);
+  });
+
+  it('returns a challenge instead of tokens when TOTP is enabled, without touching lastLoginAt', async () => {
+    const { service, userDelegate, twoFactor } = build({
+      findFirstUser: user({ totpEnabledAt: new Date() }),
+      verify: true,
+    });
+
+    const result = await service.login('aziz@example.com', 'correcthorse7', {});
+
+    expect(result).toEqual({ twoFactorRequired: true, challengeToken: 'challenge-raw' });
+    expect(twoFactor.issueChallenge).toHaveBeenCalledWith('user-1');
+    expect(userDelegate.update).not.toHaveBeenCalled();
   });
 });
 

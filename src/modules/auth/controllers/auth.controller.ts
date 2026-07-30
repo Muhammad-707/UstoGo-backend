@@ -4,6 +4,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiExtraModels,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -12,6 +13,7 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -22,6 +24,7 @@ import { ErrorResponseDto } from '@common/dto/error-response.dto';
 import type { AppRequest } from '@common/types/app-request.type';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
+import { sessionContext } from './session-context.util';
 import { THROTTLE } from '../constants/throttle.constants';
 import { ThrottleIdentifier } from '../decorators/throttle-identifier.decorator';
 import {
@@ -30,27 +33,26 @@ import {
   LoginDto,
   RefreshTokenDto,
   ResetPasswordDto,
-  VerifyEmailDto,
 } from '../dto/requests/credentials.dto';
 import { RegisterClientDto } from '../dto/requests/register-client.dto';
 import { RegisterMasterDto } from '../dto/requests/register-master.dto';
 import { AuthResponseDto } from '../dto/responses/auth.response.dto';
+import { TwoFactorRequiredResponseDto } from '../dto/responses/two-factor.response.dto';
 import { AuthService } from '../services/auth.service';
-import { EmailVerificationService } from '../services/email-verification.service';
 import { PasswordResetService } from '../services/password-reset.service';
-import { TokenService, type SessionContext } from '../services/token.service';
+import { TokenService } from '../services/token.service';
 
 const VALIDATION_FAILED = { description: 'VALIDATION_FAILED', type: ErrorResponseDto };
 const RATE_LIMITED = { description: 'TOO_MANY_REQUESTS', type: ErrorResponseDto };
 
 @ApiTags('Auth')
+@ApiExtraModels(TwoFactorRequiredResponseDto)
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly tokens: TokenService,
     private readonly passwordReset: PasswordResetService,
-    private readonly emailVerification: EmailVerificationService,
   ) {}
 
   @Post('register/client')
@@ -114,9 +116,17 @@ export class AuthController {
       'Public — no authentication required. An unknown email and a wrong password produce ' +
       'the same 401 and a comparable response time, so this endpoint cannot be used to ' +
       'discover which addresses are registered. Account status is reported only after the ' +
-      'password verifies, for the same reason.',
+      'password verifies, for the same reason. For an account with TOTP enabled, this ' +
+      'returns a `challengeToken` instead of tokens — exchange it at `POST /auth/2fa/verify`.',
   })
-  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiOkResponse({
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(AuthResponseDto) },
+        { $ref: getSchemaPath(TwoFactorRequiredResponseDto) },
+      ],
+    },
+  })
   @ApiUnauthorizedResponse({ description: 'INVALID_CREDENTIALS', type: ErrorResponseDto })
   @ApiForbiddenResponse({
     description: 'ACCOUNT_BLOCKED | ACCOUNT_INACTIVE',
@@ -124,10 +134,16 @@ export class AuthController {
   })
   @ApiUnprocessableEntityResponse(VALIDATION_FAILED)
   @ApiTooManyRequestsResponse(RATE_LIMITED)
-  async login(@Body() dto: LoginDto, @Req() request: AppRequest): Promise<AuthResponseDto> {
+  async login(
+    @Body() dto: LoginDto,
+    @Req() request: AppRequest,
+  ): Promise<AuthResponseDto | TwoFactorRequiredResponseDto> {
     const context = { ...sessionContext(request), deviceId: dto.deviceId };
-    const { user, tokens } = await this.auth.login(dto.email, dto.password, context);
-    return AuthResponseDto.from(user, tokens);
+    const result = await this.auth.login(dto.email, dto.password, context);
+
+    return result.twoFactorRequired
+      ? { twoFactorRequired: true, challengeToken: result.challengeToken }
+      : AuthResponseDto.from(result.user, result.tokens);
   }
 
   @Post('refresh')
@@ -220,39 +236,6 @@ export class AuthController {
     await this.passwordReset.resetPassword(dto.token, dto.password);
   }
 
-  @Post('verify-email')
-  @Public()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @Throttle({ default: THROTTLE.VERIFY_EMAIL })
-  @ApiOperation({
-    summary: 'Confirm an email address using the emailed token',
-    description:
-      'Public — the token is the credential. Single use. Sets `emailVerifiedAt`; nothing ' +
-      'else in v1 is gated on it.',
-  })
-  @ApiNoContentResponse()
-  @ApiBadRequestResponse({ description: 'INVALID_VERIFICATION_TOKEN', type: ErrorResponseDto })
-  @ApiUnprocessableEntityResponse(VALIDATION_FAILED)
-  @ApiTooManyRequestsResponse(RATE_LIMITED)
-  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<void> {
-    await this.emailVerification.verify(dto.token);
-  }
-
-  @Post('resend-verification')
-  @ApiAuth()
-  @HttpCode(HttpStatus.ACCEPTED)
-  @Throttle({ default: THROTTLE.RESEND_VERIFICATION })
-  @ApiOperation({
-    summary: 'Resend the email verification link',
-    description: 'Any previously issued verification link stops working.',
-  })
-  @ApiAcceptedResponse()
-  @ApiConflictResponse({ description: 'EMAIL_ALREADY_VERIFIED', type: ErrorResponseDto })
-  @ApiTooManyRequestsResponse(RATE_LIMITED)
-  async resendVerification(@CurrentUser() user: AuthenticatedUser): Promise<void> {
-    await this.emailVerification.resend(user.id);
-  }
-
   @Patch('password')
   @ApiAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -275,9 +258,3 @@ export class AuthController {
     await this.auth.changePassword(user.id, user.sessionId, dto.currentPassword, dto.password);
   }
 }
-
-/** Forensic context for the session row (DATABASE.md §4.1). */
-const sessionContext = (request: AppRequest): SessionContext => ({
-  userAgent: request.header('user-agent'),
-  ipAddress: request.ip,
-});

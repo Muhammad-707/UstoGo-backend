@@ -19,6 +19,10 @@ export const generateResetToken = (): string =>
 export const generateEmailVerificationToken = (): string =>
   randomBytes(AUTH.EMAIL_VERIFICATION_TOKEN_BYTES).toString('base64url');
 
+/** A 256-bit value returned to the client after the first login factor verifies. */
+export const generateTwoFactorChallengeToken = (): string =>
+  randomBytes(AUTH.TWO_FACTOR_CHALLENGE_TOKEN_BYTES).toString('base64url');
+
 /**
  * SHA-256, not bcrypt.
  *

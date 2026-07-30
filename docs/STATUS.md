@@ -104,6 +104,10 @@ One judgment call, per `CLAUDE.md` §3: **`emailVerifiedAt` gates nothing else i
 
 828 tests total (649 unit + 183 e2e — the auth suite's e2e count includes the four new verify/resend cases). Building the migration surfaced the same `search_vector` drift `STATUS.md`'s F-12/F-14 entries already describe (Prisma's diff cannot see the raw-SQL generated column and proposes dropping it); the generated `DROP COLUMN`/`DROP INDEX` was removed by hand and a fresh `prisma migrate deploy` (as the e2e harness runs on every boot) confirmed the corrected migration replays cleanly with the column intact.
 
+**Two-factor authentication for admin accounts is next in Phase 6.** TOTP (RFC 4226/6238) is implemented directly against `node:crypto` (`domain/totp.util.ts`) rather than a dependency, per `CLAUDE.md` §5. `User.totpSecret` is stored AES-256-GCM-encrypted (`domain/secret-encryption.util.ts`) — the one secret in this schema that has to be recovered rather than one-way-compared, since verifying a code means recomputing HOTP against the plaintext. `totpEnabledAt` stays null until `POST /auth/2fa/enable` proves the caller's authenticator app actually has the secret, so a typo during setup cannot lock an account out. `AuthService.login` returns `{ twoFactorRequired: true, challengeToken }` instead of a token pair for an account with TOTP on; the challenge (`TwoFactorChallenge` model, DATABASE.md §4.4 — same hash-only, single-use shape as every other token here, 5-minute TTL) is exchanged together with a TOTP code at `POST /auth/2fa/verify`. `POST /auth/2fa/disable` requires a currently valid code, not just the bearer token, so a stolen access token alone cannot downgrade an account out of 2FA. 862 tests total (655 unit + 189 e2e, plus one pre-existing flaky `chat.e2e-spec.ts` websocket-timing case unrelated to this feature, already noted in §6 Blockers).
+
+One test-fixture gap was found and fixed in the same pass: `src/config/__tests__/env.fixture.ts`'s `validEnv()` did not set the new `TOTP_ENCRYPTION_KEY`, which failed every `env.schema.spec.ts` case once the variable became required — fixed by adding it to the fixture, not by making the key optional.
+
 ---
 
 ## 2. Phase Progress
@@ -116,7 +120,7 @@ One judgment call, per `CLAUDE.md` §3: **`emailVerifiedAt` gates nothing else i
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓░░░░░░░░░ 10%  |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓░░░░░░░░ 20%  |
 
 ---
 
@@ -200,7 +204,7 @@ One judgment call, per `CLAUDE.md` §3: **`emailVerifiedAt` gates nothing else i
 
 ## 6. Blockers
 
-None. Phase 6 (Hardening & Launch) is in progress — email verification done, two-factor admin auth next.
+None. Phase 6 (Hardening & Launch) is in progress — email verification and two-factor admin auth done, device/session list next.
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -222,7 +226,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-**Phase 6 — Hardening & Launch** is in progress. Email verification is done; next up is two-factor authentication for admin accounts, per `docs/TODO.md`/`ROADMAP.md`.
+**Phase 6 — Hardening & Launch** is in progress. Email verification and admin two-factor authentication are done; next up is the device/session list with per-device revocation, per `docs/TODO.md`/`ROADMAP.md`.
 
 Detailed task list: `TODO.md`.
 

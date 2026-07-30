@@ -166,7 +166,7 @@ would ship its admin routes unaudited and need a retrofit.
 ## 🟡 In Progress — Phase 6: Hardening & Launch
 
 - [x] Email verification: `EmailVerificationToken` model (same shape as `PasswordResetToken`), `AuthService.registerClient`/`registerMaster` issue a token right after commit, `POST /auth/verify-email` (public, single-use), `POST /auth/resend-verification` (authenticated, `409 EMAIL_ALREADY_VERIFIED` if already verified). Not gated on anything else in v1 — no FR/SRS document ties `emailVerifiedAt` to an access restriction, so no enforcement was invented.
-- [ ] Two-factor authentication for admin accounts
+- [x] Two-factor authentication for admin accounts: TOTP (RFC 6238) against `node:crypto`, `User.totpSecret`/`totpEnabledAt` + `TwoFactorChallenge` model, `POST /auth/2fa/{setup,enable,disable,verify}`, `AuthService.login` returns a `challengeToken` instead of tokens when `totpEnabledAt` is set
 - [ ] Device/session list with per-device revocation
 - [ ] Idempotency keys on mutating endpoints
 - [ ] Personal data export and anonymised deletion

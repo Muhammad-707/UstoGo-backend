@@ -8,6 +8,7 @@ import { TransactionManager, type PrismaTransaction } from '@prisma-lib/transact
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordService } from './password.service';
 import { TokenService, type SessionContext, type TokenPair } from './token.service';
+import { TwoFactorService } from './two-factor.service';
 import { REVOKED_REASON } from '../constants/auth.constants';
 import type { RegisterClientDto } from '../dto/requests/register-client.dto';
 import type { RegisterMasterDto } from '../dto/requests/register-master.dto';
@@ -32,6 +33,14 @@ export type AuthResult = {
   readonly tokens: TokenPair;
 };
 
+/**
+ * `login`'s result: a real session, or — for an admin with TOTP enabled — a challenge
+ * to exchange at `POST /auth/2fa/verify` instead (`TwoFactorService`).
+ */
+export type LoginResult =
+  | ({ readonly twoFactorRequired: false } & AuthResult)
+  | { readonly twoFactorRequired: true; readonly challengeToken: string };
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -41,6 +50,7 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly events: EventEmitter2,
     private readonly emailVerification: EmailVerificationService,
+    private readonly twoFactor: TwoFactorService,
   ) {}
 
   /**
@@ -131,7 +141,7 @@ export class AuthService {
    * would make `ACCOUNT_BLOCKED` an oracle: it would confirm the address is registered
    * to anyone who guessed a password wrong.
    */
-  async login(email: string, password: string, context: SessionContext): Promise<AuthResult> {
+  async login(email: string, password: string, context: SessionContext): Promise<LoginResult> {
     const user = await this.prisma.db.user.findFirst({ where: { email } });
 
     if (user === null) {
@@ -145,13 +155,22 @@ export class AuthService {
 
     this.assertAccountUsable(user);
 
+    // Second factor required: no session yet, only a short-lived challenge exchanged
+    // at POST /auth/2fa/verify once the TOTP code also checks out.
+    if (user.totpEnabledAt !== null) {
+      return {
+        twoFactorRequired: true,
+        challengeToken: await this.twoFactor.issueChallenge(user.id),
+      };
+    }
+
     const tokens = await this.tokens.issuePair(user, context);
     await this.prisma.db.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
 
-    return { user, tokens };
+    return { twoFactorRequired: false, user, tokens };
   }
 
   /**

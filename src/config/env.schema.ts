@@ -66,6 +66,13 @@ export const envSchema = z
       ['http:', 'https:'],
       'must be an http:// or https:// URL',
     ).default('http://localhost:3000/verify-email'),
+    // AES-256-GCM key encrypting the TOTP secret at rest (src/modules/auth/domain/
+    // secret-encryption.util.ts) — 64 hex characters, i.e. 32 bytes.
+    TOTP_ENCRYPTION_KEY: z
+      .string()
+      .regex(/^[0-9a-fA-F]{64}$/, 'must be 64 hex characters (32 bytes)'),
+    TOTP_ISSUER: z.string().min(1).default('UstoGo'),
+    TWO_FACTOR_CHALLENGE_TTL: duration('5m'),
 
     // ---- Object storage ----
     S3_ENDPOINT: connectionUrl(['http:', 'https:'], 'must be an http:// or https:// URL'),

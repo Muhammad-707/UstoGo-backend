@@ -16,5 +16,6 @@ export const validEnv = (
   MAIL_HOST: 'localhost',
   MAIL_FROM: 'UstoGo <no-reply@ustogo.app>',
   REDIS_URL: 'redis://localhost:6379',
+  TOTP_ENCRYPTION_KEY: 'c'.repeat(64),
   ...overrides,
 });
