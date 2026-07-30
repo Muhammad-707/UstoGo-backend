@@ -116,6 +116,7 @@ Defined once in `ERROR_HANDLING.md`:
 | POST   | `/auth/2fa/disable`         | ADMIN  | Turn TOTP off, requires a valid code → 204                        |
 | GET    | `/auth/sessions`            | Any    | List active devices (refresh-token families) → 200                |
 | DELETE | `/auth/sessions/:id`        | Any    | Revoke one device by family id → 204                              |
+| GET    | `/users/me/export`          | Any    | Export the caller's own personal data → 200                       |
 
 **`AuthResponse`**
 
@@ -139,7 +140,7 @@ Defined once in `ERROR_HANDLING.md`:
 | GET    | `/users/me`        | Any    | Own user + role profile                                             |
 | PATCH  | `/users/me`        | Any    | Partial profile update                                              |
 | PATCH  | `/users/me/avatar` | Any    | Attach a confirmed `fileId` (see FR-3.3 on why the id, not the key) |
-| DELETE | `/users/me`        | Any    | Soft-delete own account, revoke all sessions → 204                  |
+| DELETE | `/users/me`        | Any    | Soft-delete and anonymise own account, revoke all sessions → 204    |
 | GET    | `/cities`          | Public | Reference list of active cities                                     |
 
 ---

@@ -118,7 +118,7 @@ Size: **S** ≤ 3 days · **M** ≤ 2 weeks · **L** ≤ 6 weeks · **XL** a qua
 
 | ID   | Item                                     | Priority | Size |
 | ---- | ---------------------------------------- | -------- | ---- |
-| B-70 | Full GDPR-style data export self-service | P1       | M    |
+| B-70 | Full GDPR-style data export self-service | P1       | M    | A synchronous v1 slice landed in Phase 6 (`GET /users/me/export`, `STATUS.md`); this item is now scoped to an async/downloadable export job, not the base capability. |
 | B-71 | Cookie/consent management for clients    | P2       | S    |
 | B-72 | Data retention automation per category   | P2       | M    |
 | B-73 | Tax document generation for masters      | P2       | L    |

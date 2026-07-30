@@ -83,6 +83,27 @@ describe('Users (e2e)', () => {
     });
   });
 
+  describe('GET /users/me/export', () => {
+    it('returns the caller’s own account, bookings, reviews and notifications', async () => {
+      const actor = await createClient(app);
+
+      const response = await request(app.server)
+        .get('/api/v1/users/me/export')
+        .set('Authorization', `Bearer ${actor.accessToken}`)
+        .expect(200);
+
+      expect(response.body.account).toMatchObject({ id: actor.id });
+      expect(Array.isArray(response.body.bookings)).toBe(true);
+      expect(Array.isArray(response.body.reviews)).toBe(true);
+      expect(Array.isArray(response.body.notifications)).toBe(true);
+      expect(response.body.exportedAt).toEqual(expect.any(String));
+    });
+
+    it('requires authentication', async () => {
+      await request(app.server).get('/api/v1/users/me/export').expect(401);
+    });
+  });
+
   describe('PATCH /users/me', () => {
     it('applies a partial update and leaves the rest alone', async () => {
       const actor = await createClient(app);
@@ -163,6 +184,23 @@ describe('Users (e2e)', () => {
       // Soft, not hard: history keeps its author.
       const row = await app.prisma.user.findUnique({ where: { id: actor.id } });
       expect(row?.deletedAt).not.toBeNull();
+    });
+
+    it('anonymises email, phone and the client profile name', async () => {
+      await request(app.server)
+        .delete('/api/v1/users/me')
+        .set('Authorization', `Bearer ${actor.accessToken}`)
+        .expect(204);
+
+      const row = await app.prisma.user.findUnique({
+        where: { id: actor.id },
+        include: { clientProfile: true },
+      });
+
+      expect(row?.email).toBe(`deleted-${actor.id}@deleted.invalid`);
+      expect(row?.phone).toBeNull();
+      expect(row?.clientProfile?.firstName).toBe('Deleted');
+      expect(row?.clientProfile?.lastName).toBe('User');
     });
 
     it('frees the email and phone for a fresh registration', async () => {

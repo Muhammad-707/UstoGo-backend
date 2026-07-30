@@ -69,37 +69,70 @@ export class UsersService {
   }
 
   /**
-   * Soft delete plus a full session revocation, in one transaction.
+   * Soft delete, PII anonymisation and a full session revocation, in one transaction
+   * (Phase 6 — anonymised deletion, `ROADMAP.md`).
    *
    * The profile is soft-deleted alongside the user so that no read path can surface a
-   * profile whose owner is gone. The partial unique indexes mean the address becomes
-   * available again, which is the documented intent (DATABASE.md §3.1) — historical
-   * bookings and reviews survive, with the author shown as a redacted placeholder
-   * (BR-5).
+   * profile whose owner is gone. `email`/`phone`/`firstName`/`lastName`/`defaultAddress`/
+   * `bio` are overwritten rather than merely hidden — a soft-deleted row is still a row
+   * an operator or a database dump can read, and "deleted" has to mean the personal data
+   * is actually gone, not just filtered out of normal queries. `email` becomes a
+   * deterministic, non-PII placeholder rather than null: it stays `NOT NULL` per
+   * `DATABASE.md` §3.1 and unique among placeholders since it is derived from the id.
+   * The avatar is released the same way `setAvatar` releases a replaced one. The partial
+   * unique indexes mean the *real* address becomes available again for re-registration.
+   * Historical bookings and reviews survive with the author's name now reading
+   * "Deleted User" wherever it is displayed (BR-5) — a consequence of this overwrite,
+   * not a separate redaction step.
    */
   async deleteMe(userId: string): Promise<void> {
     const user = await this.findMe(userId);
     const deletedAt = new Date();
+    const anonymisedEmail = `deleted-${userId}@deleted.invalid`;
+
+    const avatarFileId =
+      user.clientProfile?.avatarFileId ?? user.masterProfile?.avatarFileId ?? null;
 
     await this.tx.run(async (tx) => {
       await tx.user.update({
         where: { id: userId },
-        data: { deletedAt, status: UserStatus.INACTIVE },
+        data: { deletedAt, status: UserStatus.INACTIVE, email: anonymisedEmail, phone: null },
       });
 
       if (user.clientProfile !== null) {
-        await tx.clientProfile.update({ where: { userId }, data: { deletedAt } });
+        await tx.clientProfile.update({
+          where: { userId },
+          data: {
+            deletedAt,
+            firstName: 'Deleted',
+            lastName: 'User',
+            defaultAddress: null,
+            avatarFileId: null,
+          },
+        });
       }
       if (user.masterProfile !== null) {
         await tx.masterProfile.update({
           where: { userId },
-          // A deleted master must also leave search, which keys on isActive.
-          data: { deletedAt, isActive: false },
+          data: {
+            deletedAt,
+            // A deleted master must also leave search, which keys on isActive.
+            isActive: false,
+            firstName: 'Deleted',
+            lastName: 'User',
+            displayName: 'Deleted User',
+            bio: null,
+            avatarFileId: null,
+          },
         });
       }
 
       await this.tokens.revokeAllForUser(userId, REVOKED_REASON.ADMIN_ACTION, tx);
     });
+
+    if (avatarFileId !== null) {
+      await this.files.softDelete(avatarFileId);
+    }
   }
 
   /**

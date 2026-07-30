@@ -16,13 +16,18 @@ import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
 import { SetAvatarDto } from '../dto/requests/set-avatar.dto';
 import { UpdateProfileDto } from '../dto/requests/update-profile.dto';
+import { DataExportResponseDto } from '../dto/responses/data-export.response.dto';
 import { UserResponseDto } from '../dto/responses/user.response.dto';
+import { DataExportService } from '../services/data-export.service';
 import { UsersService } from '../services/users.service';
 
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly users: UsersService) {}
+  constructor(
+    private readonly users: UsersService,
+    private readonly dataExport: DataExportService,
+  ) {}
 
   @Get('me')
   @ApiAuth()
@@ -78,6 +83,19 @@ export class UsersController {
     @Body() dto: SetAvatarDto,
   ): Promise<UserResponseDto> {
     return UserResponseDto.fromEntity(await this.users.setAvatar(user.id, dto.fileId));
+  }
+
+  @Get('me/export')
+  @ApiAuth()
+  @ApiOperation({
+    summary: 'Export the caller’s own personal data',
+    description:
+      'Everything the caller is themself the subject of: account, profile, bookings, ' +
+      'reviews and notifications, returned synchronously as JSON.',
+  })
+  @ApiOkResponse({ type: DataExportResponseDto })
+  async exportMe(@CurrentUser() user: AuthenticatedUser): Promise<DataExportResponseDto> {
+    return this.dataExport.export(user.id, user.role);
   }
 
   @Delete('me')

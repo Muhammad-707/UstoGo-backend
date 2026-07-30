@@ -229,4 +229,66 @@ describe('UsersService.deleteMe', () => {
 
     await expect(service.deleteMe('gone')).rejects.toBeInstanceOf(UserNotFoundException);
   });
+
+  it('anonymises the email and clears the phone', async () => {
+    const { service, userDelegate } = build();
+
+    await service.deleteMe('u1');
+    const update = firstArg<{ data: { email: string; phone: null } }>(userDelegate.update);
+
+    expect(update.data.email).toBe('deleted-u1@deleted.invalid');
+    expect(update.data.phone).toBeNull();
+  });
+
+  it('anonymises the client profile name and address', async () => {
+    const { service, clientProfile } = build();
+
+    await service.deleteMe('u1');
+    const update = firstArg<{
+      data: { firstName: string; lastName: string; defaultAddress: null; avatarFileId: null };
+    }>(clientProfile.update);
+
+    expect(update.data).toMatchObject({
+      firstName: 'Deleted',
+      lastName: 'User',
+      defaultAddress: null,
+      avatarFileId: null,
+    });
+  });
+
+  it('anonymises the master profile display name and bio', async () => {
+    const { service, masterProfile } = build({ user: MASTER });
+
+    await service.deleteMe('u2');
+    const update = firstArg<{
+      data: { displayName: string; bio: null; avatarFileId: null };
+    }>(masterProfile.update);
+
+    expect(update.data).toMatchObject({
+      displayName: 'Deleted User',
+      bio: null,
+      avatarFileId: null,
+    });
+  });
+
+  it('releases the avatar file when one was set', async () => {
+    const { service, files } = build({
+      user: {
+        ...CLIENT,
+        clientProfile: { ...CLIENT.clientProfile, avatarFileId: 'avatar-1' },
+      },
+    });
+
+    await service.deleteMe('u1');
+
+    expect(files.softDelete).toHaveBeenCalledWith('avatar-1');
+  });
+
+  it('does not touch file storage when no avatar was set', async () => {
+    const { service, files } = build();
+
+    await service.deleteMe('u1');
+
+    expect(files.softDelete).not.toHaveBeenCalled();
+  });
 });

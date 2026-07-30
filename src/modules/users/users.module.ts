@@ -5,6 +5,7 @@ import { FilesModule } from '../files/files.module';
 import { CitiesController } from './controllers/cities.controller';
 import { UsersController } from './controllers/users.controller';
 import { CitiesService } from './services/cities.service';
+import { DataExportService } from './services/data-export.service';
 import { UsersService } from './services/users.service';
 
 /**
@@ -17,7 +18,7 @@ import { UsersService } from './services/users.service';
 @Module({
   imports: [AuthModule, FilesModule],
   controllers: [UsersController, CitiesController],
-  providers: [UsersService, CitiesService],
+  providers: [UsersService, CitiesService, DataExportService],
   exports: [UsersService],
 })
 export class UsersModule {}
