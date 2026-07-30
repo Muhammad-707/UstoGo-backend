@@ -15,6 +15,7 @@ import { generateRefreshToken, hashToken } from '../domain/refresh-token.util';
 import {
   InvalidRefreshTokenException,
   RefreshTokenReusedException,
+  SessionNotFoundException,
 } from '../exceptions/auth.exceptions';
 
 export type SessionContext = {
@@ -27,6 +28,17 @@ export type TokenPair = {
   readonly accessToken: string;
   readonly refreshToken: string;
   readonly expiresIn: number;
+};
+
+/** One row per refresh-token family — what the caller thinks of as "a device". */
+export type SessionSummary = {
+  readonly id: string; // familyId
+  readonly deviceId: string | null;
+  readonly userAgent: string | null;
+  readonly ipAddress: string | null;
+  readonly createdAt: Date; // first token issued in the family — session start
+  readonly lastActiveAt: Date; // most recent token issued in the family — last refresh
+  readonly current: boolean;
 };
 
 /**
@@ -170,6 +182,62 @@ export class TokenService {
       where: { userId, familyId: { not: familyId }, revokedAt: null },
       data: { revokedAt: new Date(), revokedReason: reason },
     });
+  }
+
+  /**
+   * Every active session (device), most recently active first.
+   *
+   * A "session" here is a refresh-token family, not a single row — rotation replaces
+   * the row on every refresh, but the family id is stable for the device's whole
+   * lifetime. Rows are fetched oldest-first and folded in application code rather than
+   * queried with `distinct`, so both the family's start (`createdAt`) and its last
+   * activity (`lastActiveAt`) come out of one query; the row count per user is bounded
+   * by how many devices someone is logged into, never large enough to warrant more.
+   */
+  async listSessions(userId: string, currentFamilyId: string): Promise<SessionSummary[]> {
+    const rows = await this.prisma.db.refreshToken.findMany({
+      where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'asc' },
+      select: { familyId: true, deviceId: true, userAgent: true, ipAddress: true, createdAt: true },
+    });
+
+    const byFamily = new Map<string, SessionSummary>();
+    for (const row of rows) {
+      const existing = byFamily.get(row.familyId);
+      byFamily.set(row.familyId, {
+        id: row.familyId,
+        deviceId: row.deviceId,
+        userAgent: row.userAgent,
+        ipAddress: row.ipAddress,
+        createdAt: existing?.createdAt ?? row.createdAt,
+        lastActiveAt: row.createdAt,
+        current: row.familyId === currentFamilyId,
+      });
+    }
+
+    return [...byFamily.values()].sort(
+      (a, b) => b.lastActiveAt.getTime() - a.lastActiveAt.getTime(),
+    );
+  }
+
+  /**
+   * Revokes one session (family) on the caller's own account.
+   *
+   * @throws {SessionNotFoundException} no live row in this family belongs to `userId` —
+   *   the ownership → 404 convention (`CLAUDE.md` §5), so a foreign family id cannot be
+   *   distinguished from one that never existed.
+   */
+  async revokeSession(userId: string, familyId: string): Promise<void> {
+    const owned = await this.prisma.db.refreshToken.findFirst({
+      where: { userId, familyId, revokedAt: null, expiresAt: { gt: new Date() } },
+      select: { id: true },
+    });
+
+    if (owned === null) {
+      throw new SessionNotFoundException();
+    }
+
+    await this.revokeFamily(familyId, REVOKED_REASON.SESSION_REVOKED);
   }
 
   private async revokeFamily(familyId: string, reason: RevokedReason): Promise<void> {

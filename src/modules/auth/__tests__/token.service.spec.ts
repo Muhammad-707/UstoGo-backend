@@ -10,6 +10,7 @@ import { hashToken } from '../domain/refresh-token.util';
 import {
   InvalidRefreshTokenException,
   RefreshTokenReusedException,
+  SessionNotFoundException,
 } from '../exceptions/auth.exceptions';
 import { TokenService } from '../services/token.service';
 
@@ -226,5 +227,94 @@ describe('TokenService revocation', () => {
     const call = firstArg<{ where: { familyId: { not: string } } }>(updateMany);
 
     expect(call.where.familyId).toEqual({ not: 'keep-me' });
+  });
+});
+
+const sessionsHarness = (rows: unknown[], owned: unknown = { id: 'row-1' }) => {
+  const findMany = jest.fn().mockResolvedValue(rows);
+  const findFirst = jest.fn().mockResolvedValue(owned);
+  const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+
+  const refreshToken = { findMany, findFirst, updateMany };
+  const prisma = { db: { refreshToken } } as unknown as PrismaService;
+  const tx = {
+    run: (fn: (client: unknown) => unknown) => fn({ refreshToken }),
+  } as unknown as TransactionManager;
+  const jwt = {} as unknown as JwtService;
+  const config = { jwt: { accessTtl: '15m', refreshTtl: '30d' } } as AppConfigService;
+
+  return {
+    service: new TokenService(prisma, tx, jwt, config),
+    findMany,
+    findFirst,
+    updateMany,
+  };
+};
+
+describe('TokenService.listSessions', () => {
+  const older = {
+    familyId: 'fam-old',
+    deviceId: 'd1',
+    userAgent: 'ua-1',
+    ipAddress: '10.0.0.1',
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+  };
+  const olderRotated = { ...older, createdAt: new Date('2026-01-02T00:00:00Z') };
+  const newer = {
+    familyId: 'fam-new',
+    deviceId: 'd2',
+    userAgent: 'ua-2',
+    ipAddress: '10.0.0.2',
+    createdAt: new Date('2026-01-03T00:00:00Z'),
+  };
+
+  it('folds rotated rows into one session per family, oldest as createdAt and newest as lastActiveAt', async () => {
+    const { service } = sessionsHarness([older, olderRotated, newer]);
+
+    const sessions = await service.listSessions('user-1', 'fam-new');
+
+    const oldSession = sessions.find((s) => s.id === 'fam-old');
+    expect(oldSession?.createdAt).toEqual(older.createdAt);
+    expect(oldSession?.lastActiveAt).toEqual(olderRotated.createdAt);
+  });
+
+  it('marks the caller-supplied family as current and orders most recently active first', async () => {
+    const { service } = sessionsHarness([older, olderRotated, newer]);
+
+    const sessions = await service.listSessions('user-1', 'fam-new');
+
+    expect(sessions[0]?.id).toBe('fam-new');
+    expect(sessions[0]?.current).toBe(true);
+    expect(sessions[1]?.current).toBe(false);
+  });
+
+  it('only queries live, unexpired rows for this user', async () => {
+    const { service, findMany } = sessionsHarness([]);
+
+    await service.listSessions('user-1', 'fam-new');
+    const call = firstArg<{ where: Record<string, unknown> }>(findMany);
+
+    expect(call.where).toMatchObject({ userId: 'user-1', revokedAt: null });
+    expect(call.where.expiresAt).toBeDefined();
+  });
+});
+
+describe('TokenService.revokeSession', () => {
+  it('revokes the family once ownership is confirmed', async () => {
+    const { service, updateMany } = sessionsHarness([], { id: 'row-1' });
+
+    await service.revokeSession('user-1', 'fam-1');
+    const call = firstArg<{ where: Record<string, unknown> }>(updateMany);
+
+    expect(call.where).toMatchObject({ familyId: 'fam-1', revokedAt: null });
+  });
+
+  it('rejects a family that does not belong to the caller', async () => {
+    const { service, updateMany } = sessionsHarness([], null);
+
+    await expect(service.revokeSession('user-1', 'fam-1')).rejects.toBeInstanceOf(
+      SessionNotFoundException,
+    );
+    expect(updateMany).not.toHaveBeenCalled();
   });
 });

@@ -106,25 +106,26 @@ Codes are unique across the API and are exported as a single const object consum
 
 ### Authentication — 401 / 403
 
-| Code                           | Status | Meaning                                           |
-| ------------------------------ | ------ | ------------------------------------------------- |
-| `UNAUTHORIZED`                 | 401    | Missing or malformed credentials                  |
-| `INVALID_CREDENTIALS`          | 401    | Wrong email or password (deliberately ambiguous)  |
-| `TOKEN_EXPIRED`                | 401    | Access token past `exp`                           |
-| `INVALID_REFRESH_TOKEN`        | 401    | Unknown, expired or revoked refresh token         |
-| `REFRESH_TOKEN_REUSED`         | 401    | Reuse detected; the whole family was revoked      |
-| `ACCOUNT_BLOCKED`              | 403    | Admin sanction                                    |
-| `ACCOUNT_INACTIVE`             | 403    | Deactivated account                               |
-| `INVALID_RESET_TOKEN`          | 400    | Password reset token invalid, expired or used     |
-| `PASSWORD_REUSED`              | 422    | New password equals the current one               |
-| `INVALID_VERIFICATION_TOKEN`   | 400    | Email verification token invalid, expired or used |
-| `EMAIL_ALREADY_VERIFIED`       | 409    | Resend requested for an already-verified address  |
-| `INVALID_TOTP_CODE`            | 401    | TOTP code did not match                           |
-| `TOTP_ALREADY_ENABLED`         | 409    | Setup/enable requested, 2FA already on            |
-| `TOTP_NOT_ENABLED`             | 409    | Disable requested, 2FA is not on                  |
-| `TOTP_SETUP_NOT_STARTED`       | 409    | Enable requested before setup                     |
-| `INVALID_TWO_FACTOR_CHALLENGE` | 401    | Login challenge invalid, expired or used          |
-| `FORBIDDEN`                    | 403    | Role does not permit this operation               |
+| Code                           | Status | Meaning                                            |
+| ------------------------------ | ------ | -------------------------------------------------- |
+| `UNAUTHORIZED`                 | 401    | Missing or malformed credentials                   |
+| `INVALID_CREDENTIALS`          | 401    | Wrong email or password (deliberately ambiguous)   |
+| `TOKEN_EXPIRED`                | 401    | Access token past `exp`                            |
+| `INVALID_REFRESH_TOKEN`        | 401    | Unknown, expired or revoked refresh token          |
+| `REFRESH_TOKEN_REUSED`         | 401    | Reuse detected; the whole family was revoked       |
+| `ACCOUNT_BLOCKED`              | 403    | Admin sanction                                     |
+| `ACCOUNT_INACTIVE`             | 403    | Deactivated account                                |
+| `INVALID_RESET_TOKEN`          | 400    | Password reset token invalid, expired or used      |
+| `PASSWORD_REUSED`              | 422    | New password equals the current one                |
+| `INVALID_VERIFICATION_TOKEN`   | 400    | Email verification token invalid, expired or used  |
+| `EMAIL_ALREADY_VERIFIED`       | 409    | Resend requested for an already-verified address   |
+| `INVALID_TOTP_CODE`            | 401    | TOTP code did not match                            |
+| `TOTP_ALREADY_ENABLED`         | 409    | Setup/enable requested, 2FA already on             |
+| `TOTP_NOT_ENABLED`             | 409    | Disable requested, 2FA is not on                   |
+| `TOTP_SETUP_NOT_STARTED`       | 409    | Enable requested before setup                      |
+| `INVALID_TWO_FACTOR_CHALLENGE` | 401    | Login challenge invalid, expired or used           |
+| `SESSION_NOT_FOUND`            | 404    | Session (device) id unknown or not owned by caller |
+| `FORBIDDEN`                    | 403    | Role does not permit this operation                |
 
 ### Registration & users
 

@@ -129,7 +129,7 @@ Database volumes are encrypted at rest by the infrastructure provider. Backups a
 | Notification on sensitive change | Email sent on password change and on password reset completion                            |
 | Admin actions                    | Always audited, always reason-bearing where they affect a user                            |
 
-Deferred to Phase 6, now landing: email verification (done) and TOTP two-factor for admin accounts (done — `EmailVerificationService`, `TwoFactorService`). Still deferred: device list with per-device revocation UI.
+Deferred to Phase 6, now landing: email verification (done), TOTP two-factor for admin accounts (done — `EmailVerificationService`, `TwoFactorService`) and the device/session list with per-device revocation (done — `GET/DELETE /auth/sessions`, `TokenService`).
 
 ---
 

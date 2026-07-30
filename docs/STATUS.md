@@ -108,6 +108,8 @@ One judgment call, per `CLAUDE.md` §3: **`emailVerifiedAt` gates nothing else i
 
 One test-fixture gap was found and fixed in the same pass: `src/config/__tests__/env.fixture.ts`'s `validEnv()` did not set the new `TOTP_ENCRYPTION_KEY`, which failed every `env.schema.spec.ts` case once the variable became required — fixed by adding it to the fixture, not by making the key optional.
 
+**Device/session list with per-device revocation** reuses `RefreshToken` rather than adding a new model — `deviceId`/`userAgent`/`ipAddress` were already columns on it (DATABASE.md §4.1), collected since Phase 1 and unread until now. A "session" is a refresh-token _family_, not a single row: rotation replaces the row on every refresh, but the family id is stable for the device's whole lifetime, so `TokenService.listSessions` folds every live, unexpired row for a user into one entry per family — the earliest row's `createdAt` is the session's start, the latest is `lastActiveAt` — done in application code rather than a `distinct` query, since the row count per user is bounded by how many devices someone is logged into. `GET /auth/sessions` returns them most-recently-active first with a `current` flag (the caller's own `sid` claim); `DELETE /auth/sessions/:id` revokes one family after confirming it belongs to the caller, `404 SESSION_NOT_FOUND` otherwise — the ownership → 404 convention, so a foreign session id cannot be distinguished from one that never existed. Revoking the session the caller is authenticated with is allowed and behaves like `POST /auth/logout` for that one device. 880 tests total (678 unit + 202 e2e).
+
 ---
 
 ## 2. Phase Progress
@@ -120,7 +122,7 @@ One test-fixture gap was found and fixed in the same pass: `src/config/__tests__
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓░░░░░░░░ 20%  |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓░░░░░░░ 33%  |
 
 ---
 
@@ -191,7 +193,7 @@ One test-fixture gap was found and fixed in the same pass: `src/config/__tests__
 
 | Metric                               | Target              | Current                                                         |
 | ------------------------------------ | ------------------- | --------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 828 tests green (649 unit + 183 e2e); `test:cov` thresholds met |
+| Line coverage                        | ≥ 80%               | 880 tests green (678 unit + 202 e2e); `test:cov` thresholds met |
 | Service/guard coverage               | ≥ 90%               | Met                                                             |
 | Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                 |
 | Endpoints implemented                | ~95                 | 64                                                              |
@@ -204,7 +206,7 @@ One test-fixture gap was found and fixed in the same pass: `src/config/__tests__
 
 ## 6. Blockers
 
-None. Phase 6 (Hardening & Launch) is in progress — email verification and two-factor admin auth done, device/session list next.
+None. Phase 6 (Hardening & Launch) is in progress — email verification, two-factor admin auth and the device/session list are done; idempotency keys are next.
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -226,7 +228,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-**Phase 6 — Hardening & Launch** is in progress. Email verification and admin two-factor authentication are done; next up is the device/session list with per-device revocation, per `docs/TODO.md`/`ROADMAP.md`.
+**Phase 6 — Hardening & Launch** is in progress. Email verification, admin two-factor authentication and the device/session list are done; next up is idempotency keys on mutating endpoints, per `docs/TODO.md`/`ROADMAP.md`.
 
 Detailed task list: `TODO.md`.
 

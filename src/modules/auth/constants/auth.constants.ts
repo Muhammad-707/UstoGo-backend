@@ -23,6 +23,8 @@ export const REVOKED_REASON = Object.freeze({
   PASSWORD_CHANGED: 'PASSWORD_CHANGED',
   PASSWORD_RESET: 'PASSWORD_RESET',
   ADMIN_ACTION: 'ADMIN_ACTION',
+  /** Phase 6 — the caller revoked this specific device from `GET/DELETE /auth/sessions`. */
+  SESSION_REVOKED: 'SESSION_REVOKED',
 } as const);
 
 export type RevokedReason = (typeof REVOKED_REASON)[keyof typeof REVOKED_REASON];

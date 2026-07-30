@@ -114,6 +114,8 @@ Defined once in `ERROR_HANDLING.md`:
 | POST   | `/auth/2fa/setup`           | ADMIN  | Start TOTP enrollment → 200 `{ secret, otpauthUrl }`              |
 | POST   | `/auth/2fa/enable`          | ADMIN  | Confirm enrollment with a code → 204                              |
 | POST   | `/auth/2fa/disable`         | ADMIN  | Turn TOTP off, requires a valid code → 204                        |
+| GET    | `/auth/sessions`            | Any    | List active devices (refresh-token families) → 200                |
+| DELETE | `/auth/sessions/:id`        | Any    | Revoke one device by family id → 204                              |
 
 **`AuthResponse`**
 

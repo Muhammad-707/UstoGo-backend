@@ -7,6 +7,7 @@ import { AppConfigService } from '@config/app-config.service';
 
 import { AuthController } from './controllers/auth.controller';
 import { EmailVerificationController } from './controllers/email-verification.controller';
+import { SessionsController } from './controllers/sessions.controller';
 import { TwoFactorController } from './controllers/two-factor.controller';
 import { AuthService } from './services/auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
@@ -41,7 +42,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
     }),
   ],
-  controllers: [AuthController, EmailVerificationController, TwoFactorController],
+  controllers: [
+    AuthController,
+    EmailVerificationController,
+    TwoFactorController,
+    SessionsController,
+  ],
   providers: [
     AuthService,
     TokenService,

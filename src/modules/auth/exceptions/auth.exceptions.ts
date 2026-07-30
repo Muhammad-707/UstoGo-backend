@@ -181,6 +181,19 @@ export class InvalidTwoFactorChallengeException extends AppException {
   }
 }
 
+/**
+ * 404. No live session in this family belongs to the caller.
+ *
+ * Returned for an unknown id and for another account's session alike — the
+ * ownership → 404 convention (`CLAUDE.md` §5) — so a foreign session id cannot be
+ * distinguished from one that never existed.
+ */
+export class SessionNotFoundException extends AppException {
+  constructor() {
+    super(ERROR_CODE.SESSION_NOT_FOUND, 'That session does not exist.', HttpStatus.NOT_FOUND);
+  }
+}
+
 /** 404. A referenced city does not exist. */
 export class CityNotFoundException extends AppException {
   constructor() {

@@ -168,18 +168,18 @@ Deletion is soft — a certificate referenced by a past moderation decision must
 
 ### 4.1 `RefreshToken`
 
-| Column                               | Type         | Notes                                                                      |
-| ------------------------------------ | ------------ | -------------------------------------------------------------------------- |
-| `id`                                 | uuid         | PK                                                                         |
-| `userId`                             | uuid         | FK → User, cascade, indexed                                                |
-| `tokenHash`                          | varchar(128) | **unique**, SHA-256 of the raw token                                       |
-| `familyId`                           | uuid         | rotation lineage, indexed                                                  |
-| `expiresAt`                          | timestamptz  |                                                                            |
-| `usedAt`                             | timestamptz  | set when consumed → reuse detection                                        |
-| `revokedAt`                          | timestamptz  |                                                                            |
-| `revokedReason`                      | varchar(100) | `LOGOUT`, `ROTATION`, `REUSE_DETECTED`, `PASSWORD_CHANGED`, `ADMIN_ACTION` |
-| `deviceId`, `userAgent`, `ipAddress` |              | forensic context                                                           |
-| `createdAt`                          | timestamptz  |                                                                            |
+| Column                               | Type         | Notes                                                                                                   |
+| ------------------------------------ | ------------ | ------------------------------------------------------------------------------------------------------- |
+| `id`                                 | uuid         | PK                                                                                                      |
+| `userId`                             | uuid         | FK → User, cascade, indexed                                                                             |
+| `tokenHash`                          | varchar(128) | **unique**, SHA-256 of the raw token                                                                    |
+| `familyId`                           | uuid         | rotation lineage, indexed                                                                               |
+| `expiresAt`                          | timestamptz  |                                                                                                         |
+| `usedAt`                             | timestamptz  | set when consumed → reuse detection                                                                     |
+| `revokedAt`                          | timestamptz  |                                                                                                         |
+| `revokedReason`                      | varchar(100) | `LOGOUT`, `ROTATION`, `REUSE_DETECTED`, `PASSWORD_CHANGED`, `ADMIN_ACTION`, `SESSION_REVOKED` (Phase 6) |
+| `deviceId`, `userAgent`, `ipAddress` |              | forensic context; also what `GET /auth/sessions` (Phase 6) lists per device                             |
+| `createdAt`                          | timestamptz  |                                                                                                         |
 
 Indexes: `(userId, revokedAt)`, `(familyId)`, `(expiresAt)` for the cleanup job.
 Hard-deleted by a nightly job once `expiresAt < now() - 30 days`.
