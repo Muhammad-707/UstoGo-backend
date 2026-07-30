@@ -7,6 +7,7 @@ import { AppConfigService } from '@config/app-config.service';
 
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
+import { EmailVerificationService } from './services/email-verification.service';
 import { PasswordResetService } from './services/password-reset.service';
 import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
@@ -38,7 +39,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, PasswordService, PasswordResetService, JwtStrategy],
+  providers: [
+    AuthService,
+    TokenService,
+    PasswordService,
+    PasswordResetService,
+    EmailVerificationService,
+    JwtStrategy,
+  ],
   // `JwtModule` and `JwtStrategy` are exported so `ChatGateway` can verify a socket
   // handshake's access token the exact same way `JwtAuthGuard`/`JwtStrategy` verify
   // one on a REST request — same secret, same issuer/audience checks, same re-read

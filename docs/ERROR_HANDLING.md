@@ -106,18 +106,20 @@ Codes are unique across the API and are exported as a single const object consum
 
 ### Authentication — 401 / 403
 
-| Code                    | Status | Meaning                                          |
-| ----------------------- | ------ | ------------------------------------------------ |
-| `UNAUTHORIZED`          | 401    | Missing or malformed credentials                 |
-| `INVALID_CREDENTIALS`   | 401    | Wrong email or password (deliberately ambiguous) |
-| `TOKEN_EXPIRED`         | 401    | Access token past `exp`                          |
-| `INVALID_REFRESH_TOKEN` | 401    | Unknown, expired or revoked refresh token        |
-| `REFRESH_TOKEN_REUSED`  | 401    | Reuse detected; the whole family was revoked     |
-| `ACCOUNT_BLOCKED`       | 403    | Admin sanction                                   |
-| `ACCOUNT_INACTIVE`      | 403    | Deactivated account                              |
-| `INVALID_RESET_TOKEN`   | 400    | Password reset token invalid, expired or used    |
-| `PASSWORD_REUSED`       | 422    | New password equals the current one              |
-| `FORBIDDEN`             | 403    | Role does not permit this operation              |
+| Code                         | Status | Meaning                                           |
+| ---------------------------- | ------ | ------------------------------------------------- |
+| `UNAUTHORIZED`               | 401    | Missing or malformed credentials                  |
+| `INVALID_CREDENTIALS`        | 401    | Wrong email or password (deliberately ambiguous)  |
+| `TOKEN_EXPIRED`              | 401    | Access token past `exp`                           |
+| `INVALID_REFRESH_TOKEN`      | 401    | Unknown, expired or revoked refresh token         |
+| `REFRESH_TOKEN_REUSED`       | 401    | Reuse detected; the whole family was revoked      |
+| `ACCOUNT_BLOCKED`            | 403    | Admin sanction                                    |
+| `ACCOUNT_INACTIVE`           | 403    | Deactivated account                               |
+| `INVALID_RESET_TOKEN`        | 400    | Password reset token invalid, expired or used     |
+| `PASSWORD_REUSED`            | 422    | New password equals the current one               |
+| `INVALID_VERIFICATION_TOKEN` | 400    | Email verification token invalid, expired or used |
+| `EMAIL_ALREADY_VERIFIED`     | 409    | Resend requested for an already-verified address  |
+| `FORBIDDEN`                  | 403    | Role does not permit this operation               |
 
 ### Registration & users
 

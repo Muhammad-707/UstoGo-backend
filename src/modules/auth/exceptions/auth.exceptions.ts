@@ -104,6 +104,28 @@ export class PasswordReusedException extends AppException {
   }
 }
 
+/** 400. Missing, expired or already used — one code, one message, as with reset tokens. */
+export class InvalidVerificationTokenException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.INVALID_VERIFICATION_TOKEN,
+      'The verification link is invalid or has expired.',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+/** 409. Resending a verification link for an already-verified address. */
+export class EmailAlreadyVerifiedException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.EMAIL_ALREADY_VERIFIED,
+      'This email address is already verified.',
+      HttpStatus.CONFLICT,
+    );
+  }
+}
+
 /** 404. A referenced city does not exist. */
 export class CityNotFoundException extends AppException {
   constructor() {

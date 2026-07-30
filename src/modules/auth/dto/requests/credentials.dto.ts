@@ -81,6 +81,13 @@ export class ChangePasswordDto extends PasswordField {
   currentPassword!: string;
 }
 
+export class VerifyEmailDto {
+  @ApiProperty({ description: 'The single-use token from the emailed verification link.' })
+  @IsString()
+  @MaxLength(200)
+  token!: string;
+}
+
 export class RefreshTokenDto {
   @ApiProperty({
     description: 'The refresh token issued by login, registration or a prior refresh.',

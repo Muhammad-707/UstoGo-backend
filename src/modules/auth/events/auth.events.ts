@@ -12,6 +12,7 @@ export const AUTH_EVENT = Object.freeze({
   USER_REGISTERED: 'user.registered',
   MASTER_REGISTERED: 'master.registered',
   PASSWORD_CHANGED: 'user.password-changed',
+  EMAIL_VERIFIED: 'user.email-verified',
 } as const);
 
 /** Payloads carry identifiers, never entities and never credentials. */
@@ -30,5 +31,9 @@ export class MasterRegisteredEvent {
 }
 
 export class PasswordChangedEvent {
+  constructor(readonly userId: string) {}
+}
+
+export class EmailVerifiedEvent {
   constructor(readonly userId: string) {}
 }

@@ -4,6 +4,8 @@ export const AUTH = Object.freeze({
   REFRESH_TOKEN_BYTES: 64,
   /** §8 — reset tokens are 256-bit; only the SHA-256 hash is stored. */
   RESET_TOKEN_BYTES: 32,
+  /** Phase 6 — email verification tokens follow the same 256-bit shape as reset tokens. */
+  EMAIL_VERIFICATION_TOKEN_BYTES: 32,
   /** §2 — verified, not merely tolerated. */
   CLOCK_SKEW_SECONDS: 30,
   /** §7 — the bcrypt truncation boundary, enforced rather than silently applied. */

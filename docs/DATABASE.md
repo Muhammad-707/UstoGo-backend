@@ -186,6 +186,10 @@ Hard-deleted by a nightly job once `expiresAt < now() - 30 days`.
 
 `id`, `userId` (FK, cascade), `tokenHash` (unique), `expiresAt`, `usedAt?`, `createdAt`. Only the hash is stored; the raw token exists only in the outbound email.
 
+### 4.3 `EmailVerificationToken` (Phase 6)
+
+`id`, `userId` (FK, cascade), `tokenHash` (unique), `expiresAt`, `usedAt?`, `createdAt`. Same shape and the same reasoning as `PasswordResetToken`: only the hash is stored, the raw token exists only in the outbound email, and issuing a new one invalidates any still-outstanding token. Sets `User.emailVerifiedAt` on consumption; nothing else in v1 is gated on that column.
+
 ---
 
 ## 5. Catalogue

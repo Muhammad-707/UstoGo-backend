@@ -10,6 +10,8 @@ export type JwtConfig = {
   readonly bcryptRounds: number;
   readonly passwordResetTtl: string;
   readonly passwordResetUrl: string;
+  readonly emailVerificationTtl: string;
+  readonly emailVerificationUrl: string;
 };
 
 export const buildJwtConfig = (env: Env): JwtConfig =>
@@ -23,4 +25,6 @@ export const buildJwtConfig = (env: Env): JwtConfig =>
     bcryptRounds: env.BCRYPT_ROUNDS,
     passwordResetTtl: env.PASSWORD_RESET_TTL,
     passwordResetUrl: env.PASSWORD_RESET_URL,
+    emailVerificationTtl: env.EMAIL_VERIFICATION_TTL,
+    emailVerificationUrl: env.EMAIL_VERIFICATION_URL,
   });

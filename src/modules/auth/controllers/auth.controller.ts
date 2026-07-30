@@ -30,11 +30,13 @@ import {
   LoginDto,
   RefreshTokenDto,
   ResetPasswordDto,
+  VerifyEmailDto,
 } from '../dto/requests/credentials.dto';
 import { RegisterClientDto } from '../dto/requests/register-client.dto';
 import { RegisterMasterDto } from '../dto/requests/register-master.dto';
 import { AuthResponseDto } from '../dto/responses/auth.response.dto';
 import { AuthService } from '../services/auth.service';
+import { EmailVerificationService } from '../services/email-verification.service';
 import { PasswordResetService } from '../services/password-reset.service';
 import { TokenService, type SessionContext } from '../services/token.service';
 
@@ -48,6 +50,7 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly tokens: TokenService,
     private readonly passwordReset: PasswordResetService,
+    private readonly emailVerification: EmailVerificationService,
   ) {}
 
   @Post('register/client')
@@ -215,6 +218,39 @@ export class AuthController {
   @ApiTooManyRequestsResponse(RATE_LIMITED)
   async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
     await this.passwordReset.resetPassword(dto.token, dto.password);
+  }
+
+  @Post('verify-email')
+  @Public()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: THROTTLE.VERIFY_EMAIL })
+  @ApiOperation({
+    summary: 'Confirm an email address using the emailed token',
+    description:
+      'Public — the token is the credential. Single use. Sets `emailVerifiedAt`; nothing ' +
+      'else in v1 is gated on it.',
+  })
+  @ApiNoContentResponse()
+  @ApiBadRequestResponse({ description: 'INVALID_VERIFICATION_TOKEN', type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse(VALIDATION_FAILED)
+  @ApiTooManyRequestsResponse(RATE_LIMITED)
+  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<void> {
+    await this.emailVerification.verify(dto.token);
+  }
+
+  @Post('resend-verification')
+  @ApiAuth()
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({ default: THROTTLE.RESEND_VERIFICATION })
+  @ApiOperation({
+    summary: 'Resend the email verification link',
+    description: 'Any previously issued verification link stops working.',
+  })
+  @ApiAcceptedResponse()
+  @ApiConflictResponse({ description: 'EMAIL_ALREADY_VERIFIED', type: ErrorResponseDto })
+  @ApiTooManyRequestsResponse(RATE_LIMITED)
+  async resendVerification(@CurrentUser() user: AuthenticatedUser): Promise<void> {
+    await this.emailVerification.resend(user.id);
   }
 
   @Patch('password')

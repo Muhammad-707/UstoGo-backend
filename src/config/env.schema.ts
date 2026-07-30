@@ -59,6 +59,13 @@ export const envSchema = z
       ['http:', 'https:'],
       'must be an http:// or https:// URL',
     ).default('http://localhost:3000/reset-password'),
+    EMAIL_VERIFICATION_TTL: duration('24h'),
+    // Where the emailed verification link points. Same reasoning as PASSWORD_RESET_URL:
+    // the client application owns this page and posts the token to /auth/verify-email.
+    EMAIL_VERIFICATION_URL: connectionUrl(
+      ['http:', 'https:'],
+      'must be an http:// or https:// URL',
+    ).default('http://localhost:3000/verify-email'),
 
     // ---- Object storage ----
     S3_ENDPOINT: connectionUrl(['http:', 'https:'], 'must be an http:// or https:// URL'),

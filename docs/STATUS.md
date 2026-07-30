@@ -1,9 +1,9 @@
 # Project Status — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Current phase:** Phase 5 — Engagement & Operations, complete
-**Version:** 0.1.7
-**Overall progress:** ▓▓▓▓▓▓▓▓▓░ 85% (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, and an admin can see the whole platform's health in one call)
+**Current phase:** Phase 6 — Hardening & Launch, in progress
+**Version:** 0.1.8
+**Overall progress:** ▓▓▓▓▓▓▓▓▓░ 86% (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, an admin can see the whole platform's health in one call, and every new account now gets a verification email)
 
 ---
 
@@ -20,7 +20,7 @@
 | Business features   | ✅ F-01–F-16 done; Phase 6 (hardening/launch) next                           |
 | Common layer        | ✅ Complete — envelope, validation, correlation, logging                     |
 | Object storage      | ✅ Complete — presign, server-side verification, hourly cleanup              |
-| Tests               | ✅ 819 tests (640 unit + 179 e2e); Testcontainers harness live               |
+| Tests               | ✅ 828 tests (649 unit + 183 e2e); Testcontainers harness live               |
 | Operations CLI      | ✅ `admin:create` — the only path to an administrator                        |
 | CI/CD               | ✅ GitHub Actions: lint → typecheck → build → test:cov → audit → gitleaks    |
 | Deployment          | ⬜ Not started                                                               |
@@ -98,6 +98,12 @@ Masters are reported across four buckets, not the three `ApprovalStatus` values:
 
 **Phase 5 is closed.** F-12 Chat, F-14 Banners, F-15 Admin dashboard, admin broadcast notifications, Prometheus metrics and the load-test scripts against every NFR-P target are all done. Phase 6 — Hardening & Launch — is next.
 
+**Phase 6 opens with email verification.** `EmailVerificationToken` (DATABASE.md §4.3) is the same shape as `PasswordResetToken` — only the SHA-256 hash is stored, the raw token exists once in the outbound email, and issuing a new one invalidates any still-outstanding token. `AuthService.registerClient`/`registerMaster` call `EmailVerificationService.issue()` right after their transaction commits, so every new account gets a verification email without registration itself waiting on mail delivery (`sendAndForget`, same as password reset). `POST /auth/verify-email` (public, single-use, `400 INVALID_VERIFICATION_TOKEN` for unknown/expired/used) sets `User.emailVerifiedAt`; `POST /auth/resend-verification` (authenticated) re-issues a link and answers `409 EMAIL_ALREADY_VERIFIED` if the address is already confirmed.
+
+One judgment call, per `CLAUDE.md` §3: **`emailVerifiedAt` gates nothing else in v1.** `SECURITY.md` names email verification only as a data-model placeholder for Phase 6, and no FR/SRS document specifies a restriction on an unverified account (unlike, say, `ACCOUNT_INACTIVE`). Inventing an enforcement rule — blocking login, hiding certain actions — would be scope no document asked for, so the column is populated and nothing reads it yet. Revisit if product wants gating.
+
+828 tests total (649 unit + 183 e2e — the auth suite's e2e count includes the four new verify/resend cases). Building the migration surfaced the same `search_vector` drift `STATUS.md`'s F-12/F-14 entries already describe (Prisma's diff cannot see the raw-SQL generated column and proposes dropping it); the generated `DROP COLUMN`/`DROP INDEX` was removed by hand and a fresh `prisma migrate deploy` (as the e2e harness runs on every boot) confirmed the corrected migration replays cleanly with the column intact.
+
 ---
 
 ## 2. Phase Progress
@@ -110,7 +116,7 @@ Masters are reported across four buckets, not the three `ApprovalStatus` values:
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ⬜      | ░░░░░░░░░░ 0%   |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓░░░░░░░░░ 10%  |
 
 ---
 
@@ -181,7 +187,7 @@ Masters are reported across four buckets, not the three `ApprovalStatus` values:
 
 | Metric                               | Target              | Current                                                         |
 | ------------------------------------ | ------------------- | --------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 819 tests green (640 unit + 179 e2e); `test:cov` thresholds met |
+| Line coverage                        | ≥ 80%               | 828 tests green (649 unit + 183 e2e); `test:cov` thresholds met |
 | Service/guard coverage               | ≥ 90%               | Met                                                             |
 | Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                 |
 | Endpoints implemented                | ~95                 | 64                                                              |
@@ -194,7 +200,7 @@ Masters are reported across four buckets, not the three `ApprovalStatus` values:
 
 ## 6. Blockers
 
-None. Phase 5 is closed; Phase 6 (Hardening & Launch) is next.
+None. Phase 6 (Hardening & Launch) is in progress — email verification done, two-factor admin auth next.
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -216,7 +222,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-Phase 5 (Engagement & Ops) is closed: F-12 Chat, F-14 Banners, F-15 Admin dashboard, broadcast notifications, Prometheus metrics and load-test scripts against the NFR targets are all done. **Phase 6 — Hardening & Launch** is next (`docs/TODO.md`, `ROADMAP.md`).
+**Phase 6 — Hardening & Launch** is in progress. Email verification is done; next up is two-factor authentication for admin accounts, per `docs/TODO.md`/`ROADMAP.md`.
 
 Detailed task list: `TODO.md`.
 

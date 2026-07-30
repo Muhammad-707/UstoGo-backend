@@ -15,6 +15,7 @@ import {
   PhoneAlreadyExistsException,
 } from '../exceptions/auth.exceptions';
 import { AuthService } from '../services/auth.service';
+import type { EmailVerificationService } from '../services/email-verification.service';
 import type { PasswordService } from '../services/password.service';
 import type { TokenService } from '../services/token.service';
 
@@ -90,9 +91,12 @@ const build = (stubs: Stubs = {}) => {
     revokeAllExceptFamily: jest.fn().mockResolvedValue(undefined),
   } as unknown as TokenService;
   const events = { emit: jest.fn() } as unknown as EventEmitter2;
+  const emailVerification = {
+    issue: jest.fn().mockResolvedValue(undefined),
+  } as unknown as EmailVerificationService;
 
   return {
-    service: new AuthService(prisma, tx, passwords, tokens, events),
+    service: new AuthService(prisma, tx, passwords, tokens, events, emailVerification),
     userDelegate,
     cityDelegate,
     clientProfileDelegate,

@@ -106,9 +106,9 @@ has to exist before the first privileged mutation it is meant to cover.
 
 ---
 
-## Phase 6 — Hardening & Launch ⬜
+## Phase 6 — Hardening & Launch 🟨
 
-- ⬜ Email verification
+- ✅ Email verification
 - ⬜ Two-factor authentication for admin accounts
 - ⬜ Device/session list with per-device revocation
 - ⬜ Idempotency keys on mutating endpoints

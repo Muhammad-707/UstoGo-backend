@@ -15,6 +15,10 @@ export const generateRefreshToken = (): string =>
 export const generateResetToken = (): string =>
   randomBytes(AUTH.RESET_TOKEN_BYTES).toString('base64url');
 
+/** A 256-bit value for email verification; travels only in the outbound email. */
+export const generateEmailVerificationToken = (): string =>
+  randomBytes(AUTH.EMAIL_VERIFICATION_TOKEN_BYTES).toString('base64url');
+
 /**
  * SHA-256, not bcrypt.
  *

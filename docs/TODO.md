@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Active phase:** Phase 5 — Engagement & Ops (Phases 1–4 complete) — done. Phase 6 next.
+**Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete).
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -160,6 +160,21 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] Load test scripts: `k6/simple-reads.js` (NFR-P-1), `prisma/seed/scale.seed.ts` + `npm run seed:scale` for NFR-P-2's 50k-master dataset. Execution stays a manual/staging step, same as the two Phase 3 scripts
 
 **Phase 6** — email verification, admin 2FA, device list, idempotency keys, data export/anonymised deletion, RS256, pentest, restore rehearsal, runbook, v1.0.0.
+
+---
+
+## 🟡 In Progress — Phase 6: Hardening & Launch
+
+- [x] Email verification: `EmailVerificationToken` model (same shape as `PasswordResetToken`), `AuthService.registerClient`/`registerMaster` issue a token right after commit, `POST /auth/verify-email` (public, single-use), `POST /auth/resend-verification` (authenticated, `409 EMAIL_ALREADY_VERIFIED` if already verified). Not gated on anything else in v1 — no FR/SRS document ties `emailVerifiedAt` to an access restriction, so no enforcement was invented.
+- [ ] Two-factor authentication for admin accounts
+- [ ] Device/session list with per-device revocation
+- [ ] Idempotency keys on mutating endpoints
+- [ ] Personal data export and anonymised deletion
+- [ ] RS256 migration for access tokens
+- [ ] External penetration test and remediation
+- [ ] Backup restore rehearsal (RTO 1 h, RPO 15 min)
+- [ ] Production runbook and on-call rotation
+- [ ] v1.0.0 release
 
 ---
 

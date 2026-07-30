@@ -97,17 +97,19 @@ Defined once in `ERROR_HANDLING.md`:
 
 ## 3. Auth — `/auth`
 
-| Method | Path                    | Auth   | Description                                                       |
-| ------ | ----------------------- | ------ | ----------------------------------------------------------------- |
-| POST   | `/auth/register/client` | Public | Register a client → 201 `AuthResponse`                            |
-| POST   | `/auth/register/master` | Public | Register a master (`approvalStatus=PENDING`) → 201 `AuthResponse` |
-| POST   | `/auth/login`           | Public | → 200 `AuthResponse`                                              |
-| POST   | `/auth/refresh`         | Public | Rotate tokens → 200 `AuthResponse`                                |
-| POST   | `/auth/logout`          | Any    | Revoke the presented refresh token → 204                          |
-| POST   | `/auth/logout-all`      | Any    | Revoke every session → 204                                        |
-| POST   | `/auth/forgot-password` | Public | Always 202                                                        |
-| POST   | `/auth/reset-password`  | Public | → 204                                                             |
-| PATCH  | `/auth/password`        | Any    | Change password → 204                                             |
+| Method | Path                        | Auth   | Description                                                       |
+| ------ | --------------------------- | ------ | ----------------------------------------------------------------- |
+| POST   | `/auth/register/client`     | Public | Register a client → 201 `AuthResponse`                            |
+| POST   | `/auth/register/master`     | Public | Register a master (`approvalStatus=PENDING`) → 201 `AuthResponse` |
+| POST   | `/auth/login`               | Public | → 200 `AuthResponse`                                              |
+| POST   | `/auth/refresh`             | Public | Rotate tokens → 200 `AuthResponse`                                |
+| POST   | `/auth/logout`              | Any    | Revoke the presented refresh token → 204                          |
+| POST   | `/auth/logout-all`          | Any    | Revoke every session → 204                                        |
+| POST   | `/auth/forgot-password`     | Public | Always 202                                                        |
+| POST   | `/auth/reset-password`      | Public | → 204                                                             |
+| PATCH  | `/auth/password`            | Any    | Change password → 204                                             |
+| POST   | `/auth/verify-email`        | Public | Confirm an emailed token, sets `emailVerifiedAt` → 204            |
+| POST   | `/auth/resend-verification` | Any    | Re-issue the verification link → 202                              |
 
 **`AuthResponse`**
 
@@ -384,6 +386,8 @@ All routes `@Roles(ADMIN)`; all mutations audited.
 | `/auth/login`, `/auth/register/*` | 5 req / 15 min per IP + identifier |
 | `/auth/forgot-password`           | 3 req / hour per email             |
 | `/auth/refresh`                   | 30 req / hour per user             |
+| `/auth/verify-email`              | 10 req / hour per IP               |
+| `/auth/resend-verification`       | 3 req / hour per user              |
 | `/files/presign`                  | 20 req / hour per user             |
 | `POST /bookings`                  | 10 req / hour per client           |
 | `POST /reviews`                   | 10 req / day per client            |

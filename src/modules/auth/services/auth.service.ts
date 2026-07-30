@@ -5,6 +5,7 @@ import { UserRole, UserStatus, type User } from '@prisma/client';
 import { PrismaService } from '@prisma-lib/prisma.service';
 import { TransactionManager, type PrismaTransaction } from '@prisma-lib/transaction.manager';
 
+import { EmailVerificationService } from './email-verification.service';
 import { PasswordService } from './password.service';
 import { TokenService, type SessionContext, type TokenPair } from './token.service';
 import { REVOKED_REASON } from '../constants/auth.constants';
@@ -39,6 +40,7 @@ export class AuthService {
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
     private readonly events: EventEmitter2,
+    private readonly emailVerification: EmailVerificationService,
   ) {}
 
   /**
@@ -77,6 +79,7 @@ export class AuthService {
     // Emitted after commit — a welcome message for a rolled-back registration is
     // worse than a missing one (ARCHITECTURE.md §5).
     this.events.emit(AUTH_EVENT.USER_REGISTERED, new UserRegisteredEvent(user.id, profileId));
+    await this.emailVerification.issue(user);
 
     return { user, tokens: await this.tokens.issuePair(user, context) };
   }
@@ -115,6 +118,7 @@ export class AuthService {
     });
 
     this.events.emit(AUTH_EVENT.MASTER_REGISTERED, new MasterRegisteredEvent(user.id, profileId));
+    await this.emailVerification.issue(user);
 
     return { user, tokens: await this.tokens.issuePair(user, context) };
   }

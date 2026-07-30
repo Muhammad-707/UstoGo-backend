@@ -284,6 +284,85 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  // Phase 6: email verification.
+  describe('email verification', () => {
+    const verificationToken = (): string => {
+      const sent = app.mail.at(-1);
+      if (sent === undefined) {
+        throw new Error('No verification email was captured.');
+      }
+      const token = /token=([^\s&]+)/.exec(sent.text)?.[1];
+      if (token === undefined) {
+        throw new Error('Verification email carried no token.');
+      }
+      return token;
+    };
+
+    it('registration sends a verification email, and the token marks the address verified', async () => {
+      const actor = await createClient(app);
+
+      const token = verificationToken();
+
+      await request(app.server).post('/api/v1/auth/verify-email').send({ token }).expect(204);
+
+      const user = await app.prisma.db.user.findUniqueOrThrow({ where: { id: actor.id } });
+      expect(user.emailVerifiedAt).not.toBeNull();
+
+      // Single use.
+      const replay = await request(app.server)
+        .post('/api/v1/auth/verify-email')
+        .send({ token })
+        .expect(400);
+      expect(replay.body.code).toBe('INVALID_VERIFICATION_TOKEN');
+    });
+
+    it('rejects an unknown token', async () => {
+      const response = await request(app.server)
+        .post('/api/v1/auth/verify-email')
+        .send({ token: 'not-a-real-token' })
+        .expect(400);
+
+      expect(response.body.code).toBe('INVALID_VERIFICATION_TOKEN');
+    });
+
+    it('resend issues a fresh token and invalidates the previous one', async () => {
+      const actor = await createClient(app);
+      const firstToken = verificationToken();
+
+      await request(app.server)
+        .post('/api/v1/auth/resend-verification')
+        .set('Authorization', `Bearer ${actor.accessToken}`)
+        .expect(202);
+
+      const secondToken = verificationToken();
+      expect(secondToken).not.toBe(firstToken);
+
+      await request(app.server)
+        .post('/api/v1/auth/verify-email')
+        .send({ token: firstToken })
+        .expect(400);
+
+      await request(app.server)
+        .post('/api/v1/auth/verify-email')
+        .send({ token: secondToken })
+        .expect(204);
+    });
+
+    it('rejects resend once the address is already verified', async () => {
+      const actor = await createClient(app);
+      const token = verificationToken();
+
+      await request(app.server).post('/api/v1/auth/verify-email').send({ token }).expect(204);
+
+      const response = await request(app.server)
+        .post('/api/v1/auth/resend-verification')
+        .set('Authorization', `Bearer ${actor.accessToken}`)
+        .expect(409);
+
+      expect(response.body.code).toBe('EMAIL_ALREADY_VERIFIED');
+    });
+  });
+
   describe('PATCH /auth/password', () => {
     it('changes the password and revokes every other session but the caller’s', async () => {
       const actor = await createClient(app);
