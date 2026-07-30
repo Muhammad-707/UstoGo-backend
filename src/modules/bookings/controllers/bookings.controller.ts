@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from 
 import {
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -17,6 +18,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '@common/dto/error-response.dto';
 import { PaginatedDto } from '@common/dto/paginated.dto';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
+import { Idempotent } from '@modules/idempotency/decorators/idempotent.decorator';
 
 import { CancelBookingDto } from '../dto/requests/cancel-booking.dto';
 import { CreateBookingDto } from '../dto/requests/create-booking.dto';
@@ -38,8 +40,20 @@ export class BookingsController {
   ) {}
 
   @Post()
+  @Idempotent()
   @ApiAuth(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Request a booking', description: 'FR-7.1 — six pre-conditions.' })
+  @ApiOperation({
+    summary: 'Request a booking',
+    description:
+      'FR-7.1 — six pre-conditions. An optional `Idempotency-Key` header (Phase 6) ' +
+      'makes a retried request replay the original response instead of creating a ' +
+      'second booking.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description: 'Client-generated value; replaying it returns the original response.',
+  })
   @ApiCreatedResponse({ type: BookingResponseDto })
   @ApiNotFoundResponse({ description: 'MASTER_NOT_FOUND', type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({
@@ -47,7 +61,9 @@ export class BookingsController {
     type: ErrorResponseDto,
   })
   @ApiConflictResponse({
-    description: 'MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT',
+    description:
+      'MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | ' +
+      'IDEMPOTENCY_KEY_REUSED | IDEMPOTENCY_KEY_IN_PROGRESS',
     type: ErrorResponseDto,
   })
   @ApiTooManyRequestsResponse({ description: 'TOO_MANY_PENDING_BOOKINGS', type: ErrorResponseDto })

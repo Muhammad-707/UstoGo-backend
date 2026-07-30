@@ -181,6 +181,7 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   twoFactorChallenges     TwoFactorChallenge[]
+  idempotencyKeys         IdempotencyKey[]
   approvedMasters         MasterProfile[]          @relation("MasterApprovedBy")
   uploadedFiles           File[]
   auditLogs               AuditLog[]
@@ -467,6 +468,33 @@ model TwoFactorChallenge {
   @@index([userId])
   @@index([expiresAt])
   @@map("two_factor_challenges")
+}
+
+/// §4.5 (Phase 6). One row per client-supplied `Idempotency-Key` on a decorated
+/// mutating endpoint. `requestHash` (SHA-256 of method+path+body) detects a key reused
+/// for a genuinely different request, which is a client bug, not a retry —
+/// `IDEMPOTENCY_KEY_REUSED` rather than silently replaying the wrong response.
+/// `responseStatus`/`responseBody` are null while the original request is still being
+/// handled; the unique constraint on (userId, key) is what makes two concurrent
+/// requests carrying the same key race on *inserting* this row rather than on running
+/// the handler twice.
+model IdempotencyKey {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  key            String    @db.VarChar(200)
+  method         String    @db.VarChar(10)
+  path           String    @db.VarChar(300)
+  requestHash    String    @map("request_hash") @db.VarChar(64)
+  responseStatus Int?      @map("response_status")
+  responseBody   Json?     @map("response_body")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }
 
 // ---------------------------------------------------------------------------

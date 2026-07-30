@@ -110,6 +110,10 @@ One test-fixture gap was found and fixed in the same pass: `src/config/__tests__
 
 **Device/session list with per-device revocation** reuses `RefreshToken` rather than adding a new model — `deviceId`/`userAgent`/`ipAddress` were already columns on it (DATABASE.md §4.1), collected since Phase 1 and unread until now. A "session" is a refresh-token _family_, not a single row: rotation replaces the row on every refresh, but the family id is stable for the device's whole lifetime, so `TokenService.listSessions` folds every live, unexpired row for a user into one entry per family — the earliest row's `createdAt` is the session's start, the latest is `lastActiveAt` — done in application code rather than a `distinct` query, since the row count per user is bounded by how many devices someone is logged into. `GET /auth/sessions` returns them most-recently-active first with a `current` flag (the caller's own `sid` claim); `DELETE /auth/sessions/:id` revokes one family after confirming it belongs to the caller, `404 SESSION_NOT_FOUND` otherwise — the ownership → 404 convention, so a foreign session id cannot be distinguished from one that never existed. Revoking the session the caller is authenticated with is allowed and behaves like `POST /auth/logout` for that one device. 880 tests total (678 unit + 202 e2e).
 
+**Idempotency keys on mutating endpoints** follow `AuditInterceptor`'s own precedent exactly: `IdempotencyInterceptor` is registered globally in a new `IdempotencyModule` and is a no-op for every route without `@Idempotent()`, so adding it could not silently start enforcing idempotency anywhere. A new `IdempotencyKey` model (DATABASE.md §4.5) stores one row per `(userId, key)` — unique, so two concurrent requests carrying the same key race on the row _insert_, never on the handler running twice. The first request inserts a placeholder (`responseStatus`/`responseBody` null) and runs normally; on success the interceptor fills in the response so a genuine retry (same key, same method/path/body — `requestHash` is a SHA-256 fingerprint of all three) replays it verbatim without the handler running again. A key reused for a _different_ request is `409 IDEMPOTENCY_KEY_REUSED`; a key whose original request has not finished yet is `409 IDEMPOTENCY_KEY_IN_PROGRESS`. On handler failure the placeholder is deleted so the same key can be retried. `@Idempotent()` is applied to the two mutating endpoints with the clearest retry-duplication risk and no other natural safeguard: `POST /bookings` (a double-tapped "book now") and `POST /admin/notifications/broadcast` (a retried request would otherwise send every recipient a duplicate notification, with no unique constraint to catch it). The header is optional and the mechanism is opt-in per route via the decorator — no FR/SRS document names which endpoints need it, so the two highest-value targets were chosen rather than decorating every mutating route, and more can adopt `@Idempotent()` without further model or interceptor work. 902 tests total (697 unit + 205 e2e).
+
+Found and fixed during the migration, not after: `npx prisma migrate dev --name add_idempotency_keys` reproduced the same `master_profiles.search_vector` drift documented for every migration since F-12 (Prisma's diff cannot see the raw-SQL generated column). This time it had already applied against the local dev database before being caught, so the column was restored by hand (`ALTER TABLE ... ADD COLUMN ... GENERATED ALWAYS AS ... STORED` plus its GIN index, the exact DDL from `20260729204719_add_schedule_and_search_vector`) rather than resetting the database, and the generated migration file was hand-edited to drop the destructive lines before it reached a shared branch.
+
 ---
 
 ## 2. Phase Progress
@@ -122,7 +126,7 @@ One test-fixture gap was found and fixed in the same pass: `src/config/__tests__
 | 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓░░░░░░░ 33%  |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓▓░░░░░░ 44%  |
 
 ---
 
@@ -191,22 +195,22 @@ One test-fixture gap was found and fixed in the same pass: `src/config/__tests__
 
 ## 5. Metrics
 
-| Metric                               | Target              | Current                                                         |
-| ------------------------------------ | ------------------- | --------------------------------------------------------------- |
-| Line coverage                        | ≥ 80%               | 880 tests green (678 unit + 202 e2e); `test:cov` thresholds met |
-| Service/guard coverage               | ≥ 90%               | Met                                                             |
-| Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                 |
-| Endpoints implemented                | ~95                 | 64                                                              |
-| Endpoints documented in Swagger      | 100% of implemented | 100% (`openapi.json` regenerated with every route)              |
-| Files over 300 lines                 | 0                   | 0                                                               |
-| `any` occurrences                    | 0                   | 0                                                               |
-| Open high/critical vulnerabilities   | 0                   | 0 (`npm audit --omit=dev --audit-level=high`)                   |
+| Metric                               | Target              | Current                                                                                                                                                                                                                                              |
+| ------------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Line coverage                        | ≥ 80%               | 902 tests green (697 unit + 205 e2e); pre-existing gaps below the 90%-lines service floor in `masters-search.service.ts`, `search.service.ts`, `services.service.ts`, `conversations.service.ts`, `profile-lookup.util.ts` (none touched by Phase 6) |
+| Service/guard coverage               | ≥ 90%               | Met                                                                                                                                                                                                                                                  |
+| Auth & state machine branch coverage | 100%                | Met for auth (booking state machine is Phase 4)                                                                                                                                                                                                      |
+| Endpoints implemented                | ~95                 | 64                                                                                                                                                                                                                                                   |
+| Endpoints documented in Swagger      | 100% of implemented | 100% (`openapi.json` regenerated with every route)                                                                                                                                                                                                   |
+| Files over 300 lines                 | 0                   | 0                                                                                                                                                                                                                                                    |
+| `any` occurrences                    | 0                   | 0                                                                                                                                                                                                                                                    |
+| Open high/critical vulnerabilities   | 0                   | 0 (`npm audit --omit=dev --audit-level=high`)                                                                                                                                                                                                        |
 
 ---
 
 ## 6. Blockers
 
-None. Phase 6 (Hardening & Launch) is in progress — email verification, two-factor admin auth and the device/session list are done; idempotency keys are next.
+None. Phase 6 (Hardening & Launch) is in progress — email verification, two-factor admin auth, the device/session list and idempotency keys are done; personal data export/anonymised deletion is next.
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -228,7 +232,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-**Phase 6 — Hardening & Launch** is in progress. Email verification, admin two-factor authentication and the device/session list are done; next up is idempotency keys on mutating endpoints, per `docs/TODO.md`/`ROADMAP.md`.
+**Phase 6 — Hardening & Launch** is in progress. Email verification, admin two-factor authentication, the device/session list and idempotency keys are done; next up is personal data export and anonymised deletion, per `docs/TODO.md`/`ROADMAP.md`.
 
 Detailed task list: `TODO.md`.
 

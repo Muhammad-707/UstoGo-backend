@@ -111,7 +111,7 @@ has to exist before the first privileged mutation it is meant to cover.
 - ✅ Email verification
 - ✅ Two-factor authentication for admin accounts
 - ✅ Device/session list with per-device revocation
-- ⬜ Idempotency keys on mutating endpoints
+- ✅ Idempotency keys on mutating endpoints
 - ⬜ Personal data export and anonymised deletion
 - ⬜ RS256 migration for access tokens
 - ⬜ External penetration test and remediation

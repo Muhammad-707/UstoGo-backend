@@ -196,6 +196,10 @@ Hard-deleted by a nightly job once `expiresAt < now() - 30 days`.
 
 `id`, `userId` (FK, cascade), `tokenHash` (unique), `expiresAt` (5 min), `usedAt?`, `createdAt`. Issued after a password verifies for an account with `User.totpEnabledAt` set; exchanged, together with a TOTP code, for a real session at `POST /auth/2fa/verify`. `User.totpSecret` (§3.1) is AES-256-GCM ciphertext, not a hash — a TOTP code has to be verified by recomputing HOTP against the plaintext secret, unlike every other token in this schema, which only ever needs a one-way comparison.
 
+### 4.5 `IdempotencyKey` (Phase 6)
+
+`id`, `userId` (FK, cascade), `key`, `method`, `path`, `requestHash` (SHA-256 of method+path+body), `responseStatus?`, `responseBody?` (jsonb), `createdAt`, `expiresAt` (24 h). Unique on `(userId, key)`. Backs `IdempotencyInterceptor` (`ERROR_HANDLING.md` §7) — a decorated route (`@Idempotent()`, currently `POST /bookings` and `POST /admin/notifications/broadcast`) with an `Idempotency-Key` header inserts a placeholder row before running the handler; the unique constraint is what makes two concurrent requests carrying the same key race on the _insert_ rather than on the handler itself. `responseStatus`/`responseBody` are null while the original request is still in flight, so a second request arriving mid-flight gets `409 IDEMPOTENCY_KEY_IN_PROGRESS` rather than a stale replay.
+
 ---
 
 ## 5. Catalogue

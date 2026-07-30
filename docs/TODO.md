@@ -168,7 +168,7 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] Email verification: `EmailVerificationToken` model (same shape as `PasswordResetToken`), `AuthService.registerClient`/`registerMaster` issue a token right after commit, `POST /auth/verify-email` (public, single-use), `POST /auth/resend-verification` (authenticated, `409 EMAIL_ALREADY_VERIFIED` if already verified). Not gated on anything else in v1 — no FR/SRS document ties `emailVerifiedAt` to an access restriction, so no enforcement was invented.
 - [x] Two-factor authentication for admin accounts: TOTP (RFC 6238) against `node:crypto`, `User.totpSecret`/`totpEnabledAt` + `TwoFactorChallenge` model, `POST /auth/2fa/{setup,enable,disable,verify}`, `AuthService.login` returns a `challengeToken` instead of tokens when `totpEnabledAt` is set
 - [x] Device/session list with per-device revocation: `GET /auth/sessions` folds `RefreshToken` rows into one row per family (device), most recently active first; `DELETE /auth/sessions/:id` revokes a family, `404 SESSION_NOT_FOUND` for an unknown or foreign one
-- [ ] Idempotency keys on mutating endpoints
+- [x] Idempotency keys on mutating endpoints: `IdempotencyKey` model + `IdempotencyInterceptor` (registered globally, no-op without `@Idempotent()`, same precedent as `AuditInterceptor`); applied to `POST /bookings` and `POST /admin/notifications/broadcast`; optional `Idempotency-Key` header replays the original response, `409 IDEMPOTENCY_KEY_REUSED`/`IDEMPOTENCY_KEY_IN_PROGRESS` otherwise
 - [ ] Personal data export and anonymised deletion
 - [ ] RS256 migration for access tokens
 - [ ] External penetration test and remediation

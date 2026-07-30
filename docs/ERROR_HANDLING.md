@@ -213,6 +213,13 @@ Codes are unique across the API and are exported as a single const object consum
 | ------------------ | ------ |
 | `BANNER_NOT_FOUND` | 404    |
 
+### Idempotency (Phase 6)
+
+| Code                          | Status | Meaning                                              |
+| ----------------------------- | ------ | ---------------------------------------------------- |
+| `IDEMPOTENCY_KEY_REUSED`      | 409    | Same `Idempotency-Key`, a different method/path/body |
+| `IDEMPOTENCY_KEY_IN_PROGRESS` | 409    | The original request with this key is still running  |
+
 ### Generic
 
 | Code                    | Status |
@@ -269,7 +276,7 @@ Never logged: passwords, tokens, hashes, reset tokens, full request bodies of au
 | 500                     | ⚠️ once, with backoff                                                             |
 | 503                     | ✅ with exponential backoff and jitter                                            |
 
-Mutating endpoints that could be retried accept an optional `Idempotency-Key` header (Phase 6); until then clients must treat a timed-out `POST /bookings` as indeterminate and reconcile by listing bookings.
+`POST /bookings` and `POST /admin/notifications/broadcast` (Phase 6) accept an optional `Idempotency-Key` header: a retried request with the same key, method, path and body replays the original response instead of running again. Any other mutating endpoint still has no such guard, so a timed-out request there must be treated as indeterminate and reconciled by re-reading state.
 
 ---
 

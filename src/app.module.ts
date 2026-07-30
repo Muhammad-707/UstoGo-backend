@@ -22,6 +22,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { FilesModule } from './modules/files/files.module';
+import { IdempotencyModule } from './modules/idempotency/idempotency.module';
 import { MastersModule } from './modules/masters/masters.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
@@ -86,6 +87,7 @@ import { StorageModule } from './shared/storage/storage.module';
     AuthModule,
     UsersModule,
     FilesModule,
+    IdempotencyModule,
     AuditModule,
     CategoriesModule,
     MastersModule,

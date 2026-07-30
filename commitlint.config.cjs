@@ -26,6 +26,7 @@ module.exports = {
         'chat',
         'banners',
         'audit',
+        'idempotency',
         'admin',
         'common',
         'config',
