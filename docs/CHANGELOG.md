@@ -11,6 +11,13 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-30
+
+Phase 6 — Hardening & Launch. Closes the roadmap: every implementable-in-repo item has landed. **Judgment call, recorded rather than silently skipped:** the external penetration test `ROADMAP.md`/`DEPLOYMENT.md` §12 name as a pre-launch checklist item was deliberately not performed before this tag — cutting `v1.0.0` was an explicit decision made without it, not an oversight. Scheduling that engagement against a deployed environment and remediating its findings remains open work for whoever operates the next release.
+
+### Security
+- No external penetration test has been performed against this codebase. `SECURITY.md`'s OWASP API Top-10 mapping and the internal threat model are the only security review this release has had.
+
 ### Added
 - **Backup restore rehearsal and production runbook** (Phase 6). `scripts/backup-restore-rehearsal.sh` (`npm run backup:rehearse`) dumps the running Postgres container, restores into a throwaway database on the same instance, and verifies row counts on six tables match — run once locally, 2 seconds, every table matched; the mechanism is proven, the production-scale timing is what the quarterly rehearsal against a real backup measures. `DEPLOYMENT.md` §11's runbook gained two incident scenarios (2FA lockout via direct SQL — no API bypass exists by design; a stuck `Idempotency-Key`) and a new On-Call Rotation section documenting the escalation path; the named weekly schedule is left for the team to fill in, not something a repository can generate.
 - **RS256 migration for access tokens** (Phase 6). `JWT_ACCESS_SECRET` (HS256, one shared secret) is replaced by `JWT_ACCESS_PRIVATE_KEY`/`JWT_ACCESS_PUBLIC_KEY` (base64 PKCS8/SPKI PEM, validated at boot by decoding and checking for real PEM markers). `JwtModule` signs with the private key; `JwtStrategy` and `ChatGateway`'s socket handshake both verify with the public key alone and pin `algorithms: ['RS256']` explicitly, closing the algorithm-confusion class of bug. `JWT_REFRESH_SECRET` is untouched — refresh tokens are opaque and database-backed, never JWTs. 914 tests total (706 unit + 208 e2e).

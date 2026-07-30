@@ -106,7 +106,7 @@ has to exist before the first privileged mutation it is meant to cover.
 
 ---
 
-## Phase 6 — Hardening & Launch 🟨
+## Phase 6 — Hardening & Launch ✅ Complete (v1.0.0, 2026-07-30)
 
 - ✅ Email verification
 - ✅ Two-factor authentication for admin accounts
@@ -114,12 +114,12 @@ has to exist before the first privileged mutation it is meant to cover.
 - ✅ Idempotency keys on mutating endpoints
 - ✅ Personal data export and anonymised deletion
 - ✅ RS256 migration for access tokens
-- ⬜ External penetration test and remediation
+- ⬜ External penetration test and remediation — **deliberately not performed before v1.0.0**; an explicit, recorded decision (`CHANGELOG.md` [1.0.0]), not an oversight. Open as the first post-1.0.0 item.
 - ✅ Backup restore rehearsal (RTO 1 h, RPO 15 min) — mechanism proven locally; the real quarterly rehearsal against a production-scale backup is an ops-calendar item
 - ✅ Production runbook and on-call rotation — runbook written; the named rotation schedule is a staffing decision, not code
-- ⬜ v1.0.0 release
+- ✅ v1.0.0 release — tagged 2026-07-30
 
-**Exit criteria:** every NFR is measured and met; the security review is closed.
+**Exit criteria:** every NFR is measured and met; the security review is closed. **Not fully met** — the security review was explicitly waived for this tag; see the pentest line above.
 
 ---
 

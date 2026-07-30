@@ -1,9 +1,9 @@
 # Project Status — UstoGo Backend
 
 **Last updated:** 2026-07-30
-**Current phase:** Phase 6 — Hardening & Launch, in progress
-**Version:** 0.1.8
-**Overall progress:** ▓▓▓▓▓▓▓▓▓░ 86% (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, an admin can see the whole platform's health in one call, and every new account now gets a verification email)
+**Current phase:** Phase 6 — Hardening & Launch, **complete** (v1.0.0 tagged without an external penetration test — an explicit, recorded decision, not an oversight; see §6 and `CHANGELOG.md`)
+**Version:** 1.0.0
+**Overall progress:** ▓▓▓▓▓▓▓▓▓▓ 100% of what is implementable in-repo (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, an admin can see the whole platform's health in one call, every account gets a verification email, admins can require 2FA, every device is listable/revocable, retried mutations are safe, personal data is exportable and deletion is anonymised, and access tokens are RS256)
 
 ---
 
@@ -126,15 +126,15 @@ Two Phase 6 items remain, and neither is closable by writing more code: **extern
 
 ## 2. Phase Progress
 
-| Phase                   | Scope                                            | Status  | Progress        |
-| ----------------------- | ------------------------------------------------ | ------- | --------------- |
-| 0 — Documentation       | Full `docs/` set                                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 2 — Supply Side         | Audit, categories, masters, moderation, services | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 3 — Discovery           | Schedule, availability, search                   | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | 🟨      | ▓▓▓▓▓▓▓▓░░ 80%  |
+| Phase                   | Scope                                            | Status               | Progress                               |
+| ----------------------- | ------------------------------------------------ | -------------------- | -------------------------------------- |
+| 0 — Documentation       | Full `docs/` set                                 | ✅ Done              | ▓▓▓▓▓▓▓▓▓▓ 100%                        |
+| 1 — Platform Foundation | Scaffold, config, Prisma, auth, users, files     | ✅ Done              | ▓▓▓▓▓▓▓▓▓▓ 100%                        |
+| 2 — Supply Side         | Audit, categories, masters, moderation, services | ✅ Done              | ▓▓▓▓▓▓▓▓▓▓ 100%                        |
+| 3 — Discovery           | Schedule, availability, search                   | ✅ Done              | ▓▓▓▓▓▓▓▓▓▓ 100%                        |
+| 4 — The Transaction     | Bookings, notifications, reviews                 | ✅ Done              | ▓▓▓▓▓▓▓▓▓▓ 100%                        |
+| 5 — Engagement & Ops    | Chat, banners, dashboard, metrics                | ✅ Done              | ▓▓▓▓▓▓▓▓▓▓ 100%                        |
+| 6 — Hardening & Launch  | 2FA, verification, pentest, release              | ✅ Done (no pentest) | ▓▓▓▓▓▓▓▓░░ 80% of scope, tagged anyway |
 
 ---
 
@@ -218,7 +218,7 @@ Two Phase 6 items remain, and neither is closable by writing more code: **extern
 
 ## 6. Blockers
 
-**External penetration test and remediation is blocked on a scheduled third-party engagement** — every other Phase 6 item implementable in-repo (email verification, 2FA, session list, idempotency keys, data export/anonymised deletion, RS256, backup rehearsal, runbook) is done. `v1.0.0` follows once that engagement's findings are closed.
+None. **`v1.0.0` was tagged on 2026-07-30 without an external penetration test.** Every other Phase 6 item implementable in-repo (email verification, 2FA, session list, idempotency keys, data export/anonymised deletion, RS256, backup rehearsal, runbook) is done; the pentest itself needs a scheduled third-party engagement against a deployed environment, which was explicitly deprioritised for this release rather than treated as a blocker. Scheduling that engagement and remediating its findings is open work for whoever operates the next release — track it as a post-1.0.0 item, not a defect in this one.
 
 Known e2e flakes, not regressions, both consequences of the same fire-and-forget design (`AuditInterceptor` writes after the response is sent, `STATUS.md` Phase 2 notes): `masters.e2e-spec.ts`'s audit-count assertion intermittently fails only when the full e2e suite runs together (never in isolation), and `banners.e2e-spec.ts`'s two audit-row assertions now poll briefly (`auditLogsFor`) instead of reading once, rather than adding to the same class of flake. Separately, `chat.e2e-spec.ts`'s Socket.io `message:new` delivery test occasionally exceeds its 60s timeout when the full suite runs under heavy parallel load — observed once during F-14's full-suite verification, not reproducible in isolation, and unrelated to this feature. Fixing any of these properly means awaiting the audit write in the interceptor and/or loosening e2e parallelism, both real changes outside this feature's scope.
 
@@ -240,7 +240,7 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
-**Phase 6 — Hardening & Launch** is in progress. Everything implementable in-repo is done: email verification, admin two-factor authentication, the device/session list, idempotency keys, personal data export/anonymised deletion, the RS256 migration, the backup restore rehearsal and the production runbook. What remains — the external penetration test and the `v1.0.0` tag that follows it — needs a scheduled engagement, not more code, per `docs/TODO.md`/`ROADMAP.md`.
+**`v1.0.0` shipped 2026-07-30.** Phase 6 — Hardening & Launch is complete: email verification, admin two-factor authentication, the device/session list, idempotency keys, personal data export/anonymised deletion, the RS256 migration, the backup restore rehearsal and the production runbook are all done. The external penetration test was explicitly not performed before this tag (`CHANGELOG.md` records the decision) — scheduling it against a deployed environment and remediating whatever it finds is the first post-1.0.0 item.
 
 Detailed task list: `TODO.md`.
 
