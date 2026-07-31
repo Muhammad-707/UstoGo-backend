@@ -1,28 +1,41 @@
 import type { PrismaClient } from '@prisma/client';
 
 /**
- * Starter reference data. The definitive list is open decision D-4 in `STATUS.md`
- * (owner: Product); this set follows the `Asia/Tashkent` timezone that DATABASE.md
- * §3.3 uses as its worked example, and is replaced rather than extended once D-4
- * closes. Coordinates are city centres.
+ * Reference data for Tajikistan, the product's actual market (the app's timezone
+ * default and phone format both target `Asia/Dushanbe` / `+992`). Coordinates are
+ * city centres.
  */
 const CITIES = [
-  { name: 'Tashkent', slug: 'tashkent', region: 'Tashkent', latitude: 41.2995, longitude: 69.2401 },
+  { name: 'Dushanbe', slug: 'dushanbe', region: 'Dushanbe', latitude: 38.5598, longitude: 68.787 },
+  { name: 'Khujand', slug: 'khujand', region: 'Sughd', latitude: 40.2833, longitude: 69.6333 },
+  { name: 'Bokhtar', slug: 'bokhtar', region: 'Khatlon', latitude: 37.8322, longitude: 68.7797 },
+  { name: 'Kulob', slug: 'kulob', region: 'Khatlon', latitude: 37.9139, longitude: 69.7861 },
   {
-    name: 'Samarkand',
-    slug: 'samarkand',
-    region: 'Samarkand',
-    latitude: 39.627,
-    longitude: 66.975,
+    name: 'Istaravshan',
+    slug: 'istaravshan',
+    region: 'Sughd',
+    latitude: 39.9086,
+    longitude: 69.0058,
   },
-  { name: 'Bukhara', slug: 'bukhara', region: 'Bukhara', latitude: 39.7681, longitude: 64.4556 },
-  { name: 'Namangan', slug: 'namangan', region: 'Namangan', latitude: 40.9983, longitude: 71.6726 },
-  { name: 'Andijan', slug: 'andijan', region: 'Andijan', latitude: 40.7821, longitude: 72.3442 },
-  { name: 'Fergana', slug: 'fergana', region: 'Fergana', latitude: 40.3864, longitude: 71.7864 },
-  { name: 'Nukus', slug: 'nukus', region: 'Karakalpakstan', latitude: 42.4531, longitude: 59.6103 },
-  { name: 'Qarshi', slug: 'qarshi', region: 'Qashqadaryo', latitude: 38.8606, longitude: 65.7891 },
-  { name: 'Urgench', slug: 'urgench', region: 'Xorazm', latitude: 41.5506, longitude: 60.6314 },
-  { name: 'Termez', slug: 'termez', region: 'Surxondaryo', latitude: 37.2242, longitude: 67.2783 },
+  { name: 'Konibodom', slug: 'konibodom', region: 'Sughd', latitude: 40.2864, longitude: 70.4231 },
+  {
+    name: 'Tursunzoda',
+    slug: 'tursunzoda',
+    region: 'Districts of Republican Subordination',
+    latitude: 38.5028,
+    longitude: 68.0128,
+  },
+  {
+    name: 'Vahdat',
+    slug: 'vahdat',
+    region: 'Districts of Republican Subordination',
+    latitude: 38.5589,
+    longitude: 69.0272,
+  },
+  { name: 'Isfara', slug: 'isfara', region: 'Sughd', latitude: 40.1225, longitude: 70.6247 },
+  { name: 'Panjakent', slug: 'panjakent', region: 'Sughd', latitude: 39.4964, longitude: 67.6083 },
+  { name: 'Khorog', slug: 'khorog', region: 'GBAO', latitude: 37.4928, longitude: 71.5497 },
+  { name: 'Norak', slug: 'norak', region: 'Khatlon', latitude: 38.3814, longitude: 69.3272 },
 ] as const;
 
 /**
@@ -42,6 +55,21 @@ export const seedCities = async (prisma: PrismaClient): Promise<number> => {
         latitude: city.latitude,
         longitude: city.longitude,
       },
+    });
+  }
+
+  // Drops cities from an earlier reference set (e.g. the old placeholder Uzbekistan
+  // list) that are no longer in CITIES. onDelete: Restrict on client/master profiles
+  // means a city still referenced by a profile simply survives the cleanup instead of
+  // failing the whole seed run.
+  const currentSlugs = CITIES.map((city) => city.slug);
+  const stale = await prisma.city.findMany({
+    where: { slug: { notIn: currentSlugs } },
+    select: { id: true, slug: true },
+  });
+  for (const city of stale) {
+    await prisma.city.delete({ where: { id: city.id } }).catch(() => {
+      // Referenced by an existing profile — leave it in place rather than fail the seed.
     });
   }
 
