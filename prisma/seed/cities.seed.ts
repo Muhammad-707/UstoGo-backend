@@ -5,6 +5,8 @@ import type { PrismaClient } from '@prisma/client';
  * default and phone format both target `Asia/Dushanbe` / `+992`). Coordinates are
  * city centres.
  */
+const RRP = 'Districts of Republican Subordination';
+
 const CITIES = [
   { name: 'Dushanbe', slug: 'dushanbe', region: 'Dushanbe', latitude: 38.5598, longitude: 68.787 },
   { name: 'Khujand', slug: 'khujand', region: 'Sughd', latitude: 40.2833, longitude: 69.6333 },
@@ -18,24 +20,28 @@ const CITIES = [
     longitude: 69.0058,
   },
   { name: 'Konibodom', slug: 'konibodom', region: 'Sughd', latitude: 40.2864, longitude: 70.4231 },
-  {
-    name: 'Tursunzoda',
-    slug: 'tursunzoda',
-    region: 'Districts of Republican Subordination',
-    latitude: 38.5028,
-    longitude: 68.0128,
-  },
-  {
-    name: 'Vahdat',
-    slug: 'vahdat',
-    region: 'Districts of Republican Subordination',
-    latitude: 38.5589,
-    longitude: 69.0272,
-  },
+  { name: 'Tursunzoda', slug: 'tursunzoda', region: RRP, latitude: 38.5028, longitude: 68.0128 },
+  { name: 'Vahdat', slug: 'vahdat', region: RRP, latitude: 38.5589, longitude: 69.0272 },
   { name: 'Isfara', slug: 'isfara', region: 'Sughd', latitude: 40.1225, longitude: 70.6247 },
   { name: 'Panjakent', slug: 'panjakent', region: 'Sughd', latitude: 39.4964, longitude: 67.6083 },
   { name: 'Khorog', slug: 'khorog', region: 'GBAO', latitude: 37.4928, longitude: 71.5497 },
   { name: 'Norak', slug: 'norak', region: 'Khatlon', latitude: 38.3814, longitude: 69.3272 },
+  { name: 'Hisor', slug: 'hisor', region: RRP, latitude: 38.5286, longitude: 68.5325 },
+  { name: 'Rogun', slug: 'rogun', region: RRP, latitude: 38.6825, longitude: 69.7469 },
+  { name: 'Yovon', slug: 'yovon', region: 'Khatlon', latitude: 38.3122, longitude: 69.0128 },
+  { name: 'Danghara', slug: 'danghara', region: 'Khatlon', latitude: 38.2, longitude: 69.3006 },
+  { name: 'Farkhor', slug: 'farkhor', region: 'Khatlon', latitude: 37.4897, longitude: 69.4064 },
+  { name: 'Vose', slug: 'vose', region: 'Khatlon', latitude: 37.7986, longitude: 69.755 },
+  { name: 'Shahrtuz', slug: 'shahrtuz', region: 'Khatlon', latitude: 37.2481, longitude: 68.1503 },
+  { name: 'Sarband', slug: 'sarband', region: 'Khatlon', latitude: 37.9975, longitude: 68.7644 },
+  { name: 'Buston', slug: 'buston', region: 'Sughd', latitude: 40.2364, longitude: 69.7239 },
+  {
+    name: 'Qayroqqum',
+    slug: 'qayroqqum',
+    region: 'Sughd',
+    latitude: 40.2667,
+    longitude: 69.8167,
+  },
 ] as const;
 
 /**
