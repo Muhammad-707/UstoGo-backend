@@ -69,15 +69,15 @@ Size: **S** ≤ 3 days · **M** ≤ 2 weeks · **L** ≤ 6 weeks · **XL** a qua
 
 ## Master Tooling
 
-| ID   | Item                                                       | Priority | Size |
-| ---- | ---------------------------------------------------------- | -------- | ---- |
-| B-40 | Calendar sync (Google/Apple, CalDAV)                       | P2       | M    |
-| B-41 | Earnings and analytics dashboard                           | P2       | M    |
-| B-42 | Team accounts (a company with several craftsmen)           | P2       | XL   |
-| B-43 | Recurring bookings                                         | P3       | M    |
-| B-44 | Quote/estimate flow before booking                         | P2       | L    |
-| B-45 | Portfolio gallery with before/after photos                 | P2       | S    |
-| B-46 | Holiday mode (temporary invisibility without deactivation) | P1       | S    |
+| ID   | Item                                                                 | Priority | Size |
+| ---- | -------------------------------------------------------------------- | -------- | ---- |
+| B-40 | Calendar sync (Google/Apple, CalDAV)                                 | P2       | M    |
+| B-41 | Earnings and analytics dashboard                                     | P2       | M    |
+| B-42 | Team accounts (a company with several craftsmen)                     | P2       | XL   |
+| B-43 | Recurring bookings                                                   | P3       | M    |
+| B-44 | Quote/estimate flow before booking                                   | P2       | L    |
+| B-45 | ~~Portfolio gallery~~ — **done**, `masters/me/portfolio` (STATUS.md) | P2       | S    |
+| B-46 | Holiday mode (temporary invisibility without deactivation)           | P1       | S    |
 
 ---
 

@@ -33,6 +33,7 @@ export const PURPOSE_RULES: Readonly<Record<FilePurpose, PurposeRule>> = Object.
   },
   [FilePurpose.BANNER]: { mimeTypes: IMAGE_TYPES, maxBytes: 5 * MB, prefix: 'banners' },
   [FilePurpose.CATEGORY_ICON]: { mimeTypes: IMAGE_TYPES, maxBytes: 5 * MB, prefix: 'categories' },
+  [FilePurpose.PORTFOLIO_IMAGE]: { mimeTypes: IMAGE_TYPES, maxBytes: 5 * MB, prefix: 'portfolio' },
 });
 
 /** API.md §5 — 20 presigns per hour per user. */

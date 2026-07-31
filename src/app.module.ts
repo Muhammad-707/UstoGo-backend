@@ -21,6 +21,7 @@ import { BannersModule } from './modules/banners/banners.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 import { FilesModule } from './modules/files/files.module';
 import { IdempotencyModule } from './modules/idempotency/idempotency.module';
 import { MastersModule } from './modules/masters/masters.module';
@@ -99,6 +100,7 @@ import { StorageModule } from './shared/storage/storage.module';
     ReviewsModule,
     ChatModule,
     BannersModule,
+    FavoritesModule,
     AdminModule,
     JobsModule,
   ],

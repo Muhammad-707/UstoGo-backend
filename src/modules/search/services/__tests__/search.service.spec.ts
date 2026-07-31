@@ -15,6 +15,7 @@ const ROW = {
   completedBookingsCount: 2,
   services: [],
   certificates: [],
+  portfolioImages: [],
 };
 
 const build = (

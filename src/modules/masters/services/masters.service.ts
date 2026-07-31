@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ApprovalStatus, FilePurpose, type Certificate, type MasterProfile } from '@prisma/client';
+import {
+  ApprovalStatus,
+  FilePurpose,
+  type Certificate,
+  type MasterProfile,
+  type PortfolioImage,
+} from '@prisma/client';
 
 import {
   CategoryNotFoundException,
@@ -8,10 +14,14 @@ import {
 import { FilesService } from '@modules/files/services/files.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
+import { PORTFOLIO_IMAGE_LIMIT } from '../constants/masters.constants';
 import type { CreateCertificateDto } from '../dto/requests/create-certificate.dto';
+import type { CreatePortfolioImageDto } from '../dto/requests/create-portfolio-image.dto';
 import {
   InvalidApprovalTransitionException,
   MasterNotFoundException,
+  PortfolioImageNotFoundException,
+  PortfolioLimitExceededException,
 } from '../exceptions/masters.exceptions';
 
 /** F-03 (MODULES.md › MastersModule). Self-service: category attachment, certificates, submission. */
@@ -116,6 +126,77 @@ export class MastersService {
     await this.prisma.db.certificate.updateMany({
       where: { id: certificateId, masterProfileId: master.id },
       data: { deletedAt: new Date() },
+    });
+  }
+
+  async listPortfolioImages(userId: string): Promise<PortfolioImage[]> {
+    const master = await this.getByUserId(userId);
+
+    return this.prisma.db.portfolioImage.findMany({
+      where: { masterProfileId: master.id },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  async addPortfolioImage(userId: string, dto: CreatePortfolioImageDto): Promise<PortfolioImage> {
+    const master = await this.getByUserId(userId);
+
+    const count = await this.prisma.db.portfolioImage.count({
+      where: { masterProfileId: master.id },
+    });
+    if (count >= PORTFOLIO_IMAGE_LIMIT) {
+      throw new PortfolioLimitExceededException();
+    }
+
+    await this.files.getAttachable(dto.fileId, userId, FilePurpose.PORTFOLIO_IMAGE);
+
+    return this.prisma.db.portfolioImage.create({
+      data: {
+        masterProfileId: master.id,
+        fileId: dto.fileId,
+        sortOrder: count,
+        ...(dto.caption !== undefined ? { caption: dto.caption } : {}),
+      },
+    });
+  }
+
+  /** Idempotent — removing an already-removed image is a no-op. */
+  async removePortfolioImage(userId: string, imageId: string): Promise<void> {
+    const master = await this.getByUserId(userId);
+
+    await this.prisma.db.portfolioImage.updateMany({
+      where: { id: imageId, masterProfileId: master.id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /**
+   * Replaces every image's `sortOrder` with its position in `imageIds`. The set must
+   * be exactly the caller's current live images — a partial or foreign id list is
+   * rejected rather than silently reordering a subset.
+   */
+  async reorderPortfolio(userId: string, imageIds: string[]): Promise<PortfolioImage[]> {
+    const master = await this.getByUserId(userId);
+
+    const existing = await this.prisma.db.portfolioImage.findMany({
+      where: { masterProfileId: master.id, deletedAt: null },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((image) => image.id));
+
+    if (imageIds.length !== existingIds.size || imageIds.some((id) => !existingIds.has(id))) {
+      throw new PortfolioImageNotFoundException();
+    }
+
+    await this.prisma.$transaction(
+      imageIds.map((id, sortOrder) =>
+        this.prisma.db.portfolioImage.update({ where: { id }, data: { sortOrder } }),
+      ),
+    );
+
+    return this.prisma.db.portfolioImage.findMany({
+      where: { masterProfileId: master.id, deletedAt: null },
+      orderBy: { sortOrder: 'asc' },
     });
   }
 

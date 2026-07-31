@@ -12,6 +12,8 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 ## [Unreleased]
 
 ### Added
+- **Master portfolio/gallery (B-45)**. Masters can showcase work photos on their public profile: `PortfolioImage` model (`caption`, `sortOrder`, soft-deletable), a new `PORTFOLIO_IMAGE` file purpose (5 MB, images only), and `GET/POST /masters/me/portfolio`, `PUT /masters/me/portfolio/order`, `DELETE /masters/me/portfolio/:imageId` — the same confirmed-file-ownership pattern `Certificate` already uses via `FilesService.getAttachable`. Capped at 20 images per master (`PORTFOLIO_LIMIT_EXCEEDED`, 422) so the public profile projection (`MasterPublicResponseDto.portfolioImageFileIds`) stays bounded without a second paginated endpoint.
+- **Favorites**. Clients can save/unsave masters (`POST`/`DELETE /favorites/:masterId`, idempotent) and list their saved masters (`GET /favorites`) via the same public `MasterPublicResponseDto` projection search uses.
 - **`GET /admin/masters`** (API.md §12, documented since F-04 but never implemented). Lists every master regardless of approval/active state — unlike public search, which only ever returns approved and active ones — filterable by `approvalStatus`, `status` (active/deactivated), `cityId`, `categoryId` and `search` (display name or account email), paginated the same way as every other list endpoint. `AdminMasterListItemResponseDto` is a distinct, admin-only projection: it includes `email`/`phone`, which `MasterPublicResponseDto` deliberately never exposes.
 
 ## [1.0.0] — 2026-07-30

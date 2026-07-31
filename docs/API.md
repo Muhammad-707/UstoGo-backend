@@ -195,7 +195,7 @@ Admin mutations live under `/admin/categories` (§12).
 | `hasCertificates`      | boolean    |                                                                                      |
 | `sort`                 | enum       | `rating:desc` (default), `reviews:desc`, `price:asc`, `price:desc`, `createdAt:desc` |
 
-Response items expose: `id`, `displayName`, `avatarUrl`, `bio` (truncated), `cityName`, `categories[]`, `ratingAverage`, `ratingCount`, `completedBookingsCount`, `priceFrom`, `hasCertificates`. **Never** email, phone or address.
+Response items expose: `id`, `displayName`, `avatarUrl`, `bio` (truncated), `cityName`, `categories[]`, `ratingAverage`, `ratingCount`, `completedBookingsCount`, `priceFrom`, `hasCertificates`, `portfolioImageFileIds[]` (B-45, ≤ 20, display order). **Never** email, phone or address.
 
 ---
 
@@ -209,6 +209,8 @@ Response items expose: `id`, `displayName`, `avatarUrl`, `bio` (truncated), `cit
 | POST                  | `/masters/me/resubmit`            | After rejection → `PENDING`                                      |
 | GET/POST/DELETE       | `/masters/me/categories`          | Attach / detach leaf categories                                  |
 | GET/POST/DELETE       | `/masters/me/certificates`        | Manage certificates                                              |
+| GET/POST/DELETE       | `/masters/me/portfolio`           | Manage work-showcase photos (B-45), ≤ 20                         |
+| PUT                   | `/masters/me/portfolio/order`     | Reorder portfolio images                                         |
 | GET/POST/PATCH/DELETE | `/masters/me/services`            | Service CRUD                                                     |
 | GET                   | `/masters/me/schedule`            | Weekly schedule                                                  |
 | PUT                   | `/masters/me/schedule`            | Atomic replacement of the weekly schedule                        |
@@ -266,6 +268,20 @@ Field visibility: `client.phone` and `address.line` are present in the master's 
 | POST   | `/reviews/:id/reply` | MASTER          | One reply per review                    |
 
 **Errors:** `409 BOOKING_NOT_COMPLETED`, `409 REVIEW_ALREADY_EXISTS`, `409 REVIEW_WINDOW_CLOSED`, `409 REVIEW_EDIT_WINDOW_CLOSED`, `409 REPLY_ALREADY_EXISTS`.
+
+---
+
+## 10a. Favorites — `/favorites`
+
+A client's saved-for-later master list — no relation to bookings or reviews.
+
+| Method | Path                   | Role   | Description                                               |
+| ------ | ---------------------- | ------ | --------------------------------------------------------- |
+| GET    | `/favorites`           | CLIENT | Saved masters, newest-first, same public projection as §7 |
+| POST   | `/favorites/:masterId` | CLIENT | Save a master → `204`. Idempotent.                        |
+| DELETE | `/favorites/:masterId` | CLIENT | Unsave → `204`. Idempotent.                               |
+
+**Errors:** `404 MASTER_NOT_FOUND` (unknown or not public).
 
 ---
 

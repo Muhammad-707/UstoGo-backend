@@ -3,6 +3,8 @@ import { HttpStatus } from '@nestjs/common';
 import { ERROR_CODE } from '@common/constants/error-codes.constant';
 import { AppException } from '@common/exceptions/app.exception';
 
+import { PORTFOLIO_IMAGE_LIMIT } from '../constants/masters.constants';
+
 /** 404. */
 export class MasterNotFoundException extends AppException {
   constructor() {
@@ -24,6 +26,28 @@ export class InvalidApprovalTransitionException extends AppException {
       ERROR_CODE.INVALID_APPROVAL_TRANSITION,
       'That transition is not valid from the master’s current state.',
       HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** 404. */
+export class PortfolioImageNotFoundException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.PORTFOLIO_IMAGE_NOT_FOUND,
+      'That portfolio image does not exist.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+}
+
+/** 422. B-45: a bounded highlight reel, not an unlimited gallery. */
+export class PortfolioLimitExceededException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.PORTFOLIO_LIMIT_EXCEEDED,
+      `A master may have at most ${String(PORTFOLIO_IMAGE_LIMIT)} portfolio images.`,
+      HttpStatus.UNPROCESSABLE_ENTITY,
     );
   }
 }

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { seedCategories } from './categories.seed';
 import { seedCities } from './cities.seed';
+import { seedMasters } from './masters.seed';
 
 /**
  * Reference data only. Seeds are idempotent so that running this against an existing
@@ -21,6 +22,9 @@ const main = async (): Promise<void> => {
 
     const categoryCount = await seedCategories(prisma);
     console.log(`Seeded ${String(categoryCount)} categories`);
+
+    const masterCount = await seedMasters(prisma);
+    console.log(`Seeded ${String(masterCount)} masters`);
   } finally {
     await prisma.$disconnect();
   }

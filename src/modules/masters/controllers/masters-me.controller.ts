@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -17,8 +27,11 @@ import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
 import { AttachCategoryDto } from '../dto/requests/attach-category.dto';
 import { CreateCertificateDto } from '../dto/requests/create-certificate.dto';
+import { CreatePortfolioImageDto } from '../dto/requests/create-portfolio-image.dto';
+import { ReorderPortfolioDto } from '../dto/requests/reorder-portfolio.dto';
 import { CertificateResponseDto } from '../dto/responses/certificate.response.dto';
 import { MasterStatusResponseDto } from '../dto/responses/master-status.response.dto';
+import { PortfolioImageResponseDto } from '../dto/responses/portfolio-image.response.dto';
 import { MastersService } from '../services/masters.service';
 
 const VALIDATION_FAILED = { description: 'VALIDATION_FAILED', type: ErrorResponseDto };
@@ -120,5 +133,59 @@ export class MastersMeController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
     await this.masters.removeCertificate(user.id, certificateId);
+  }
+
+  @Get('portfolio')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({ summary: 'The caller’s portfolio images, in display order' })
+  @ApiOkResponse({ type: PortfolioImageResponseDto, isArray: true })
+  async portfolio(@CurrentUser() user: AuthenticatedUser): Promise<PortfolioImageResponseDto[]> {
+    const images = await this.masters.listPortfolioImages(user.id);
+
+    return images.map((image) => PortfolioImageResponseDto.fromEntity(image));
+  }
+
+  @Post('portfolio')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({ summary: 'Add a work-showcase photo (B-45)' })
+  @ApiCreatedResponse({ type: PortfolioImageResponseDto })
+  @ApiUnprocessableEntityResponse({
+    description: 'VALIDATION_FAILED | PORTFOLIO_LIMIT_EXCEEDED',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse(NOT_FOUND)
+  async addPortfolioImage(
+    @Body() dto: CreatePortfolioImageDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PortfolioImageResponseDto> {
+    const image = await this.masters.addPortfolioImage(user.id, dto);
+
+    return PortfolioImageResponseDto.fromEntity(image);
+  }
+
+  @Put('portfolio/order')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({ summary: 'Reorder the caller’s portfolio images' })
+  @ApiOkResponse({ type: PortfolioImageResponseDto, isArray: true })
+  @ApiNotFoundResponse({ description: 'PORTFOLIO_IMAGE_NOT_FOUND', type: ErrorResponseDto })
+  async reorderPortfolio(
+    @Body() dto: ReorderPortfolioDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PortfolioImageResponseDto[]> {
+    const images = await this.masters.reorderPortfolio(user.id, dto.imageIds);
+
+    return images.map((image) => PortfolioImageResponseDto.fromEntity(image));
+  }
+
+  @Delete('portfolio/:imageId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({ summary: 'Remove a portfolio image', description: 'Soft delete; idempotent.' })
+  @ApiNoContentResponse()
+  async removePortfolioImage(
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.masters.removePortfolioImage(user.id, imageId);
   }
 }

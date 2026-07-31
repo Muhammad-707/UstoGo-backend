@@ -34,4 +34,12 @@ export class MasterPublicResponseDto {
 
   @ApiProperty()
   hasCertificates!: boolean;
+
+  @ApiProperty({
+    type: String,
+    isArray: true,
+    format: 'uuid',
+    description: 'Portfolio image file ids, in display order (B-45).',
+  })
+  portfolioImageFileIds!: string[];
 }

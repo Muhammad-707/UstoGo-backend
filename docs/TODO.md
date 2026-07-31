@@ -179,6 +179,15 @@ would ship its admin routes unaudited and need a retrofit.
 
 ---
 
+## 🟡 Post-1.0.0: Frontend contract gaps
+
+- [x] Favorites (`GET/POST/DELETE /favorites`)
+- [x] B-45 Master portfolio/gallery (`masters/me/portfolio` CRUD + reorder, `PortfolioImage` model, `MasterPublicResponseDto.portfolioImageFileIds`)
+- [ ] e2e coverage for both (unit-level only so far)
+- [ ] Run `prisma migrate deploy` and re-run `prisma db seed` against the deployed Render database — production currently has 0 masters and the old 3-root category taxonomy
+
+---
+
 ## 📌 Standing Rules
 
 - No `TODO` comments in merged code — they belong here or in `BACKLOG.md`

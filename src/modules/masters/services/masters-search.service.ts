@@ -15,6 +15,11 @@ export const MASTER_PUBLIC_INCLUDE = {
   categories: { include: { category: { select: { name: true } } } },
   services: { where: { isActive: true }, select: { price: true } },
   certificates: { where: { deletedAt: null }, select: { id: true }, take: 1 },
+  portfolioImages: {
+    where: { deletedAt: null },
+    orderBy: { sortOrder: 'asc' },
+    select: { fileId: true },
+  },
 } satisfies Prisma.MasterProfileInclude;
 
 export type MasterRow = Prisma.MasterProfileGetPayload<{ include: typeof MASTER_PUBLIC_INCLUDE }>;
@@ -75,6 +80,7 @@ export const toMasterPublicDto = (
       ? null
       : prices.reduce((min, price) => (price < min ? price : min)).toFixed(2);
   dto.hasCertificates = row.certificates.length > 0;
+  dto.portfolioImageFileIds = row.portfolioImages.map((image) => image.fileId);
 
   return dto;
 };

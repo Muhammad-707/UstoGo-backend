@@ -121,6 +121,7 @@ enum FilePurpose {
   BANNER
   MESSAGE_ATTACHMENT
   CATEGORY_ICON
+  PORTFOLIO_IMAGE
 
   @@map("file_purpose")
 }
@@ -216,9 +217,26 @@ model ClientProfile {
   bookings      Booking[]
   reviews       Review[]
   conversations Conversation[]
+  favorites     Favorite[]
 
   @@index([cityId])
   @@map("client_profiles")
+}
+
+/// A client's bookmarked master — purely a saved-for-later list, no business rule
+/// beyond "the client added it." Not the same as a booking or review relationship.
+model Favorite {
+  id              String   @id @default(uuid()) @db.Uuid
+  clientProfileId String   @map("client_profile_id") @db.Uuid
+  masterProfileId String   @map("master_profile_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([clientProfileId, masterProfileId])
+  @@index([masterProfileId])
+  @@map("favorites")
 }
 
 /// §3.3. ratingAverage, ratingCount and completedBookingsCount are denormalised and
@@ -255,6 +273,7 @@ model MasterProfile {
 
   categories         MasterCategory[]
   certificates       Certificate[]
+  portfolioImages    PortfolioImage[]
   services           Service[]
   workingDays        WorkingDay[]
   scheduleExceptions ScheduleException[]
@@ -262,6 +281,7 @@ model MasterProfile {
   reviews            Review[]
   reviewReplies      ReviewReply[]
   conversations      Conversation[]
+  favoritedBy        Favorite[]
 
   @@index([approvalStatus, isActive])
   @@index([cityId])
@@ -327,6 +347,26 @@ model Certificate {
 
   @@index([masterProfileId, deletedAt])
   @@map("certificates")
+}
+
+/// B-45. A master's work-showcase gallery — photos of finished jobs, shown on the
+/// public profile. Ordered by `sortOrder`, capped at `PORTFOLIO_IMAGE_LIMIT` per master
+/// (masters.constants.ts) so the public profile projection stays bounded without a
+/// second paginated endpoint for what is, in practice, a handful of highlight photos.
+model PortfolioImage {
+  id              String    @id @default(uuid()) @db.Uuid
+  masterProfileId String    @map("master_profile_id") @db.Uuid
+  fileId          String    @map("file_id") @db.Uuid
+  caption         String?   @db.VarChar(200)
+  sortOrder       Int       @default(0) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+  file          File          @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([masterProfileId, deletedAt, sortOrder])
+  @@map("portfolio_images")
 }
 
 /// §5.2. Unique per (masterProfileId, categoryId); attaching an already-attached
@@ -522,6 +562,7 @@ model File {
   masterAvatars      MasterProfile[]     @relation("MasterAvatar")
   categoryIcons      Category[]
   certificates       Certificate[]
+  portfolioImages    PortfolioImage[]
   messageAttachments MessageAttachment[]
   banners            Banner[]
 

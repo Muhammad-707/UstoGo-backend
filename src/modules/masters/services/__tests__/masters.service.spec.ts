@@ -10,6 +10,8 @@ import type { PrismaService } from '@prisma-lib/prisma.service';
 import {
   InvalidApprovalTransitionException,
   MasterNotFoundException,
+  PortfolioImageNotFoundException,
+  PortfolioLimitExceededException,
 } from '../../exceptions/masters.exceptions';
 import { MastersService } from '../masters.service';
 
@@ -21,6 +23,7 @@ const build = (
     category?: Partial<Record<string, jest.Mock>>;
     masterCategory?: Partial<Record<string, jest.Mock>>;
     certificate?: Partial<Record<string, jest.Mock>>;
+    portfolioImage?: Partial<Record<string, jest.Mock>>;
   } = {},
 ) => {
   const masterProfileDelegate = {
@@ -45,13 +48,23 @@ const build = (
     updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     ...overrides.certificate,
   };
+  const portfolioImageDelegate = {
+    findMany: jest.fn().mockResolvedValue([]),
+    count: jest.fn().mockResolvedValue(0),
+    create: jest.fn().mockResolvedValue({ id: 'img-1' }),
+    update: jest.fn().mockResolvedValue({ id: 'img-1' }),
+    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    ...overrides.portfolioImage,
+  };
   const prisma = {
     db: {
       masterProfile: masterProfileDelegate,
       category: categoryDelegate,
       masterCategory: masterCategoryDelegate,
       certificate: certificateDelegate,
+      portfolioImage: portfolioImageDelegate,
     },
+    $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
   } as unknown as PrismaService;
   const files = {
     getAttachable: jest.fn().mockResolvedValue({ id: 'file-1' }),
@@ -63,6 +76,7 @@ const build = (
     categoryDelegate,
     masterCategoryDelegate,
     certificateDelegate,
+    portfolioImageDelegate,
     files,
   };
 };
@@ -183,5 +197,100 @@ describe('MastersService certificates', () => {
     expect(certificateDelegate.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { masterProfileId: 'mp-1' } }),
     );
+  });
+});
+
+describe('MastersService portfolio images (B-45)', () => {
+  it('verifies the file belongs to the caller and is a confirmed portfolio image', async () => {
+    const { service, files } = build();
+
+    await service.addPortfolioImage('user-1', { fileId: 'file-1' });
+
+    expect(files.getAttachable).toHaveBeenCalledWith('file-1', 'user-1', 'PORTFOLIO_IMAGE');
+  });
+
+  it('assigns sortOrder from the current count', async () => {
+    const { service, portfolioImageDelegate } = build({
+      portfolioImage: { count: jest.fn().mockResolvedValue(3) },
+    });
+
+    await service.addPortfolioImage('user-1', { fileId: 'file-1' });
+
+    expect(portfolioImageDelegate.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ sortOrder: 3 }) }),
+    );
+  });
+
+  it('rejects adding a portfolio image past the limit', async () => {
+    const { service } = build({ portfolioImage: { count: jest.fn().mockResolvedValue(20) } });
+
+    await expect(service.addPortfolioImage('user-1', { fileId: 'file-1' })).rejects.toBeInstanceOf(
+      PortfolioLimitExceededException,
+    );
+  });
+
+  it('soft-deletes a portfolio image scoped to the caller', async () => {
+    const { service, portfolioImageDelegate } = build();
+
+    await service.removePortfolioImage('user-1', 'img-1');
+
+    expect(portfolioImageDelegate.updateMany).toHaveBeenCalledWith({
+      where: { id: 'img-1', masterProfileId: 'mp-1' },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+
+  it('lists portfolio images ordered for the caller', async () => {
+    const { service, portfolioImageDelegate } = build();
+
+    await service.listPortfolioImages('user-1');
+
+    expect(portfolioImageDelegate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { masterProfileId: 'mp-1' },
+        orderBy: { sortOrder: 'asc' },
+      }),
+    );
+  });
+
+  it('rejects reordering with an id that is not the caller’s', async () => {
+    const { service } = build({
+      portfolioImage: { findMany: jest.fn().mockResolvedValue([{ id: 'img-1' }]) },
+    });
+
+    await expect(service.reorderPortfolio('user-1', ['img-1', 'ghost'])).rejects.toBeInstanceOf(
+      PortfolioImageNotFoundException,
+    );
+  });
+
+  it('rejects reordering a strict subset of the caller’s images', async () => {
+    const { service } = build({
+      portfolioImage: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'img-1' }, { id: 'img-2' }]),
+      },
+    });
+
+    await expect(service.reorderPortfolio('user-1', ['img-1'])).rejects.toBeInstanceOf(
+      PortfolioImageNotFoundException,
+    );
+  });
+
+  it('writes sortOrder from array position for every image', async () => {
+    const { service, portfolioImageDelegate } = build({
+      portfolioImage: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'img-1' }, { id: 'img-2' }]),
+      },
+    });
+
+    await service.reorderPortfolio('user-1', ['img-2', 'img-1']);
+
+    expect(portfolioImageDelegate.update).toHaveBeenCalledWith({
+      where: { id: 'img-2' },
+      data: { sortOrder: 0 },
+    });
+    expect(portfolioImageDelegate.update).toHaveBeenCalledWith({
+      where: { id: 'img-1' },
+      data: { sortOrder: 1 },
+    });
   });
 });
