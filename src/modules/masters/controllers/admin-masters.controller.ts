@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
   ApiNotFoundResponse,
@@ -10,14 +10,19 @@ import {
 import { AuditAction, UserRole } from '@prisma/client';
 
 import { ApiAuth } from '@common/decorators/api-auth.decorator';
+import { ApiPaginatedResponse } from '@common/decorators/api-paginated-response.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '@common/dto/error-response.dto';
+import { PaginatedDto } from '@common/dto/paginated.dto';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
 import { Audit } from '../../audit/decorators/audit.decorator';
+import { AdminMasterSearchQueryDto } from '../dto/requests/admin-master-search-query.dto';
 import { ReasonDto } from '../dto/requests/reason.dto';
+import { AdminMasterListItemResponseDto } from '../dto/responses/admin-master-list-item.response.dto';
 import { MasterStatusResponseDto } from '../dto/responses/master-status.response.dto';
 import { MasterModerationService } from '../services/master-moderation.service';
+import { MastersSearchService } from '../services/masters-search.service';
 
 const NOT_FOUND = { description: 'MASTER_NOT_FOUND', type: ErrorResponseDto };
 const INVALID_TRANSITION = { description: 'INVALID_APPROVAL_TRANSITION', type: ErrorResponseDto };
@@ -25,7 +30,26 @@ const INVALID_TRANSITION = { description: 'INVALID_APPROVAL_TRANSITION', type: E
 @ApiTags('Admin')
 @Controller('admin/masters')
 export class AdminMastersController {
-  constructor(private readonly moderation: MasterModerationService) {}
+  constructor(
+    private readonly moderation: MasterModerationService,
+    private readonly mastersSearch: MastersSearchService,
+  ) {}
+
+  @Get()
+  @ApiAuth(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'List masters for moderation and oversight',
+    description:
+      'Every master regardless of approval/active state — filterable by approvalStatus, status (active/deactivated), cityId, categoryId, search. API.md §12.',
+  })
+  @ApiPaginatedResponse(AdminMasterListItemResponseDto)
+  async list(
+    @Query() query: AdminMasterSearchQueryDto,
+  ): Promise<PaginatedDto<AdminMasterListItemResponseDto>> {
+    const { items, total } = await this.mastersSearch.adminSearch(query);
+
+    return PaginatedDto.from(items, total, query.page, query.limit);
+  }
 
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)

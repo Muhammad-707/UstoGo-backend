@@ -185,7 +185,7 @@
     },
     "/auth/login": {
       "post": {
-        "description": "Public — no authentication required. An unknown email and a wrong password produce the same 401 and a comparable response time, so this endpoint cannot be used to discover which addresses are registered. Account status is reported only after the password verifies, for the same reason.",
+        "description": "Public — no authentication required. An unknown email and a wrong password produce the same 401 and a comparable response time, so this endpoint cannot be used to discover which addresses are registered. Account status is reported only after the password verifies, for the same reason. For an account with TOTP enabled, this returns a `challengeToken` instead of tokens — exchange it at `POST /auth/2fa/verify`.",
         "operationId": "login",
         "parameters": [],
         "requestBody": {
@@ -204,7 +204,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthResponseDto"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AuthResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TwoFactorRequiredResponseDto"
+                    }
+                  ]
                 }
               }
             }
@@ -554,6 +561,527 @@
         ]
       }
     },
+    "/auth/verify-email": {
+      "post": {
+        "description": "Public — the token is the credential. Single use. Sets `emailVerifiedAt`; nothing else in v1 is gated on it.",
+        "operationId": "verifyEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "INVALID_VERIFICATION_TOKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Confirm an email address using the emailed token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "description": "Any previously issued verification link stops working.",
+        "operationId": "resendVerification",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EMAIL_ALREADY_VERIFIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Resend the email verification link",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/2fa/verify": {
+      "post": {
+        "description": "Public — the challenge token and the code together are the credential.",
+        "operationId": "verify",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_TWO_FACTOR_CHALLENGE | INVALID_TOTP_CODE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Exchange a login challenge and TOTP code for a token pair",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/2fa/setup": {
+      "post": {
+        "description": "ADMIN-only. Stores the new secret but does not enable it — confirm with the code the authenticator app produces via POST /auth/2fa/enable. Calling this again before confirming replaces the pending secret.",
+        "operationId": "setup",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorSetupResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TOTP_ALREADY_ENABLED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Start TOTP enrollment",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/2fa/enable": {
+      "post": {
+        "description": "ADMIN-only. Requires the code produced from the secret POST /auth/2fa/setup issued.",
+        "operationId": "enable",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "INVALID_TOTP_CODE\n\nUNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TOTP_ALREADY_ENABLED | TOTP_SETUP_NOT_STARTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Confirm TOTP enrollment",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/2fa/disable": {
+      "post": {
+        "description": "ADMIN-only. Requires a currently valid code — a stolen access token alone cannot downgrade the account out of 2FA.",
+        "operationId": "disable",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "INVALID_TOTP_CODE\n\nUNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TOTP_NOT_ENABLED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Turn TOTP off",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "description": "One row per refresh-token family, most recently active first. `current` marks the session the request was authenticated with.",
+        "operationId": "list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List active devices (sessions)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/sessions/{id}": {
+      "delete": {
+        "description": "Logs that device out. Revoking the current session is allowed — it behaves like POST /auth/logout for this device.",
+        "operationId": "revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Revoke one device",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/users/me": {
       "get": {
         "description": "Returns the user together with whichever profile their role implies. Never returns the password hash, refresh tokens or moderation notes — the projection does not fetch them.",
@@ -790,6 +1318,54 @@
           }
         ],
         "summary": "Attach a confirmed file as the caller’s avatar",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/users/me/export": {
+      "get": {
+        "description": "Everything the caller is themself the subject of: account, profile, bookings, reviews and notifications, returned synchronously as JSON.",
+        "operationId": "exportMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Export the caller’s own personal data",
         "tags": [
           "Users"
         ]
@@ -2013,6 +2589,139 @@
         ]
       }
     },
+    "/admin/masters": {
+      "get": {
+        "description": "Every master regardless of approval/active state — filterable by approvalStatus, status (active/deactivated), cityId, categoryId, search. API.md §12.",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "approvalStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active/deactivated state.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "cityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches display name or account email.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AdminMasterListItemResponseDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List masters for moderation and oversight",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/admin/masters/{id}/approve": {
       "post": {
         "description": "BR-15 readiness-checked.",
@@ -3130,9 +3839,19 @@
     },
     "/bookings": {
       "post": {
-        "description": "FR-7.1 — six pre-conditions.",
+        "description": "FR-7.1 — six pre-conditions. An optional `Idempotency-Key` header (Phase 6) makes a retried request replay the original response instead of creating a second booking.",
         "operationId": "create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-generated value; replaying it returns the original response.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -3185,7 +3904,7 @@
             }
           },
           "409": {
-            "description": "MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT",
+            "description": "MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | IDEMPOTENCY_KEY_REUSED | IDEMPOTENCY_KEY_IN_PROGRESS",
             "content": {
               "application/json": {
                 "schema": {
@@ -4355,9 +5074,19 @@
     },
     "/admin/notifications/broadcast": {
       "post": {
-        "description": "To a role or a list of user ids.",
+        "description": "To a role or a list of user ids. An optional `Idempotency-Key` header (Phase 6) prevents a retried request from sending the broadcast twice.",
         "operationId": "broadcast",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-generated value; replaying it returns the original response.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -4395,6 +5124,16 @@
           },
           "403": {
             "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IDEMPOTENCY_KEY_REUSED | IDEMPOTENCY_KEY_IN_PROGRESS",
             "content": {
               "application/json": {
                 "schema": {
@@ -6393,6 +7132,25 @@
           "requestId"
         ]
       },
+      "TwoFactorRequiredResponseDto": {
+        "type": "object",
+        "properties": {
+          "twoFactorRequired": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "challengeToken": {
+            "type": "string",
+            "description": "Opaque, single-use, 5-minute credential. Exchange it together with a TOTP code at POST /auth/2fa/verify for a real token pair."
+          }
+        },
+        "required": [
+          "twoFactorRequired",
+          "challengeToken"
+        ]
+      },
       "RegisterClientDto": {
         "type": "object",
         "properties": {
@@ -6678,6 +7436,110 @@
           "currentPassword"
         ]
       },
+      "VerifyEmailDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The single-use token from the emailed verification link."
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "TwoFactorVerifyDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "description": "The 6-digit code from the authenticator app."
+          },
+          "challengeToken": {
+            "type": "string",
+            "description": "The challengeToken returned by a login requiring 2FA."
+          }
+        },
+        "required": [
+          "code",
+          "challengeToken"
+        ]
+      },
+      "TwoFactorSetupResponseDto": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string",
+            "description": "Base32 TOTP secret. Shown once — enter it manually if not scanning."
+          },
+          "otpauthUrl": {
+            "type": "string",
+            "description": "otpauth:// URI. Render as a QR code client-side; nothing here does that server-side."
+          }
+        },
+        "required": [
+          "secret",
+          "otpauthUrl"
+        ]
+      },
+      "TwoFactorCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "description": "The 6-digit code from the authenticator app."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "SessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Family id — pass to DELETE /auth/sessions/:id to revoke."
+          },
+          "deviceId": {
+            "type": "object",
+            "nullable": true,
+            "example": "a1b2c3"
+          },
+          "userAgent": {
+            "type": "object",
+            "nullable": true,
+            "example": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5)"
+          },
+          "ipAddress": {
+            "type": "object",
+            "nullable": true,
+            "example": "203.0.113.7"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "When this device first logged in."
+          },
+          "lastActiveAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "When this device last refreshed its session."
+          },
+          "current": {
+            "type": "boolean",
+            "description": "Whether this is the session the request was authenticated with."
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "lastActiveAt",
+          "current"
+        ]
+      },
       "ClientProfileDto": {
         "type": "object",
         "properties": {
@@ -6947,6 +7809,134 @@
         },
         "required": [
           "fileId"
+        ]
+      },
+      "ExportedBookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "bookingNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "scheduledAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "serviceTitle": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bookingNumber",
+          "status",
+          "scheduledAt",
+          "serviceTitle",
+          "price",
+          "createdAt"
+        ]
+      },
+      "ExportedReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "comment": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "rating",
+          "comment",
+          "createdAt"
+        ]
+      },
+      "ExportedNotificationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "isRead": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "isRead",
+          "createdAt"
+        ]
+      },
+      "DataExportResponseDto": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/UserResponseDto"
+          },
+          "bookings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedBookingDto"
+            }
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedReviewDto"
+            }
+          },
+          "notifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedNotificationDto"
+            }
+          },
+          "exportedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "When this export was generated."
+          }
+        },
+        "required": [
+          "account",
+          "bookings",
+          "reviews",
+          "notifications",
+          "exportedAt"
         ]
       },
       "CityResponseDto": {
@@ -7572,6 +8562,72 @@
         "required": [
           "fileId",
           "title"
+        ]
+      },
+      "AdminMasterListItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true
+          },
+          "cityName": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "approvalStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "ratingAverage": {
+            "type": "string"
+          },
+          "ratingCount": {
+            "type": "number"
+          },
+          "priceFrom": {
+            "type": "object",
+            "nullable": true,
+            "description": "The lowest active service price."
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "email",
+          "cityName",
+          "categories",
+          "approvalStatus",
+          "isActive",
+          "ratingAverage",
+          "ratingCount",
+          "createdAt"
         ]
       },
       "ReasonDto": {

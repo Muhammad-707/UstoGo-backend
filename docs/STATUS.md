@@ -240,6 +240,8 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 
 ## 8. Next Actions
 
+`GET /admin/masters` (API.md §12) has been implemented: `AdminMastersController` gained a filterable, paginated listing — `approvalStatus`, `status`, `cityId`, `categoryId`, `search` — returning every master regardless of approval/active state via a new `AdminMasterListItemResponseDto` that, unlike the public projection, includes `email`/`phone`. It had been documented alongside F-04's moderation actions but was never wired up; this closes that gap.
+
 **`v1.0.0` shipped 2026-07-30.** Phase 6 — Hardening & Launch is complete: email verification, admin two-factor authentication, the device/session list, idempotency keys, personal data export/anonymised deletion, the RS256 migration, the backup restore rehearsal and the production runbook are all done. The external penetration test was explicitly not performed before this tag (`CHANGELOG.md` records the decision) — scheduling it against a deployed environment and remediating whatever it finds is the first post-1.0.0 item.
 
 Detailed task list: `TODO.md`.

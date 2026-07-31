@@ -3,6 +3,8 @@ import { ApprovalStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '@prisma-lib/prisma.service';
 
+import type { AdminMasterSearchQueryDto } from '../dto/requests/admin-master-search-query.dto';
+import { AdminMasterListItemResponseDto } from '../dto/responses/admin-master-list-item.response.dto';
 import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 import { MasterServiceResponseDto } from '../dto/responses/master-service.response.dto';
 import { MasterNotFoundException } from '../exceptions/masters.exceptions';
@@ -16,6 +18,36 @@ export const MASTER_PUBLIC_INCLUDE = {
 } satisfies Prisma.MasterProfileInclude;
 
 export type MasterRow = Prisma.MasterProfileGetPayload<{ include: typeof MASTER_PUBLIC_INCLUDE }>;
+
+const ADMIN_MASTER_INCLUDE = {
+  ...MASTER_PUBLIC_INCLUDE,
+  user: { select: { email: true, phone: true } },
+} satisfies Prisma.MasterProfileInclude;
+
+type AdminMasterRow = Prisma.MasterProfileGetPayload<{ include: typeof ADMIN_MASTER_INCLUDE }>;
+
+const toAdminMasterListItemDto = (row: AdminMasterRow): AdminMasterListItemResponseDto => {
+  const dto = new AdminMasterListItemResponseDto();
+  const prices = row.services.map((service) => service.price);
+
+  dto.id = row.id;
+  dto.displayName = row.displayName;
+  dto.email = row.user.email;
+  dto.phone = row.user.phone;
+  dto.cityName = row.city.name;
+  dto.categories = row.categories.map((entry) => entry.category.name);
+  dto.approvalStatus = row.approvalStatus;
+  dto.isActive = row.isActive;
+  dto.ratingAverage = row.ratingAverage.toFixed(2);
+  dto.ratingCount = row.ratingCount;
+  dto.priceFrom =
+    prices.length === 0
+      ? null
+      : prices.reduce((min, price) => (price < min ? price : min)).toFixed(2);
+  dto.createdAt = row.createdAt;
+
+  return dto;
+};
 
 const BIO_PREVIEW_LENGTH = 200;
 
@@ -89,5 +121,39 @@ export class MastersSearchService {
     });
 
     return services.map((service) => MasterServiceResponseDto.fromEntity(service));
+  }
+
+  /** API.md §12 — every master regardless of approval/active state, unlike public search. */
+  async adminSearch(
+    query: AdminMasterSearchQueryDto,
+  ): Promise<{ items: AdminMasterListItemResponseDto[]; total: number }> {
+    const where: Prisma.MasterProfileWhereInput = {
+      deletedAt: null,
+      ...(query.approvalStatus !== undefined && { approvalStatus: query.approvalStatus }),
+      ...(query.status !== undefined && { isActive: query.status }),
+      ...(query.cityId !== undefined && { cityId: query.cityId }),
+      ...(query.categoryId !== undefined && {
+        categories: { some: { categoryId: query.categoryId } },
+      }),
+      ...(query.search !== undefined && {
+        OR: [
+          { displayName: { contains: query.search, mode: 'insensitive' } },
+          { user: { email: { contains: query.search, mode: 'insensitive' } } },
+        ],
+      }),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.db.masterProfile.findMany({
+        where,
+        include: ADMIN_MASTER_INCLUDE,
+        orderBy: { createdAt: 'desc' },
+        skip: query.skip,
+        take: query.limit,
+      }),
+      this.prisma.db.masterProfile.count({ where }),
+    ]);
+
+    return { items: rows.map(toAdminMasterListItemDto), total };
   }
 }

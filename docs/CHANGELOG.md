@@ -11,6 +11,9 @@ Categories: `Added` · `Changed` · `Deprecated` · `Removed` · `Fixed` · `Sec
 
 ## [Unreleased]
 
+### Added
+- **`GET /admin/masters`** (API.md §12, documented since F-04 but never implemented). Lists every master regardless of approval/active state — unlike public search, which only ever returns approved and active ones — filterable by `approvalStatus`, `status` (active/deactivated), `cityId`, `categoryId` and `search` (display name or account email), paginated the same way as every other list endpoint. `AdminMasterListItemResponseDto` is a distinct, admin-only projection: it includes `email`/`phone`, which `MasterPublicResponseDto` deliberately never exposes.
+
 ## [1.0.0] — 2026-07-30
 
 Phase 6 — Hardening & Launch. Closes the roadmap: every implementable-in-repo item has landed. **Judgment call, recorded rather than silently skipped:** the external penetration test `ROADMAP.md`/`DEPLOYMENT.md` §12 name as a pre-launch checklist item was deliberately not performed before this tag — cutting `v1.0.0` was an explicit decision made without it, not an oversight. Scheduling that engagement against a deployed environment and remediating its findings remains open work for whoever operates the next release.

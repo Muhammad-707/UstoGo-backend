@@ -122,6 +122,7 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] F-05 Categories: model, tree endpoint, admin CRUD, depth/leaf rules, caching
 - [x] F-03 Masters: profile fields, category attachment, certificates, submit/resubmit, public projection
 - [x] F-04 Moderation: approve/reject/activate/deactivate with readiness checks, notifications, audit
+- [x] `GET /admin/masters`: filterable listing (`approvalStatus`, `status`, `cityId`, `categoryId`, `search`) — API.md §12 documented this alongside the moderation actions above but it was never wired up until now
 - [x] F-06 Services: CRUD, leaf-category and pricing rules, soft delete
 - [x] Seed: cities and the initial category tree
 
