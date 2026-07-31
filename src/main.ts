@@ -34,6 +34,15 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix(appConfig.apiPrefix, { exclude: UNVERSIONED_ROUTES });
 
+  // Without this, browsers block every cross-origin request (frontend on a different
+  // host/port than the API) at the preflight — requests only ever worked from tools
+  // like curl/Postman that don't enforce CORS. origin:false when the list is empty
+  // rejects all cross-origin calls instead of silently allowing everything.
+  app.enableCors({
+    origin: appConfig.corsOrigins.length > 0 ? [...appConfig.corsOrigins] : false,
+    credentials: true,
+  });
+
   // Fans `/chat` Socket.io events out across every instance (ARCHITECTURE.md §7);
   // must be installed before `listen()` creates the underlying `Server`.
   const redisIoAdapter = new RedisIoAdapter(app);
