@@ -149,7 +149,14 @@ describe('Schedule & Availability (e2e)', () => {
       .expect(200);
 
     // 09:00–11:00 Asia/Tashkent (UTC+5) chunked into 60-minute slots → 04:00Z, 05:00Z.
-    expect(slots.body).toEqual([`${monday}T04:00:00.000Z`, `${monday}T05:00:00.000Z`]);
+    // Response is grouped by day ({date, free, busy}) — the shape the frontend consumes.
+    expect(slots.body).toEqual([
+      {
+        date: monday,
+        free: [`${monday}T04:00:00.000Z`, `${monday}T05:00:00.000Z`],
+        busy: [],
+      },
+    ]);
 
     await request(app.server)
       .get(`/api/v1/masters/${masterProfileId}/availability`)

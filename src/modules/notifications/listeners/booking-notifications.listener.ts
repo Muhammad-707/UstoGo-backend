@@ -29,6 +29,7 @@ export class BookingNotificationsListener {
     await this.notifications.create(event.masterUserId, NotificationType.BOOKING_CREATED, {
       bookingId: event.bookingId,
       clientName: event.clientDisplayName,
+      serviceTitle: event.serviceTitle,
       scheduledAt: event.scheduledAt.toISOString(),
     });
   }

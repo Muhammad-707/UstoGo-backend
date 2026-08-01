@@ -17,6 +17,8 @@ export type BookingWithParties = {
   durationMinutes: number;
   addressLine: string;
   addressDistrict: string;
+  cityId: string | null;
+  contactPhone: string | null;
   latitude: { toNumber: () => number } | null;
   longitude: { toNumber: () => number } | null;
   clientNote: string | null;
@@ -102,6 +104,15 @@ export class BookingResponseDto {
   @ApiProperty()
   addressDistrict!: string;
 
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  cityId!: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Contact phone captured at booking time; falls back to the profile phone.',
+  })
+  contactPhone!: string | null;
+
   @ApiPropertyOptional({ nullable: true })
   latitude!: number | null;
 
@@ -157,6 +168,7 @@ export class BookingResponseDto {
     dto.endsAt = booking.endsAt.toISOString();
     dto.durationMinutes = booking.durationMinutes;
     dto.addressDistrict = booking.addressDistrict;
+    dto.cityId = booking.cityId;
     dto.clientNote = booking.clientNote;
     dto.cancellationReason = booking.cancellationReason;
     dto.cancelledByType = booking.cancelledByType;
@@ -176,7 +188,10 @@ const applyContactFields = (
   booking: BookingWithParties,
   discloseContact: boolean,
 ): void => {
-  dto.clientPhone = discloseContact ? booking.clientProfile.user.phone : null;
+  dto.contactPhone = discloseContact
+    ? (booking.contactPhone ?? booking.clientProfile.user.phone)
+    : null;
+  dto.clientPhone = dto.contactPhone;
   dto.addressLine = discloseContact ? booking.addressLine : null;
   dto.latitude = discloseContact ? (booking.latitude?.toNumber() ?? null) : null;
   dto.longitude = discloseContact ? (booking.longitude?.toNumber() ?? null) : null;

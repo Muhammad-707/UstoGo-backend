@@ -21,6 +21,7 @@ export class BookingCreatedEvent {
     readonly masterUserId: string,
     readonly clientDisplayName: string,
     readonly scheduledAt: Date,
+    readonly serviceTitle: string,
   ) {}
 }
 

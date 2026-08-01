@@ -433,8 +433,30 @@ model City {
 
   clientProfiles ClientProfile[]
   masterProfiles MasterProfile[]
+  districts      District[]
+  bookings       Booking[]
 
   @@map("cities")
+}
+
+/// §3.6. Seeded reference data — the internal sub-divisions of a city (its districts
+/// for Dushanbe, jamoats/mahallas elsewhere). Used by the booking address step: the
+/// client picks the city at registration, then the district of that city when
+/// requesting a service. No soft delete; withdraw a district with isActive.
+model District {
+  id        String   @id @default(uuid()) @db.Uuid
+  cityId    String   @map("city_id") @db.Uuid
+  name      String   @db.VarChar(150)
+  slug      String   @db.VarChar(150)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, slug])
+  @@index([cityId, isActive, name])
+  @@map("districts")
 }
 
 // ---------------------------------------------------------------------------
@@ -658,6 +680,7 @@ model Booking {
   clientProfileId    String        @map("client_profile_id") @db.Uuid
   masterProfileId    String        @map("master_profile_id") @db.Uuid
   serviceId          String        @map("service_id") @db.Uuid
+  cityId             String?       @map("city_id") @db.Uuid
   status             BookingStatus @default(PENDING)
   scheduledAt        DateTime      @map("scheduled_at") @db.Timestamptz(3)
   endsAt             DateTime      @map("ends_at") @db.Timestamptz(3)
@@ -668,6 +691,7 @@ model Booking {
   currency           String        @db.Char(3)
   addressLine        String        @map("address_line") @db.VarChar(500)
   addressDistrict    String        @map("address_district") @db.VarChar(150)
+  contactPhone       String?       @map("contact_phone") @db.VarChar(20)
   latitude           Decimal?      @db.Decimal(9, 6)
   longitude          Decimal?      @db.Decimal(9, 6)
   clientNote         String?       @map("client_note")
@@ -685,6 +709,7 @@ model Booking {
   clientProfile ClientProfile          @relation(fields: [clientProfileId], references: [id], onDelete: Restrict)
   masterProfile MasterProfile          @relation(fields: [masterProfileId], references: [id], onDelete: Restrict)
   service       Service                @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  city          City?                  @relation(fields: [cityId], references: [id], onDelete: SetNull)
   history       BookingStatusHistory[]
   review        Review?
 
@@ -693,6 +718,7 @@ model Booking {
   @@index([status, scheduledAt])
   @@index([scheduledAt])
   @@index([createdAt])
+  @@index([cityId])
   @@map("bookings")
 }
 

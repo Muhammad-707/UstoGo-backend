@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { seedCategories } from './categories.seed';
 import { seedCities } from './cities.seed';
+import { seedDistricts } from './districts.seed';
 import { seedMasters } from './masters.seed';
 
 /**
@@ -19,6 +20,9 @@ const main = async (): Promise<void> => {
   try {
     const cityCount = await seedCities(prisma);
     console.log(`Seeded ${String(cityCount)} cities`);
+
+    const districtCount = await seedDistricts(prisma);
+    console.log(`Seeded ${String(districtCount)} districts`);
 
     const categoryCount = await seedCategories(prisma);
     console.log(`Seeded ${String(categoryCount)} categories`);

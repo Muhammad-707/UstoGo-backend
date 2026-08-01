@@ -68,11 +68,12 @@ describe('Bookings (e2e)', () => {
     // 09:00 Asia/Tashkent (UTC+5) → 04:00Z, comfortably >2h from "now".
     const scheduledAt = `${monday}T04:00:00.000Z`;
 
-    return { master, masterProfileId, serviceId: service.body.id as string, scheduledAt };
+    return { master, masterProfileId, serviceId: service.body.id as string, scheduledAt, cityId };
   };
 
   it('creates, accepts, starts, completes a booking and hides the client phone until acceptance', async () => {
-    const { master, masterProfileId, serviceId, scheduledAt } = await seedMasterWithService();
+    const { master, masterProfileId, serviceId, scheduledAt, cityId } =
+      await seedMasterWithService();
     const client = await createClient(app);
 
     const created = await request(app.server)
@@ -82,7 +83,7 @@ describe('Bookings (e2e)', () => {
         masterId: masterProfileId,
         serviceId,
         scheduledAt,
-        address: { line: '123 Main St', district: 'Downtown' },
+        address: { cityId: cityId, line: '123 Main St', district: 'Downtown' },
       })
       .expect(201);
 
@@ -134,7 +135,8 @@ describe('Bookings (e2e)', () => {
   });
 
   it('rejects an illegal transition with 409 ILLEGAL_BOOKING_TRANSITION', async () => {
-    const { masterProfileId, serviceId, scheduledAt, master } = await seedMasterWithService();
+    const { masterProfileId, serviceId, scheduledAt, master, cityId } =
+      await seedMasterWithService();
     const client = await createClient(app);
 
     const created = await request(app.server)
@@ -144,7 +146,7 @@ describe('Bookings (e2e)', () => {
         masterId: masterProfileId,
         serviceId,
         scheduledAt,
-        address: { line: '456 Oak Avenue', district: 'Downtown' },
+        address: { cityId: cityId, line: '456 Oak Avenue', district: 'Downtown' },
       })
       .expect(201);
 
@@ -156,7 +158,8 @@ describe('Bookings (e2e)', () => {
   });
 
   it('lets exactly one of two concurrent accepts on overlapping bookings succeed', async () => {
-    const { masterProfileId, serviceId, scheduledAt, master } = await seedMasterWithService();
+    const { masterProfileId, serviceId, scheduledAt, master, cityId } =
+      await seedMasterWithService();
     const clientA = await createClient(app);
     const clientB = await createClient(app);
 
@@ -169,7 +172,7 @@ describe('Bookings (e2e)', () => {
           masterId: masterProfileId,
           serviceId,
           scheduledAt,
-          address: { line: '456 Oak Avenue', district: 'Downtown' },
+          address: { cityId: cityId, line: '456 Oak Avenue', district: 'Downtown' },
         })
         .expect(201),
       request(app.server)
@@ -179,7 +182,7 @@ describe('Bookings (e2e)', () => {
           masterId: masterProfileId,
           serviceId,
           scheduledAt,
-          address: { line: '789 Pine Road', district: 'Uptown' },
+          address: { cityId: cityId, line: '789 Pine Road', district: 'Uptown' },
         })
         .expect(201),
     ]);

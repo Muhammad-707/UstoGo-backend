@@ -42,6 +42,25 @@ type ValidatedCreation = {
   endsAt: Date;
 };
 
+/** Maps the address DTO onto the Booking row columns, skipping undefined fields. */
+type BookingAddressData = {
+  addressLine: string;
+  addressDistrict: string;
+  cityId: string;
+  contactPhone?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+const bookingAddressData = (dto: CreateBookingDto): BookingAddressData => ({
+  addressLine: dto.address.line,
+  addressDistrict: dto.address.district,
+  cityId: dto.address.cityId,
+  ...(dto.address.contactPhone !== undefined ? { contactPhone: dto.address.contactPhone } : {}),
+  ...(dto.address.latitude !== undefined ? { latitude: dto.address.latitude } : {}),
+  ...(dto.address.longitude !== undefined ? { longitude: dto.address.longitude } : {}),
+});
+
 /**
  * F-09 creation and reads (MODULES.md › BookingsModule). Transitions live in
  * `BookingTransitionService` — this file only creates and reads.
@@ -74,10 +93,7 @@ export class BookingsService {
           price: validated.service.price,
           priceType: validated.service.priceType,
           currency: validated.service.currency,
-          addressLine: dto.address.line,
-          addressDistrict: dto.address.district,
-          ...(dto.address.latitude !== undefined ? { latitude: dto.address.latitude } : {}),
-          ...(dto.address.longitude !== undefined ? { longitude: dto.address.longitude } : {}),
+          ...bookingAddressData(dto),
           ...(dto.note !== undefined ? { clientNote: dto.note } : {}),
         },
         include: BOOKING_DETAIL_INCLUDE,
@@ -103,6 +119,7 @@ export class BookingsService {
         booking.masterProfile.user.id,
         booking.clientProfile.firstName,
         booking.scheduledAt,
+        booking.serviceTitle,
       ),
     );
 

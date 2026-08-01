@@ -39,7 +39,7 @@ const baseDto = (): CreateBookingDto => ({
   masterId: 'mp-1',
   serviceId: 'svc-1',
   scheduledAt: FUTURE.toISOString(),
-  address: { line: '123 Main St', district: 'Downtown' },
+  address: { cityId: 'city-1', line: '123 Main St', district: 'Downtown' },
 });
 
 const build = (

@@ -66,17 +66,17 @@ describe('Idempotency (e2e)', () => {
     const monday = nextWeekday(1);
     const scheduledAt = `${monday}T04:00:00.000Z`;
 
-    return { master, masterProfileId, serviceId: service.body.id as string, scheduledAt };
+    return { master, masterProfileId, serviceId: service.body.id as string, scheduledAt, cityId };
   };
 
   it('replays the original response instead of creating a second booking', async () => {
-    const { masterProfileId, serviceId, scheduledAt } = await seedMasterWithService();
+    const { masterProfileId, serviceId, scheduledAt, cityId } = await seedMasterWithService();
     const client = await createClient(app);
     const payload = {
       masterId: masterProfileId,
       serviceId,
       scheduledAt,
-      address: { line: '123 Main St', district: 'Downtown' },
+      address: { cityId: cityId, line: '123 Main St', district: 'Downtown' },
     };
 
     const first = await request(app.server)
@@ -100,7 +100,7 @@ describe('Idempotency (e2e)', () => {
   });
 
   it('rejects the same key reused for a different request', async () => {
-    const { masterProfileId, serviceId, scheduledAt } = await seedMasterWithService();
+    const { masterProfileId, serviceId, scheduledAt, cityId } = await seedMasterWithService();
     const client = await createClient(app);
 
     await request(app.server)
@@ -111,7 +111,7 @@ describe('Idempotency (e2e)', () => {
         masterId: masterProfileId,
         serviceId,
         scheduledAt,
-        address: { line: '123 Main St', district: 'Downtown' },
+        address: { cityId: cityId, line: '123 Main St', district: 'Downtown' },
       })
       .expect(201);
 
@@ -123,20 +123,20 @@ describe('Idempotency (e2e)', () => {
         masterId: masterProfileId,
         serviceId,
         scheduledAt,
-        address: { line: '456 Other St', district: 'Uptown' },
+        address: { cityId: cityId, line: '456 Other St', district: 'Uptown' },
       })
       .expect(409);
   });
 
   it('creates two bookings when no key is sent at all', async () => {
-    const { masterProfileId, serviceId, scheduledAt } = await seedMasterWithService();
+    const { masterProfileId, serviceId, scheduledAt, cityId } = await seedMasterWithService();
     const client = await createClient(app);
     const other = await createClient(app);
     const payload = {
       masterId: masterProfileId,
       serviceId,
       scheduledAt,
-      address: { line: '123 Main St', district: 'Downtown' },
+      address: { cityId: cityId, line: '123 Main St', district: 'Downtown' },
     };
 
     await request(app.server)

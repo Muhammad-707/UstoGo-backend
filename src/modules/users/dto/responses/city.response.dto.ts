@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { City } from '@prisma/client';
+import type { City, District } from '@prisma/client';
+
+import { DistrictResponseDto } from './district.response.dto';
+
+export type CityWithDistricts = City & { districts?: District[] };
 
 export class CityResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
@@ -13,7 +17,14 @@ export class CityResponseDto {
   @ApiPropertyOptional({ nullable: true, example: '69.240100' })
   longitude!: string | null;
 
-  static fromEntity(city: City): CityResponseDto {
+  @ApiProperty({
+    type: DistrictResponseDto,
+    isArray: true,
+    description: 'Internal sub-divisions of the city (districts / jamoats).',
+  })
+  districts!: DistrictResponseDto[];
+
+  static fromEntity(city: CityWithDistricts): CityResponseDto {
     return {
       id: city.id,
       name: city.name,
@@ -21,6 +32,9 @@ export class CityResponseDto {
       region: city.region,
       latitude: city.latitude?.toString() ?? null,
       longitude: city.longitude?.toString() ?? null,
+      districts: (city.districts ?? [])
+        .filter((district) => district.isActive)
+        .map((district) => DistrictResponseDto.fromEntity(district)),
     };
   }
 }

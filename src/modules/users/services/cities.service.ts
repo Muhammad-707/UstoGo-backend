@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { City } from '@prisma/client';
 
 import { PrismaService } from '@prisma-lib/prisma.service';
+
+import type { CityWithDistricts } from '../dto/responses/city.response.dto';
 
 /**
  * Reference data, so the cap is generous rather than a page size: the whole list is
@@ -17,9 +18,15 @@ export class CitiesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Withdrawn cities stay in the table so historical rows keep resolving. */
-  async listActive(): Promise<City[]> {
+  async listActive(): Promise<CityWithDistricts[]> {
     return this.prisma.db.city.findMany({
       where: { isActive: true },
+      include: {
+        districts: {
+          where: { isActive: true },
+          orderBy: { name: 'asc' },
+        },
+      },
       orderBy: { name: 'asc' },
       take: MAX_CITIES,
     });
