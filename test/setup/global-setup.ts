@@ -5,6 +5,7 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { GenericContainer, Wait } from 'testcontainers';
 
 import { registerContainers } from './containers';
+import { TEST_PRIVATE_KEY_B64, TEST_PUBLIC_KEY_B64 } from '../../src/config/__tests__/env.fixture';
 
 const BUCKET = 'ustogo-e2e';
 const MINIO_USER = 'minioadmin';
@@ -94,6 +95,15 @@ export default async function globalSetup(): Promise<void> {
     S3_ACCESS_KEY_ID: MINIO_USER,
     S3_SECRET_ACCESS_KEY: MINIO_PASSWORD,
     REDIS_URL: redisUrl,
+    // The auth and mail configuration must exist for the app to boot, and CI has no
+    // `.env` (the repository never ships one). These are the same throwaway test
+    // values the unit fixtures use — see TESTING.md §6.
+    JWT_ACCESS_PRIVATE_KEY: TEST_PRIVATE_KEY_B64,
+    JWT_ACCESS_PUBLIC_KEY: TEST_PUBLIC_KEY_B64,
+    JWT_REFRESH_SECRET: 'b'.repeat(64),
+    TOTP_ENCRYPTION_KEY: 'c'.repeat(64),
+    MAIL_HOST: 'localhost',
+    MAIL_FROM: 'UstoGo <no-reply@ustogo.app>',
     // Swagger and the scheduler are boot-time weight with no bearing on any assertion,
     // and a cron firing mid-suite would delete rows a test is still using.
     SWAGGER_ENABLED: 'false',

@@ -2589,6 +2589,251 @@
         ]
       }
     },
+    "/masters/me/portfolio": {
+      "get": {
+        "operationId": "portfolio",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortfolioImageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller’s portfolio images, in display order",
+        "tags": [
+          "Master Cabinet"
+        ]
+      },
+      "post": {
+        "operationId": "addPortfolioImage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePortfolioImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioImageResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MASTER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED | PORTFOLIO_LIMIT_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add a work-showcase photo (B-45)",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/me/portfolio/order": {
+      "put": {
+        "operationId": "reorderPortfolio",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderPortfolioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortfolioImageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PORTFOLIO_IMAGE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Reorder the caller’s portfolio images",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/me/portfolio/{imageId}": {
+      "delete": {
+        "description": "Soft delete; idempotent.",
+        "operationId": "removePortfolioImage",
+        "parameters": [
+          {
+            "name": "imageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a portfolio image",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
     "/admin/masters": {
       "get": {
         "description": "Every master regardless of approval/active state — filterable by approvalStatus, status (active/deactivated), cityId, categoryId, search. API.md §12.",
@@ -3623,7 +3868,7 @@
     },
     "/masters/{id}/availability": {
       "get": {
-        "description": "Public. UTC instants; `[]` (not an error) when there is no availability (FR-6.3).",
+        "description": "Public. UTC instants grouped by calendar date in the master’s timezone; every date in [from, to] is present with possibly empty arrays (FR-6.3).",
         "operationId": "availability",
         "parameters": [
           {
@@ -3670,7 +3915,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/components/schemas/DaySlotsResponseDto"
                   }
                 }
               }
@@ -3687,7 +3932,7 @@
             }
           }
         },
-        "summary": "Computed free slots for a master",
+        "summary": "Computed free and busy slots for a master, grouped by day",
         "tags": [
           "Masters"
         ]
@@ -6807,6 +7052,164 @@
         ]
       }
     },
+    "/favorites": {
+      "get": {
+        "operationId": "list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MasterPublicResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller's saved masters",
+        "tags": [
+          "Favorites"
+        ]
+      }
+    },
+    "/favorites/{masterId}": {
+      "post": {
+        "description": "Idempotent.",
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "masterId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MASTER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Save a master",
+        "tags": [
+          "Favorites"
+        ]
+      },
+      "delete": {
+        "description": "Idempotent.",
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "masterId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a saved master",
+        "tags": [
+          "Favorites"
+        ]
+      }
+    },
     "/admin/dashboard": {
       "get": {
         "description": "User/master/booking counts, completion/cancellation/acceptance rates, review aggregate, top 10 categories by booking volume and a daily booking time series (FR-11.1). `from`/`to` are independently optional; a missing bound defaults to a 30-day window, capped at 366 days.",
@@ -7939,6 +8342,28 @@
           "exportedAt"
         ]
       },
+      "DistrictResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sino"
+          },
+          "slug": {
+            "type": "string",
+            "example": "sino"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
       "CityResponseDto": {
         "type": "object",
         "properties": {
@@ -7969,12 +8394,20 @@
             "type": "object",
             "nullable": true,
             "example": "69.240100"
+          },
+          "districts": {
+            "description": "Internal sub-divisions of the city (districts / jamoats).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DistrictResponseDto"
+            }
           }
         },
         "required": [
           "id",
           "name",
-          "slug"
+          "slug",
+          "districts"
         ]
       },
       "FilePurpose": {
@@ -7984,7 +8417,8 @@
           "CERTIFICATE",
           "BANNER",
           "MESSAGE_ATTACHMENT",
-          "CATEGORY_ICON"
+          "CATEGORY_ICON",
+          "PORTFOLIO_IMAGE"
         ]
       },
       "PresignRequestDto": {
@@ -8402,6 +8836,14 @@
           },
           "hasCertificates": {
             "type": "boolean"
+          },
+          "portfolioImageFileIds": {
+            "description": "Portfolio image file ids, in display order (B-45).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
@@ -8412,7 +8854,8 @@
           "ratingAverage",
           "ratingCount",
           "completedBookingsCount",
-          "hasCertificates"
+          "hasCertificates",
+          "portfolioImageFileIds"
         ]
       },
       "MasterServiceResponseDto": {
@@ -8562,6 +9005,68 @@
         "required": [
           "fileId",
           "title"
+        ]
+      },
+      "PortfolioImageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "caption": {
+            "type": "object",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fileId",
+          "sortOrder",
+          "createdAt"
+        ]
+      },
+      "CreatePortfolioImageDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A confirmed File with purpose PORTFOLIO_IMAGE."
+          },
+          "caption": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "ReorderPortfolioDto": {
+        "type": "object",
+        "properties": {
+          "imageIds": {
+            "description": "Every one of the caller’s portfolio image ids, in the desired display order.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "imageIds"
         ]
       },
       "AdminMasterListItemResponseDto": {
@@ -8901,18 +9406,56 @@
           "isDayOff"
         ]
       },
+      "DaySlotsResponseDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-08-03",
+            "description": "Calendar date in the master’s timezone"
+          },
+          "free": {
+            "description": "Free slot starts as UTC instants",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "busy": {
+            "description": "Already-taken slot starts as UTC instants",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "free",
+          "busy"
+        ]
+      },
       "BookingAddressDto": {
         "type": "object",
         "properties": {
-          "line": {
+          "cityId": {
             "type": "string",
-            "minLength": 5,
-            "maxLength": 500
+            "format": "uuid"
           },
           "district": {
             "type": "string",
             "minLength": 2,
             "maxLength": 150
+          },
+          "line": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 500
+          },
+          "contactPhone": {
+            "type": "string",
+            "example": "+992900123456",
+            "description": "Contact phone for this booking; falls back to the profile phone."
           },
           "latitude": {
             "type": "number"
@@ -8922,8 +9465,9 @@
           }
         },
         "required": [
-          "line",
-          "district"
+          "cityId",
+          "district",
+          "line"
         ]
       },
       "CreateBookingDto": {
@@ -9037,6 +9581,16 @@
           },
           "addressDistrict": {
             "type": "string"
+          },
+          "cityId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "contactPhone": {
+            "type": "object",
+            "nullable": true,
+            "description": "Contact phone captured at booking time; falls back to the profile phone."
           },
           "latitude": {
             "type": "object",
@@ -9255,6 +9809,16 @@
           "addressDistrict": {
             "type": "string"
           },
+          "cityId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "contactPhone": {
+            "type": "object",
+            "nullable": true,
+            "description": "Contact phone captured at booking time; falls back to the profile phone."
+          },
           "latitude": {
             "type": "object",
             "nullable": true
@@ -9372,6 +9936,7 @@
               "BOOKING_COMPLETED",
               "BOOKING_CANCELLED",
               "BOOKING_EXPIRED",
+              "MASTER_REGISTERED",
               "MASTER_APPROVED",
               "MASTER_REJECTED",
               "MASTER_DEACTIVATED",
@@ -9442,6 +10007,7 @@
               "BOOKING_COMPLETED",
               "BOOKING_CANCELLED",
               "BOOKING_EXPIRED",
+              "MASTER_REGISTERED",
               "MASTER_APPROVED",
               "MASTER_REJECTED",
               "MASTER_DEACTIVATED",
