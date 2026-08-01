@@ -1,4 +1,4 @@
-import { computeAvailability } from '../availability-calculator';
+import { computeAvailability, computeBusySlots } from '../availability-calculator';
 
 const TZ = 'Asia/Dushanbe'; // UTC+5, no DST
 
@@ -150,5 +150,57 @@ describe('computeAvailability', () => {
       new Date('2026-08-03T04:00:00.000Z'),
       new Date('2026-08-04T04:00:00.000Z'),
     ]);
+  });
+});
+
+describe('computeBusySlots', () => {
+  const input = {
+    timezone: TZ,
+    workingDays: [{ weekday: 1, startTime: '09:00', endTime: '12:00' }],
+    exceptions: [],
+    from: '2026-08-03',
+    to: '2026-08-03',
+    durationMinutes: 60,
+    now: new Date('2026-08-01T00:00:00.000Z'),
+  };
+
+  it('returns slot starts inside a busy interval', () => {
+    const slots = computeBusySlots({
+      ...input,
+      busyIntervals: [
+        { start: new Date('2026-08-03T05:00:00.000Z'), end: new Date('2026-08-03T07:00:00.000Z') },
+      ],
+    });
+
+    expect(slots).toEqual([
+      new Date('2026-08-03T05:00:00.000Z'),
+      new Date('2026-08-03T06:00:00.000Z'),
+    ]);
+  });
+
+  it('clips a busy interval to the working window', () => {
+    const slots = computeBusySlots({
+      ...input,
+      busyIntervals: [
+        { start: new Date('2026-08-03T03:00:00.000Z'), end: new Date('2026-08-03T07:00:00.000Z') },
+      ],
+    });
+
+    expect(slots).toEqual([
+      new Date('2026-08-03T04:00:00.000Z'),
+      new Date('2026-08-03T05:00:00.000Z'),
+      new Date('2026-08-03T06:00:00.000Z'),
+    ]);
+  });
+
+  it('returns [] when the busy interval falls outside the window', () => {
+    const slots = computeBusySlots({
+      ...input,
+      busyIntervals: [
+        { start: new Date('2026-08-03T07:00:00.000Z'), end: new Date('2026-08-03T08:00:00.000Z') },
+      ],
+    });
+
+    expect(slots).toEqual([]);
   });
 });

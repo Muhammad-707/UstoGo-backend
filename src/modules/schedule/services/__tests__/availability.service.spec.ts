@@ -123,4 +123,45 @@ describe('AvailabilityService', () => {
       expect.objectContaining({ where: expect.objectContaining({ masterProfileId: 'm-1' }) }),
     );
   });
+
+  it('groups free and busy slots by date in the master’s timezone', async () => {
+    const { service } = build({
+      workingDay: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            weekday: 1,
+            startTime: new Date('1970-01-01T09:00:00.000Z'),
+            endTime: new Date('1970-01-01T11:00:00.000Z'),
+          },
+        ]),
+      },
+      booking: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            scheduledAt: new Date('2026-08-03T04:00:00.000Z'),
+            endsAt: new Date('2026-08-03T05:00:00.000Z'),
+          },
+        ]),
+      },
+    });
+
+    const days = await service.computeWithBusy('m-1', '2026-08-03', '2026-08-03', 's-1');
+
+    expect(days).toEqual([
+      {
+        date: '2026-08-03',
+        free: [new Date('2026-08-03T05:00:00.000Z')],
+        busy: [new Date('2026-08-03T04:00:00.000Z')],
+      },
+    ]);
+  });
+
+  it('includes every date in the range, even without slots', async () => {
+    const { service } = build();
+
+    const days = await service.computeWithBusy('m-1', '2026-08-03', '2026-08-05', 's-1');
+
+    expect(days.map((day) => day.date)).toEqual(['2026-08-03', '2026-08-04', '2026-08-05']);
+    expect(days.every((day) => day.free.length === 0 && day.busy.length === 0)).toBe(true);
+  });
 });

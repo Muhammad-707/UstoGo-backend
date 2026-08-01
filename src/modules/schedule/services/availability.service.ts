@@ -7,11 +7,13 @@ import { PrismaService } from '@prisma-lib/prisma.service';
 
 import {
   computeAvailability,
+  computeBusySlots,
+  type AvailabilityInput,
   type BusyInterval,
   type ScheduleExceptionRule,
   type WorkingDayRule,
 } from '../domain/availability-calculator';
-import { addDays, zonedTimeToUtc } from '../domain/zoned-time';
+import { addDays, zonedDateOf, zonedTimeToUtc } from '../domain/zoned-time';
 import { DateRangeTooLargeException } from '../exceptions/schedule.exceptions';
 
 /** ACCEPTED/IN_PROGRESS bookings hold a slot; every other status frees it. */
@@ -32,12 +34,36 @@ export class AvailabilityService {
   ) {}
 
   async compute(masterId: string, from: string, to: string, serviceId: string): Promise<Date[]> {
+    const result = await this.computeWithBusy(masterId, from, to, serviceId);
+    return result.flatMap((day) => day.free);
+  }
+
+  /**
+   * F-07 (MODULES.md › ScheduleModule). Free and busy slots, grouped by calendar
+   * date in the master's own timezone, covering every date in `[from, to]`.
+   */
+  async computeWithBusy(
+    masterId: string,
+    from: string,
+    to: string,
+    serviceId: string,
+  ): Promise<Array<{ date: string; free: Date[]; busy: Date[] }>> {
     if ((new Date(to).getTime() - new Date(from).getTime()) / MS_PER_DAY > MAX_RANGE_DAYS) {
       throw new DateRangeTooLargeException();
     }
 
     await this.mastersSearch.assertPublic(masterId);
 
+    const input = await this.loadInput(masterId, from, to, serviceId);
+    return this.groupByDate(input, computeAvailability(input), computeBusySlots(input));
+  }
+
+  private async loadInput(
+    masterId: string,
+    from: string,
+    to: string,
+    serviceId: string,
+  ): Promise<AvailabilityInput> {
     const [master, service] = await Promise.all([
       this.prisma.db.masterProfile.findUniqueOrThrow({
         where: { id: masterId },
@@ -60,7 +86,7 @@ export class AvailabilityService {
       master.timezone,
     );
 
-    return computeAvailability({
+    return {
       timezone: master.timezone,
       workingDays,
       exceptions,
@@ -69,7 +95,30 @@ export class AvailabilityService {
       to,
       durationMinutes: service.durationMinutes,
       now: new Date(),
-    });
+    };
+  }
+
+  private groupByDate(
+    input: AvailabilityInput,
+    free: Date[],
+    busy: Date[],
+  ): Array<{ date: string; free: Date[]; busy: Date[] }> {
+    const byDate = new Map<string, { free: Date[]; busy: Date[] }>();
+    for (let date = input.from; date <= input.to; date = addDays(date, 1)) {
+      byDate.set(date, { free: [], busy: [] });
+    }
+    for (const slot of free) {
+      byDate.get(zonedDateOf(slot, input.timezone))?.free.push(slot);
+    }
+    for (const slot of busy) {
+      byDate.get(zonedDateOf(slot, input.timezone))?.busy.push(slot);
+    }
+
+    return [...byDate.entries()].map(([date, day]) => ({
+      date,
+      free: day.free.sort((a, b) => a.getTime() - b.getTime()),
+      busy: day.busy.sort((a, b) => a.getTime() - b.getTime()),
+    }));
   }
 
   private async loadRules(

@@ -132,3 +132,37 @@ export const computeAvailability = (input: AvailabilityInput): Date[] => {
 
   return slots;
 };
+
+/**
+ * Mirrors `computeAvailability` but returns the slot starts that fall inside a busy
+ * interval, clipped to the master's working window. Lets the UI show already-taken
+ * slots ("busy") instead of silently hiding them. Never throws.
+ */
+export const computeBusySlots = (input: AvailabilityInput): Date[] => {
+  const slots: Date[] = [];
+
+  for (let date = input.from; date <= input.to; date = addDays(date, 1)) {
+    const window = windowFor(date, input.timezone, input.workingDays, input.exceptions);
+    if (window === null) {
+      continue;
+    }
+
+    const clamped = clampToNow(window, input.now);
+    if (clamped.start >= clamped.end) {
+      continue;
+    }
+
+    for (const interval of input.busyIntervals) {
+      const overlap: Window = {
+        start: interval.start > clamped.start ? interval.start : clamped.start,
+        end: interval.end < clamped.end ? interval.end : clamped.end,
+      };
+      if (overlap.start >= overlap.end) {
+        continue;
+      }
+      slots.push(...chunk(overlap, input.durationMinutes));
+    }
+  }
+
+  return slots;
+};

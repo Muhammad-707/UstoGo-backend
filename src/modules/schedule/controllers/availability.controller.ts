@@ -10,6 +10,7 @@ import { Public } from '@common/decorators/public.decorator';
 import { ErrorResponseDto } from '@common/dto/error-response.dto';
 
 import { AvailabilityQueryDto } from '../dto/requests/availability-query.dto';
+import { DaySlotsResponseDto } from '../dto/responses/day-slots.response.dto';
 import { AvailabilityService } from '../services/availability.service';
 
 @ApiTags('Masters')
@@ -20,17 +21,27 @@ export class AvailabilityController {
   @Get('availability')
   @Public()
   @ApiOperation({
-    summary: 'Computed free slots for a master',
+    summary: 'Computed free and busy slots for a master, grouped by day',
     description:
-      'Public. UTC instants; `[]` (not an error) when there is no availability (FR-6.3).',
+      'Public. UTC instants grouped by calendar date in the master’s timezone; every ' +
+      'date in [from, to] is present with possibly empty arrays (FR-6.3).',
   })
-  @ApiOkResponse({ type: String, isArray: true })
+  @ApiOkResponse({ type: DaySlotsResponseDto, isArray: true })
   @ApiUnprocessableEntityResponse({ description: 'DATE_RANGE_TOO_LARGE', type: ErrorResponseDto })
   async availability(
     @Param('id') id: string,
     @Query() query: AvailabilityQueryDto,
-  ): Promise<string[]> {
-    const slots = await this.availabilityService.compute(id, query.from, query.to, query.serviceId);
-    return slots.map((slot) => slot.toISOString());
+  ): Promise<DaySlotsResponseDto[]> {
+    const days = await this.availabilityService.computeWithBusy(
+      id,
+      query.from,
+      query.to,
+      query.serviceId,
+    );
+    return days.map((day) => ({
+      date: day.date,
+      free: day.free.map((slot) => slot.toISOString()),
+      busy: day.busy.map((slot) => slot.toISOString()),
+    }));
   }
 }
