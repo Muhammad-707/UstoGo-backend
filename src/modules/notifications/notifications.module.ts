@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { AdminNotificationsController } from './controllers/admin-notifications.controller';
 import { NotificationsController } from './controllers/notifications.controller';
+import { AuthNotificationsListener } from './listeners/auth-notifications.listener';
 import { BookingNotificationsListener } from './listeners/booking-notifications.listener';
 import { MasterNotificationsListener } from './listeners/master-notifications.listener';
 import { MessageNotificationsListener } from './listeners/message-notifications.listener';
@@ -17,6 +18,7 @@ import { NotificationsService } from './services/notifications.service';
   controllers: [NotificationsController, AdminNotificationsController],
   providers: [
     NotificationsService,
+    AuthNotificationsListener,
     BookingNotificationsListener,
     MasterNotificationsListener,
     ReviewNotificationsListener,
