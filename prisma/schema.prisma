@@ -286,6 +286,13 @@ model MasterProfile {
   @@index([approvalStatus, isActive])
   @@index([cityId])
   @@index([ratingAverage(sort: Desc)])
+  /// Search hot path (F-08): the sort columns of the two default orderings, prefixed
+  /// by the mandatory approval/active filter so the planner walks one composite index
+  /// in order instead of sorting every approved master. The `deletedAt`-covering index
+  /// exists so the `count(*)` behind search pagination is an index-only scan.
+  @@index([approvalStatus, isActive, createdAt(sort: Desc)])
+  @@index([approvalStatus, isActive, ratingAverage(sort: Desc)])
+  @@index([approvalStatus, isActive, deletedAt])
   @@map("master_profiles")
 }
 

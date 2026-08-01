@@ -26,7 +26,11 @@ const build = (
   } = {},
 ) => {
   const queryRaw =
-    overrides.queryRaw ?? jest.fn().mockResolvedValue([{ id: 'm-1', total: BigInt(1) }]);
+    overrides.queryRaw ??
+    jest
+      .fn()
+      .mockResolvedValueOnce([{ id: 'm-1' }])
+      .mockResolvedValueOnce([{ total: BigInt(1) }]);
   const prisma = {
     db: {
       $queryRaw: queryRaw,
@@ -44,7 +48,11 @@ const build = (
 
 describe('SearchService', () => {
   it('returns an empty page without hydrating when there are no candidate ids', async () => {
-    const { service, prisma } = build({ queryRaw: jest.fn().mockResolvedValue([]) });
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service, prisma } = build({ queryRaw });
 
     const result = await service.search({ page: 1, limit: 20, skip: 0 });
 
@@ -53,9 +61,7 @@ describe('SearchService', () => {
   });
 
   it('hydrates candidate ids into public projections, preserving SQL order', async () => {
-    const { service } = build({
-      queryRaw: jest.fn().mockResolvedValue([{ id: 'm-1', total: BigInt(1) }]),
-    });
+    const { service } = build();
 
     const result = await service.search({ page: 1, limit: 20, skip: 0 });
 
@@ -86,7 +92,10 @@ describe('SearchService', () => {
   });
 
   it('joins the price aggregate only when sorting by price', async () => {
-    const queryRaw = jest.fn().mockResolvedValue([]);
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
     const { service } = build({ queryRaw });
 
     await service.search({ page: 1, limit: 20, skip: 0, sort: MasterSort.PRICE_ASC });
@@ -96,12 +105,34 @@ describe('SearchService', () => {
   });
 
   it('omits the price join when sorting by rating', async () => {
-    const queryRaw = jest.fn().mockResolvedValue([]);
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
     const { service } = build({ queryRaw });
 
     await service.search({ page: 1, limit: 20, skip: 0, sort: MasterSort.RATING_DESC });
 
     const sql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
     expect(sql).not.toContain('LEFT JOIN LATERAL');
+  });
+
+  it('runs the count query with the same filters as the data query', async () => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([{ id: 'm-1' }])
+      .mockResolvedValueOnce([{ total: BigInt(1) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, cityId: 'city-1', minRating: 3 });
+
+    const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    const countSql = (queryRaw.mock.calls[1]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(countSql).toContain('COUNT(*)');
+    expect(countSql).toContain('city_id');
+    expect(countSql).toContain('rating_average');
+    expect(countSql).not.toContain('ORDER BY');
+    expect(dataSql).toContain('city_id');
+    expect(dataSql).toContain('ORDER BY');
   });
 });

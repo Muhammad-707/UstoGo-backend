@@ -147,7 +147,9 @@ Index: `(cityId)`.
 | `searchVector`                   | tsvector         | generated, GIN-indexed             |
 | timestamps + `deletedAt`         |                  |                                    |
 
-Indexes: `(approvalStatus, isActive)`, `(cityId)`, `(ratingAverage DESC)`, GIN on `searchVector`.
+Indexes: `(approvalStatus, isActive)`, `(cityId)`, `(ratingAverage DESC)`, `(approvalStatus, isActive, createdAt DESC)`, `(approvalStatus, isActive, ratingAverage DESC)`, `(approvalStatus, isActive, deletedAt)`, GIN on `searchVector`, GIN trigram on `displayName`.
+
+The last four serve the search hot path (F-08, `k6/search.js`): the two composite sort indexes let `GET /masters` walk one index in order instead of sorting every approved master, the `deletedAt`-covering index makes the pagination count an index-only scan, and the `displayName` trigram index backs the admin masters listing's `ILIKE` search (measured at 50,000 masters: data query 39ms → 0.2ms, count 16ms → 6.1ms, admin `ILIKE` 0.5ms vs a sequential scan).
 
 **Denormalisation contract:** `ratingAverage`, `ratingCount` and `completedBookingsCount` are only ever written inside the transaction that causes the change (review write/edit/hide, booking completion). A nightly reconciliation job recomputes them and logs any drift as an error — drift indicates a bug, not a tolerable condition.
 

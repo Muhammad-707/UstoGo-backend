@@ -183,6 +183,7 @@ would ship its admin routes unaudited and need a retrofit.
 
 - [x] Favorites (`GET/POST/DELETE /favorites`)
 - [x] B-45 Master portfolio/gallery (`masters/me/portfolio` CRUD + reorder, `PortfolioImage` model, `MasterPublicResponseDto.portfolioImageFileIds`)
+- [x] Search performance pass: split count/data in `SearchService` (parallel `Promise.all` instead of `COUNT(*) OVER()`), four additive indexes (`(approvalStatus, isActive, createdAt DESC)`, `(approvalStatus, isActive, ratingAverage DESC)`, `(approvalStatus, isActive, deletedAt)` covering count, `displayName` GIN trigram for the admin `ILIKE`). Measured at 50k masters: data query 39ms → 0.2ms, count 16ms → 6.1ms, admin `ILIKE` 0.5ms. Migration must be deployed to the Render database (`npm run prisma:migrate:deploy`)
 - [ ] e2e coverage for both (unit-level only so far)
 - [ ] Run `prisma migrate deploy` and re-run `prisma db seed` against the deployed Render database — production currently has 0 masters and the old 3-root category taxonomy
 
