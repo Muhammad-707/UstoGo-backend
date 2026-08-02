@@ -294,3 +294,30 @@ describe('MastersService portfolio images (B-45)', () => {
     });
   });
 });
+
+describe('MastersService.setAvailability', () => {
+  it('rejects when the profile is not APPROVED', async () => {
+    const { service } = build();
+
+    await expect(service.setAvailability('user-1', false)).rejects.toBeInstanceOf(
+      InvalidApprovalTransitionException,
+    );
+  });
+
+  it('updates isActive when the profile is APPROVED', async () => {
+    const { service, masterProfileDelegate } = build({
+      masterProfile: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ ...MASTER, approvalStatus: ApprovalStatus.APPROVED }),
+      },
+    });
+
+    await service.setAvailability('user-1', false);
+
+    expect(masterProfileDelegate.update).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      data: { isActive: false },
+    });
+  });
+});

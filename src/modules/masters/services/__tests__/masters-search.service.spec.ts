@@ -47,6 +47,7 @@ const build = (
     findMany: overrides.findMany ?? jest.fn().mockResolvedValue([ROW]),
     count: overrides.count ?? jest.fn().mockResolvedValue(1),
     findFirst: overrides.findFirst ?? jest.fn().mockResolvedValue(ROW),
+    update: jest.fn().mockResolvedValue(ROW),
   };
   const serviceDelegate = {
     findMany: overrides.serviceFindMany ?? jest.fn().mockResolvedValue([]),

@@ -65,6 +65,24 @@ export class MastersService {
     });
   }
 
+  /**
+   * Self-service "vacation mode" toggle for an approved master — separate from the
+   * admin approve/reject/activate/deactivate moderation gate, which stays untouched.
+   * Only an already-`APPROVED` master may flip this; it has no effect on approval state.
+   */
+  async setAvailability(userId: string, isActive: boolean): Promise<MasterProfile> {
+    const master = await this.getByUserId(userId);
+
+    if (master.approvalStatus !== ApprovalStatus.APPROVED) {
+      throw new InvalidApprovalTransitionException();
+    }
+
+    return this.prisma.db.masterProfile.update({
+      where: { userId },
+      data: { isActive },
+    });
+  }
+
   async listCategoryIds(userId: string): Promise<string[]> {
     const master = await this.getByUserId(userId);
     const rows = await this.prisma.db.masterCategory.findMany({

@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
 } from '@nestjs/common';
@@ -29,6 +30,7 @@ import { AttachCategoryDto } from '../dto/requests/attach-category.dto';
 import { CreateCertificateDto } from '../dto/requests/create-certificate.dto';
 import { CreatePortfolioImageDto } from '../dto/requests/create-portfolio-image.dto';
 import { ReorderPortfolioDto } from '../dto/requests/reorder-portfolio.dto';
+import { SetAvailabilityDto } from '../dto/requests/set-availability.dto';
 import { CertificateResponseDto } from '../dto/responses/certificate.response.dto';
 import { MasterStatusResponseDto } from '../dto/responses/master-status.response.dto';
 import { PortfolioImageResponseDto } from '../dto/responses/portfolio-image.response.dto';
@@ -60,6 +62,22 @@ export class MastersMeController {
   @ApiOkResponse({ type: MasterStatusResponseDto })
   async resubmit(@CurrentUser() user: AuthenticatedUser): Promise<MasterStatusResponseDto> {
     const master = await this.masters.submitForReview(user.id);
+
+    return MasterStatusResponseDto.fromEntity(master);
+  }
+
+  @Patch('availability')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({
+    summary: 'Toggle "accepting bookings" (vacation mode)',
+    description: 'Self-service — only available once the profile is APPROVED.',
+  })
+  @ApiOkResponse({ type: MasterStatusResponseDto })
+  async setAvailability(
+    @Body() dto: SetAvailabilityDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MasterStatusResponseDto> {
+    const master = await this.masters.setAvailability(user.id, dto.isActive);
 
     return MasterStatusResponseDto.fromEntity(master);
   }

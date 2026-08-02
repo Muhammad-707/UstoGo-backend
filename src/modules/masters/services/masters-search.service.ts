@@ -21,7 +21,11 @@ export const MASTER_PUBLIC_INCLUDE = {
   city: { select: { name: true } },
   categories: { include: { category: { select: { name: true } } } },
   services: { where: { isActive: true }, select: { price: true } },
-  certificates: { where: { deletedAt: null }, select: { id: true }, take: 1 },
+  certificates: {
+    where: { deletedAt: null, verifiedAt: { not: null } },
+    select: { id: true },
+    take: 1,
+  },
   portfolioImages: {
     where: { deletedAt: null },
     orderBy: { sortOrder: 'asc' },
@@ -119,6 +123,11 @@ export class MastersSearchService {
     if (row === null) {
       throw new MasterNotFoundException();
     }
+
+    // Fire-and-forget — a view counter must not slow down or fail the profile response.
+    this.prisma.db.masterProfile
+      .update({ where: { id }, data: { profileViews: { increment: 1 } } })
+      .catch(() => {});
 
     return toMasterPublicDto(row, false);
   }

@@ -261,6 +261,7 @@ model MasterProfile {
   approvedAt             DateTime?      @map("approved_at") @db.Timestamptz(3)
   approvedByUserId       String?        @map("approved_by_user_id") @db.Uuid
   isActive               Boolean        @default(false) @map("is_active")
+  profileViews           Int            @default(0) @map("profile_views")
   ratingAverage          Decimal        @default(0.00) @map("rating_average") @db.Decimal(3, 2)
   ratingCount            Int            @default(0) @map("rating_count")
   completedBookingsCount Int            @default(0) @map("completed_bookings_count")
