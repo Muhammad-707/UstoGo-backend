@@ -20,11 +20,20 @@ import e2e from './jest.e2e.config';
  * default and the socket tests time out exactly when the machine is busiest. They
  * are declared here instead, which is what makes a merged run behave like the
  * suites it merges.
+ *
+ * `maxWorkers` is the same story, with a deadlier outcome: the e2e config caps its
+ * project at one worker because every suite shares one database and truncation
+ * between tests would race across workers. Jest only honours `maxWorkers` at the
+ * top level, so a merged run ignored the cap and ran the e2e suites in parallel —
+ * two suites' `truncateAll` statements interleaved with each other's traffic and
+ * deadlocked for real (40P01). One worker for the whole merged run costs the unit
+ * project some wall-clock and buys a suite that cannot corrupt its own database.
  */
 const config: Config = {
   rootDir: '.',
   testTimeout: 60_000,
   forceExit: true,
+  maxWorkers: 1,
   projects: [
     { displayName: 'unit', ...unit },
     { displayName: 'e2e', ...e2e },
