@@ -11,8 +11,23 @@ export class MasterPublicResponseDto {
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   avatarFileId!: string | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Short-lived read URL, when an avatar exists',
+  })
+  avatarUrl!: string | null;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  bannerFileId!: string | null;
+
   @ApiPropertyOptional({ nullable: true })
   bio!: string | null;
+
+  @ApiProperty({ example: 8 })
+  yearsOfExperience!: number;
+
+  @ApiProperty({ example: 15 })
+  serviceRadiusKm!: number;
 
   @ApiProperty()
   cityName!: string;

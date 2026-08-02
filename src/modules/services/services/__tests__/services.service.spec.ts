@@ -93,7 +93,7 @@ describe('ServicesService.list', () => {
       select: { id: true },
     });
     expect(serviceDelegate.findMany).toHaveBeenCalledWith({
-      where: { masterProfileId: MASTER_PROFILE_ID },
+      where: { masterProfileId: MASTER_PROFILE_ID, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     expect(result).toEqual([]);

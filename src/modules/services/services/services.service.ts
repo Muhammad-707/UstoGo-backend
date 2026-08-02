@@ -28,7 +28,7 @@ export class ServicesService {
     const masterProfileId = await this.masterProfileIdFor(userId);
 
     return this.prisma.db.service.findMany({
-      where: { masterProfileId },
+      where: { masterProfileId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -89,7 +89,9 @@ export class ServicesService {
   }
 
   private async findOwnedOrThrow(masterProfileId: string, id: string): Promise<Service> {
-    const service = await this.prisma.db.service.findFirst({ where: { id, masterProfileId } });
+    const service = await this.prisma.db.service.findFirst({
+      where: { id, masterProfileId, deletedAt: null },
+    });
 
     if (service === null) {
       throw new ServiceNotFoundException();

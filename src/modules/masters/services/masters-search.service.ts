@@ -1,10 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ApprovalStatus, Prisma } from '@prisma/client';
+import type { WorkingDay } from '@prisma/client';
 
+import { FilesService } from '@modules/files/services/files.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
 import type { AdminMasterSearchQueryDto } from '../dto/requests/admin-master-search-query.dto';
 import { AdminMasterListItemResponseDto } from '../dto/responses/admin-master-list-item.response.dto';
+import { MasterCertificatePublicResponseDto } from '../dto/responses/master-certificate-public.response.dto';
+import {
+  MasterMediaResponseDto,
+  MasterPortfolioImageUrlDto,
+} from '../dto/responses/master-media.response.dto';
 import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 import { MasterServiceResponseDto } from '../dto/responses/master-service.response.dto';
 import { MasterNotFoundException } from '../exceptions/masters.exceptions';
@@ -66,10 +73,14 @@ export const toMasterPublicDto = (
   dto.id = row.id;
   dto.displayName = row.displayName;
   dto.avatarFileId = row.avatarFileId;
+  dto.avatarUrl = null;
+  dto.bannerFileId = row.bannerFileId;
   dto.bio =
     row.bio !== null && truncateBio && row.bio.length > BIO_PREVIEW_LENGTH
       ? `${row.bio.slice(0, BIO_PREVIEW_LENGTH)}…`
       : row.bio;
+  dto.yearsOfExperience = row.yearsOfExperience;
+  dto.serviceRadiusKm = row.serviceRadiusKm;
   dto.cityName = row.city.name;
   dto.categories = row.categories.map((entry) => entry.category.name);
   dto.ratingAverage = row.ratingAverage.toFixed(2);
@@ -92,9 +103,14 @@ export const toMasterPublicDto = (
  */
 @Injectable()
 export class MastersSearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly files: FilesService,
+  ) {}
 
   async getPublicProfile(id: string): Promise<MasterPublicResponseDto> {
+    this.assertUuid(id);
+
     const row = await this.prisma.db.masterProfile.findFirst({
       where: { id, approvalStatus: ApprovalStatus.APPROVED, isActive: true },
       include: MASTER_PUBLIC_INCLUDE,
@@ -107,7 +123,109 @@ export class MastersSearchService {
     return toMasterPublicDto(row, false);
   }
 
+  /**
+   * Guards the public `:id` wildcards. Express registers `masters/:id/*` with no
+   * specificity preference, so a stray `me` (e.g. `/masters/me/media`) would reach
+   * Prisma and die on the UUID cast — a 500. Non-UUID ids are simply "not found".
+   */
+  private assertUuid(id: string): void {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new MasterNotFoundException();
+    }
+  }
+
+  /**
+   * Mints short-lived read URLs for every avatar in a search page. Presigning is
+   * local and cheap, so this is one extra file lookup per non-empty avatar.
+   */
+  async mintAvatarUrls(items: MasterPublicResponseDto[]): Promise<MasterPublicResponseDto[]> {
+    const ids = [
+      ...new Set(items.map((item) => item.avatarFileId).filter((id): id is string => id !== null)),
+    ];
+
+    if (ids.length === 0) {
+      return items;
+    }
+
+    const files = await this.prisma.db.file.findMany({
+      where: { id: { in: ids }, isConfirmed: true, deletedAt: null },
+      select: { id: true, key: true },
+    });
+    const keyById = new Map(files.map((file) => [file.id, file.key]));
+
+    await Promise.all(
+      items.map(async (item) => {
+        const key = item.avatarFileId === null ? undefined : keyById.get(item.avatarFileId);
+        item.avatarUrl = key === undefined ? null : await this.files.createReadUrlForKey(key);
+      }),
+    );
+
+    return items;
+  }
+
+  /** All visual media of a public master, as short-lived URLs (F-07, API.md §7). */
+  async getPublicMedia(masterId: string): Promise<MasterMediaResponseDto> {
+    await this.assertPublic(masterId);
+
+    const row = await this.prisma.db.masterProfile.findUnique({
+      where: { id: masterId },
+      select: {
+        avatarFileId: true,
+        bannerFileId: true,
+        portfolioImages: {
+          where: { deletedAt: null },
+          orderBy: { sortOrder: 'asc' },
+          select: { fileId: true, caption: true },
+        },
+      },
+    });
+
+    if (row === null) {
+      throw new MasterNotFoundException();
+    }
+
+    const fileIds = [
+      row.avatarFileId,
+      row.bannerFileId,
+      ...row.portfolioImages.map((image) => image.fileId),
+    ].filter((id): id is string => id !== null);
+
+    const files = await this.prisma.db.file.findMany({
+      where: { id: { in: fileIds }, isConfirmed: true, deletedAt: null },
+      select: { id: true, key: true },
+    });
+    const keyById = new Map(files.map((file) => [file.id, file.key]));
+
+    const urlFor = async (fileId: string | null): Promise<string | null> => {
+      const key = fileId === null ? undefined : keyById.get(fileId);
+      return key === undefined ? null : this.files.createReadUrlForKey(key);
+    };
+
+    const [avatarUrl, bannerUrl] = await Promise.all([
+      urlFor(row.avatarFileId),
+      urlFor(row.bannerFileId),
+    ]);
+
+    const dto = new MasterMediaResponseDto();
+
+    dto.avatarUrl = avatarUrl;
+    dto.bannerUrl = bannerUrl;
+    dto.portfolio = (
+      await Promise.all(
+        row.portfolioImages.map(async (image) => ({
+          fileId: image.fileId,
+          caption: image.caption,
+          url: await urlFor(image.fileId),
+        })),
+      )
+    ).filter((image): image is MasterPortfolioImageUrlDto => image.url !== null);
+
+    return dto;
+  }
+
   async assertPublic(id: string): Promise<void> {
+    this.assertUuid(id);
+
     const row = await this.prisma.db.masterProfile.findFirst({
       where: { id, approvalStatus: ApprovalStatus.APPROVED, isActive: true },
       select: { id: true },
@@ -127,6 +245,40 @@ export class MastersSearchService {
     });
 
     return services.map((service) => MasterServiceResponseDto.fromEntity(service));
+  }
+
+  /** Public certificate list of an approved master, newest first. */
+  async getPublicCertificates(masterId: string): Promise<MasterCertificatePublicResponseDto[]> {
+    await this.assertPublic(masterId);
+
+    const certificates = await this.prisma.db.certificate.findMany({
+      where: { masterProfileId: masterId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    return certificates.map((certificate) => {
+      const dto = new MasterCertificatePublicResponseDto();
+
+      dto.id = certificate.id;
+      dto.title = certificate.title;
+      dto.issuedBy = certificate.issuedBy;
+      dto.issuedAt = certificate.issuedAt?.toISOString() ?? null;
+      dto.verifiedAt = certificate.verifiedAt?.toISOString() ?? null;
+      dto.fileId = certificate.fileId;
+
+      return dto;
+    });
+  }
+
+  /** Public weekly working hours of an approved master, ordered by weekday. */
+  async getPublicSchedule(masterId: string): Promise<WorkingDay[]> {
+    await this.assertPublic(masterId);
+
+    return this.prisma.db.workingDay.findMany({
+      where: { masterProfileId: masterId },
+      orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }],
+    });
   }
 
   /** API.md §12 — every master regardless of approval/active state, unlike public search. */

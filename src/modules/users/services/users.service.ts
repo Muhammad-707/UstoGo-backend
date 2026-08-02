@@ -166,6 +166,32 @@ export class UsersService {
     return this.findMe(userId);
   }
 
+  /**
+   * Master cover banner — same attach-flow as the avatar, master role only. A client
+   * profile has no banner, so a client calling this is rejected up front.
+   */
+  async setBanner(userId: string, fileId: string): Promise<UserWithProfile> {
+    const current = await this.findMe(userId);
+
+    if (current.role !== UserRole.MASTER) {
+      throw new FieldNotApplicableException(['bannerFileId'], UserRole.MASTER);
+    }
+
+    await this.files.getAttachable(fileId, userId, FilePurpose.BANNER);
+
+    const previousId = current.masterProfile?.bannerFileId ?? null;
+
+    await this.tx.run(async (tx) => {
+      await tx.masterProfile.update({ where: { userId }, data: { bannerFileId: fileId } });
+    });
+
+    if (previousId !== null && previousId !== fileId) {
+      await this.files.softDelete(previousId);
+    }
+
+    return this.findMe(userId);
+  }
+
   private assertFieldsApplicable(role: UserRole, dto: UpdateProfileDto): void {
     const forbidden = role === UserRole.MASTER ? CLIENT_ONLY_FIELDS : MASTER_ONLY_FIELDS;
     const supplied = forbidden.filter((field) => dto[field] !== undefined);

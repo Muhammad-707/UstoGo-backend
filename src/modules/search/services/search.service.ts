@@ -8,6 +8,7 @@ import {
 import type { MasterPublicResponseDto } from '@modules/masters/dto/responses/master-public.response.dto';
 import {
   MASTER_PUBLIC_INCLUDE,
+  MastersSearchService,
   toMasterPublicDto,
   type MasterRow,
 } from '@modules/masters/services/masters-search.service';
@@ -23,7 +24,10 @@ import { PrismaService } from '@prisma-lib/prisma.service';
  */
 @Injectable()
 export class SearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly masters: MastersSearchService,
+  ) {}
 
   async search(
     query: MasterSearchQueryDto,
@@ -80,6 +84,8 @@ export class SearchService {
       .map((id) => byId.get(id))
       .filter((row): row is MasterRow => row !== undefined)
       .map((row) => toMasterPublicDto(row, true));
+
+    await this.masters.mintAvatarUrls(items);
 
     return { items, total };
   }

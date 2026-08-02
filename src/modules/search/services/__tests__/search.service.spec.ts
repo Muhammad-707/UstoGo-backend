@@ -1,4 +1,5 @@
 import { MasterSort } from '@modules/masters/dto/requests/master-search-query.dto';
+import { MastersSearchService } from '@modules/masters/services/masters-search.service';
 import type { PrismaService } from '@prisma-lib/prisma.service';
 
 import { SearchService } from '../search.service';
@@ -7,6 +8,10 @@ const ROW = {
   id: 'm-1',
   displayName: 'Jamshed',
   avatarFileId: null,
+  bannerFileId: null,
+  avatarUrl: null,
+  yearsOfExperience: 3,
+  serviceRadiusKm: 15,
   bio: null,
   city: { name: 'Dushanbe' },
   categories: [],
@@ -43,7 +48,11 @@ const build = (
     },
   } as unknown as PrismaService;
 
-  return { service: new SearchService(prisma), prisma, queryRaw };
+  const masters = {
+    mintAvatarUrls: jest.fn().mockImplementation((items) => Promise.resolve(items)),
+  } as unknown as MastersSearchService;
+
+  return { service: new SearchService(prisma, masters), prisma, queryRaw };
 };
 
 describe('SearchService', () => {

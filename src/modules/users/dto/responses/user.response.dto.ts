@@ -23,6 +23,7 @@ export class MasterProfileDto {
   @ApiProperty({ example: 15 }) serviceRadiusKm!: number;
   @ApiProperty({ example: 'Asia/Tashkent' }) timezone!: string;
   @ApiPropertyOptional({ format: 'uuid', nullable: true }) avatarFileId!: string | null;
+  @ApiPropertyOptional({ format: 'uuid', nullable: true }) bannerFileId!: string | null;
 
   @ApiProperty({ enum: ApprovalStatus, enumName: 'ApprovalStatus' })
   approvalStatus!: ApprovalStatus;

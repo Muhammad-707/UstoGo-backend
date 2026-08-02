@@ -255,6 +255,7 @@ model MasterProfile {
   serviceRadiusKm        Int            @default(15) @map("service_radius_km") @db.SmallInt
   timezone               String         @db.VarChar(64)
   avatarFileId           String?        @map("avatar_file_id") @db.Uuid
+  bannerFileId           String?        @map("banner_file_id") @db.Uuid
   approvalStatus         ApprovalStatus @default(PENDING) @map("approval_status")
   rejectionReason        String?        @map("rejection_reason") @db.VarChar(500)
   approvedAt             DateTime?      @map("approved_at") @db.Timestamptz(3)
@@ -271,6 +272,7 @@ model MasterProfile {
   city       City  @relation(fields: [cityId], references: [id], onDelete: Restrict)
   approvedBy User? @relation("MasterApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Restrict)
   avatar     File? @relation("MasterAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  banner     File? @relation("MasterBanner", fields: [bannerFileId], references: [id], onDelete: SetNull)
 
   categories         MasterCategory[]
   certificates       Certificate[]
@@ -590,6 +592,7 @@ model File {
   uploadedBy         User?               @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   clientAvatars      ClientProfile[]     @relation("ClientAvatar")
   masterAvatars      MasterProfile[]     @relation("MasterAvatar")
+  masterBanners      MasterProfile[]     @relation("MasterBanner")
   categoryIcons      Category[]
   certificates       Certificate[]
   portfolioImages    PortfolioImage[]

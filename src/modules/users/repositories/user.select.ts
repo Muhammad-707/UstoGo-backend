@@ -48,6 +48,7 @@ export const MASTER_PROFILE_SELECT = {
   serviceRadiusKm: true,
   timezone: true,
   avatarFileId: true,
+  bannerFileId: true,
   approvalStatus: true,
   rejectionReason: true,
   approvedAt: true,

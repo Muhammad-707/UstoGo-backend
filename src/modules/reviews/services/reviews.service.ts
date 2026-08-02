@@ -21,7 +21,10 @@ import {
   ReviewWindowClosedException,
 } from '../exceptions/reviews.exceptions';
 
-const REVIEW_INCLUDE = { reply: true } as const;
+const REVIEW_INCLUDE = {
+  reply: true,
+  clientProfile: { select: { firstName: true, lastName: true } },
+} as const;
 
 /** F-10 (MODULES.md › ReviewsModule). Depends on `BookingsModule` for the gating check. */
 @Injectable()

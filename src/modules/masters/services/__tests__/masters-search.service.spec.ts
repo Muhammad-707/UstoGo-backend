@@ -1,5 +1,6 @@
 import { ApprovalStatus } from '@prisma/client';
 
+import type { FilesService } from '@modules/files/services/files.service';
 import type { PrismaService } from '@prisma-lib/prisma.service';
 
 import { MasterNotFoundException } from '../../exceptions/masters.exceptions';
@@ -54,7 +55,11 @@ const build = (
     db: { masterProfile: masterProfileDelegate, service: serviceDelegate },
   } as unknown as PrismaService;
 
-  return { service: new MastersSearchService(prisma), masterProfileDelegate };
+  const files = {
+    createReadUrlForKey: jest.fn().mockResolvedValue('https://cdn/x'),
+  } as unknown as FilesService;
+
+  return { service: new MastersSearchService(prisma, files), masterProfileDelegate };
 };
 
 describe('MastersSearchService.adminSearch', () => {
@@ -191,7 +196,7 @@ describe('MastersSearchService.getPublicProfile', () => {
   it('returns the public projection for an approved, active master', async () => {
     const { service } = build();
 
-    const result = await service.getPublicProfile('mp-1');
+    const result = await service.getPublicProfile('47a7c6e9-c411-42c9-8b64-c30a410e9032');
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -215,7 +220,7 @@ describe('MastersSearchService.getPublicProfile', () => {
       }),
     });
 
-    const result = await service.getPublicProfile('mp-1');
+    const result = await service.getPublicProfile('47a7c6e9-c411-42c9-8b64-c30a410e9032');
 
     expect(result.priceFrom).toBe('50.00');
   });
@@ -228,7 +233,7 @@ describe('MastersSearchService.getPublicProfile', () => {
       }),
     });
 
-    const result = await service.getPublicProfile('mp-1');
+    const result = await service.getPublicProfile('47a7c6e9-c411-42c9-8b64-c30a410e9032');
 
     expect(result.priceFrom).toBe('50.00');
   });
@@ -238,7 +243,7 @@ describe('MastersSearchService.getPublicProfile', () => {
       findFirst: jest.fn().mockResolvedValue({ ...ROW, services: [] }),
     });
 
-    const result = await service.getPublicProfile('mp-1');
+    const result = await service.getPublicProfile('47a7c6e9-c411-42c9-8b64-c30a410e9032');
 
     expect(result.priceFrom).toBeNull();
   });
@@ -254,7 +259,9 @@ describe('MastersSearchService.assertPublic', () => {
   it('resolves for an approved, active master', async () => {
     const { service } = build();
 
-    await expect(service.assertPublic('mp-1')).resolves.toBeUndefined();
+    await expect(
+      service.assertPublic('47a7c6e9-c411-42c9-8b64-c30a410e9032'),
+    ).resolves.toBeUndefined();
   });
 
   it('throws MasterNotFoundException when the master is not public', async () => {
@@ -269,10 +276,12 @@ describe('MastersSearchService.getActiveServices', () => {
     const serviceFindMany = jest.fn().mockResolvedValue([SERVICE_ENTITY]);
     const { service } = build({ serviceFindMany });
 
-    const result = await service.getActiveServices('mp-1');
+    const result = await service.getActiveServices('47a7c6e9-c411-42c9-8b64-c30a410e9032');
 
     expect(serviceFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { masterProfileId: 'mp-1', isActive: true } }),
+      expect.objectContaining({
+        where: { masterProfileId: '47a7c6e9-c411-42c9-8b64-c30a410e9032', isActive: true },
+      }),
     );
     expect(result).toEqual([
       expect.objectContaining({ id: 'svc-1', title: 'Leak repair', price: '50.00' }),

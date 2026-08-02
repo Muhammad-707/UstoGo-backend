@@ -3,7 +3,10 @@ import { ReviewStatus, type Review, type ReviewReply } from '@prisma/client';
 
 import { ReviewReplyResponseDto } from './review-reply.response.dto';
 
-export type ReviewWithReply = Review & { reply: ReviewReply | null };
+export type ReviewWithReply = Review & {
+  reply: ReviewReply | null;
+  clientProfile: { firstName: string; lastName: string };
+};
 
 /** `Review` + optional `ReviewReply` (DATABASE.md §8, FR-8.5). */
 export class ReviewResponseDto {
@@ -15,6 +18,9 @@ export class ReviewResponseDto {
 
   @ApiProperty({ format: 'uuid' })
   clientId!: string;
+
+  @ApiProperty()
+  clientName!: string;
 
   @ApiProperty({ format: 'uuid' })
   masterId!: string;
@@ -43,6 +49,7 @@ export class ReviewResponseDto {
     dto.id = entity.id;
     dto.bookingId = entity.bookingId;
     dto.clientId = entity.clientProfileId;
+    dto.clientName = `${entity.clientProfile.firstName} ${entity.clientProfile.lastName}`.trim();
     dto.masterId = entity.masterProfileId;
     dto.rating = entity.rating;
     dto.comment = entity.comment;

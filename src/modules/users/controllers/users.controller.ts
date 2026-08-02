@@ -15,6 +15,7 @@ import { ErrorResponseDto } from '@common/dto/error-response.dto';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
 import { SetAvatarDto } from '../dto/requests/set-avatar.dto';
+import { SetBannerDto } from '../dto/requests/set-banner.dto';
 import { UpdateProfileDto } from '../dto/requests/update-profile.dto';
 import { DataExportResponseDto } from '../dto/responses/data-export.response.dto';
 import { UserResponseDto } from '../dto/responses/user.response.dto';
@@ -83,6 +84,24 @@ export class UsersController {
     @Body() dto: SetAvatarDto,
   ): Promise<UserResponseDto> {
     return UserResponseDto.fromEntity(await this.users.setAvatar(user.id, dto.fileId));
+  }
+
+  @Patch('me/banner')
+  @ApiAuth()
+  @ApiOperation({
+    summary: 'Attach a confirmed file as the master’s cover banner',
+    description:
+      'Master role only. Same attach-flow as the avatar: presign, PUT the binary, then ' +
+      'attach a confirmed file with purpose BANNER. The previous banner is released.',
+  })
+  @ApiOkResponse({ type: UserResponseDto })
+  @ApiNotFoundResponse({ description: 'FILE_NOT_FOUND', type: ErrorResponseDto })
+  @ApiConflictResponse({ description: 'FILE_NOT_CONFIRMED', type: ErrorResponseDto })
+  async setBanner(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetBannerDto,
+  ): Promise<UserResponseDto> {
+    return UserResponseDto.fromEntity(await this.users.setBanner(user.id, dto.fileId));
   }
 
   @Get('me/export')
