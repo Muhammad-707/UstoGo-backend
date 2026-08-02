@@ -358,6 +358,29 @@ describe('Chat (e2e)', () => {
         ),
       );
 
+      // `connect` fires as soon as the Engine.IO handshake completes, but
+      // `ChatGateway.handleConnection` is still awaiting the account re-read and
+      // `idsFor` afterwards — a socket can look connected on the client while the
+      // server has not yet joined its conversation rooms, and an emit in that
+      // window is lost forever. That race turned this test into a hang exactly
+      // when the machine was slowest. Round-trip `typing` (the one event the
+      // gateway handles directly) until the master has it: once the master's own
+      // join has landed, the `message:new` emit below cannot be dropped either.
+      // This is a retry loop, not a sleep — it takes as long as the machine needs.
+      await new Promise<void>((resolve, reject) => {
+        masterSocket.on('typing', () => resolve());
+        let attempts = 100;
+        const ping = () => {
+          clientSocket.emit('typing', { conversationId: conversation.body.id });
+          if (--attempts <= 0) {
+            reject(new Error('typing barrier: the master never joined its rooms'));
+          } else {
+            setTimeout(ping, 100);
+          }
+        };
+        ping();
+      });
+
       const masterReceived = new Promise<{ conversationId: string }>((resolve) => {
         masterSocket.on('message:new', (payload: { conversationId: string }) => resolve(payload));
       });
@@ -373,7 +396,12 @@ describe('Chat (e2e)', () => {
         .send({ body: 'hello from the client' })
         .expect(201);
 
-      const received = await masterReceived;
+      const received = await Promise.race([
+        masterReceived,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('message:new never arrived')), 15_000),
+        ),
+      ]);
       expect(received.conversationId).toBe(conversation.body.id);
 
       await new Promise((resolve) => setTimeout(resolve, 300));
