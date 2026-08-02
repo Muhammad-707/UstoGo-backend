@@ -25,6 +25,9 @@ const UNIQUE_TARGET_CODES: ReadonlyArray<readonly [RegExp, ErrorCode, string]> =
 /** PostgreSQL SQLSTATE for an exclusion-constraint violation. */
 const EXCLUSION_VIOLATION = '23P01';
 
+/** PostgreSQL SQLSTATEs for a deadlock and a serialization failure. */
+const WRITE_CONFLICT_SQLSTATE = /"40P01"|"40001"/;
+
 const targetOf = (error: Prisma.PrismaClientKnownRequestError): string => {
   const { target } = error.meta ?? {};
   if (Array.isArray(target)) {
@@ -42,6 +45,40 @@ const mapUniqueViolation = (error: Prisma.PrismaClientKnownRequestError): Mapped
     code: match?.[1] ?? ERROR_CODE.CONFLICT,
     message: match?.[2] ?? 'That value is already in use.',
   };
+};
+
+/**
+ * Raw Postgres errors (`PrismaClientUnknownRequestError`) carry the SQLSTATE only in
+ * their message — no Prisma code to switch on. Two of them are known to the API.
+ *
+ * The GiST exclusion constraint from DATABASE.md §7.1 is the last line of defence
+ * against double-booking; without the first branch the single most important
+ * integrity guarantee in the system would reach the client as a 500 rather than a
+ * meaningful BOOKING_OVERLAP. A deadlock or serialization failure is the same
+ * condition `TransactionManager` retries as `P2034`; the second branch is what a
+ * client sees when the retries are exhausted — a retryable conflict, not a 500, and
+ * never the raw Postgres text the mapper exists to keep out.
+ */
+const mapUnknownRequestError = (
+  error: Prisma.PrismaClientUnknownRequestError,
+): MappedPrismaError | null => {
+  if (error.message.includes(EXCLUSION_VIOLATION)) {
+    return {
+      status: HttpStatus.CONFLICT,
+      code: ERROR_CODE.BOOKING_OVERLAP,
+      message: 'That time slot was taken by another booking.',
+    };
+  }
+
+  if (WRITE_CONFLICT_SQLSTATE.test(error.message)) {
+    return {
+      status: HttpStatus.CONFLICT,
+      code: ERROR_CODE.CONFLICT,
+      message: 'The operation conflicted with a concurrent change. Retry after re-reading.',
+    };
+  }
+
+  return null;
 };
 
 /**
@@ -86,19 +123,14 @@ export const mapPrismaError = (error: unknown): MappedPrismaError | null => {
     }
   }
 
-  // The GiST exclusion constraint from DATABASE.md §7.1 is the last line of defence
-  // against double-booking. Prisma surfaces it as an unknown raw error, so without this
-  // branch the single most important integrity guarantee in the system would reach the
-  // client as a 500 rather than a meaningful BOOKING_OVERLAP.
-  if (
-    error instanceof Prisma.PrismaClientUnknownRequestError &&
-    error.message.includes(EXCLUSION_VIOLATION)
-  ) {
-    return {
-      status: HttpStatus.CONFLICT,
-      code: ERROR_CODE.BOOKING_OVERLAP,
-      message: 'That time slot was taken by another booking.',
-    };
+  // A deadlock or serialization failure inside an interactive transaction reaches
+  // the filter as an unknown raw error with the SQLSTATE in the message — the same
+  // condition `TransactionManager` retries as `P2034` (see `mapUnknownRequestError`).
+  if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+    const unknown = mapUnknownRequestError(error);
+    if (unknown !== null) {
+      return unknown;
+    }
   }
 
   if (

@@ -43,6 +43,43 @@ describe('TransactionManager', () => {
       expect(transaction).toHaveBeenCalledTimes(2);
     });
 
+    // Prisma surfaces Postgres's deadlock and serialization failure inside an
+    // interactive transaction as an unknown request error with the SQLSTATE in the
+    // message rather than a P2034 code. Retrying it is what turns the concurrent
+    // accept race (BOOKINGS.md §7.1) into the loser's 409 instead of a 500.
+    it.each(['40P01', '40001'])(
+      'retries a %s SQLSTATE surfaced as an unknown raw error',
+      async (sqlstate) => {
+        const deadlock = (): Prisma.PrismaClientUnknownRequestError =>
+          new Prisma.PrismaClientUnknownRequestError(
+            `Error occurred during query execution:\nConnectorError(ConnectorError { kind: QueryError(PostgresError { code: "${sqlstate}", message: "deadlock detected", severity: "ERROR" }) })`,
+            { clientVersion: 'test' },
+          );
+        const transaction = jest
+          .fn()
+          .mockRejectedValueOnce(deadlock())
+          .mockResolvedValueOnce('committed');
+
+        await expect(
+          managerWith(transaction).run(() => Promise.resolve('committed')),
+        ).resolves.toBe('committed');
+        expect(transaction).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it('does not retry an unknown raw error without a write-conflict SQLSTATE', async () => {
+      const transaction = jest.fn().mockRejectedValue(
+        new Prisma.PrismaClientUnknownRequestError('something else went wrong', {
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(
+        managerWith(transaction).run(() => Promise.resolve('never')),
+      ).rejects.toBeInstanceOf(Prisma.PrismaClientUnknownRequestError);
+      expect(transaction).toHaveBeenCalledTimes(1);
+    });
+
     it('gives up after three attempts and rethrows the conflict', async () => {
       const transaction = jest.fn().mockRejectedValue(writeConflict());
 

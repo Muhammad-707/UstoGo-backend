@@ -68,6 +68,20 @@ describe('mapPrismaError', () => {
     });
   });
 
+  // TransactionManager retries these, but a client whose retries are exhausted still
+  // deserves a retryable conflict rather than a 500 with Postgres internals.
+  it('maps an exhausted deadlock to 409 CONFLICT', () => {
+    const raw = new Prisma.PrismaClientUnknownRequestError(
+      'Error occurred during query execution:\nConnectorError(ConnectorError { kind: QueryError(PostgresError { code: "40P01", message: "deadlock detected", severity: "ERROR" }) })',
+      { clientVersion: 'test' },
+    );
+
+    expect(mapPrismaError(raw)).toMatchObject({
+      status: HttpStatus.CONFLICT,
+      code: ERROR_CODE.CONFLICT,
+    });
+  });
+
   // The GiST exclusion constraint is the last line of defence against double-booking.
   // Without this branch it would surface as a 500 and tell the client nothing.
   it('maps a 23P01 exclusion violation to 409 BOOKING_OVERLAP', () => {
