@@ -6,6 +6,7 @@ import { AdminBookingsController } from './controllers/admin-bookings.controller
 import { BookingsController } from './controllers/bookings.controller';
 import { AdminBookingTransitionService } from './services/admin-booking-transition.service';
 import { BookingJobsService } from './services/booking-jobs.service';
+import { BookingStatsService } from './services/booking-stats.service';
 import { BookingTransitionService } from './services/booking-transition.service';
 import { BookingsService } from './services/bookings.service';
 
@@ -18,12 +19,14 @@ import { BookingsService } from './services/bookings.service';
     BookingTransitionService,
     AdminBookingTransitionService,
     BookingJobsService,
+    BookingStatsService,
   ],
   exports: [
     BookingsService,
     BookingTransitionService,
     AdminBookingTransitionService,
     BookingJobsService,
+    BookingStatsService,
   ],
 })
 export class BookingsModule {}

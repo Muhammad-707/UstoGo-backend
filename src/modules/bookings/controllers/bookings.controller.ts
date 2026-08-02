@@ -26,6 +26,8 @@ import { ListBookingsQueryDto } from '../dto/requests/list-bookings-query.dto';
 import { RejectBookingDto } from '../dto/requests/reject-booking.dto';
 import { BookingDetailResponseDto } from '../dto/responses/booking-detail.response.dto';
 import { BookingResponseDto } from '../dto/responses/booking.response.dto';
+import { MasterStatsResponseDto } from '../dto/responses/master-stats.response.dto';
+import { BookingStatsService } from '../services/booking-stats.service';
 import { BookingTransitionService } from '../services/booking-transition.service';
 import { BookingsService } from '../services/bookings.service';
 
@@ -37,6 +39,7 @@ export class BookingsController {
   constructor(
     private readonly bookings: BookingsService,
     private readonly transitions: BookingTransitionService,
+    private readonly bookingStats: BookingStatsService,
   ) {}
 
   @Post()
@@ -94,6 +97,17 @@ export class BookingsController {
       query.page,
       query.limit,
     );
+  }
+
+  @Get('me/stats')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({
+    summary: 'Dashboard analytics for the caller',
+    description: 'Total earnings, a 14-day earnings trend, status breakdown and completion rate.',
+  })
+  @ApiOkResponse({ type: MasterStatsResponseDto })
+  async stats(@CurrentUser() user: AuthenticatedUser): Promise<MasterStatsResponseDto> {
+    return this.bookingStats.getMasterStats(user.id);
   }
 
   @Get(':id')
