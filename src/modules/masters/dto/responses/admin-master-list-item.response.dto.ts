@@ -38,4 +38,13 @@ export class AdminMasterListItemResponseDto {
 
   @ApiProperty()
   createdAt!: Date;
+
+  @ApiProperty({ example: 42 })
+  completedBookingsCount!: number;
+
+  @ApiProperty({
+    example: '3400.00',
+    description: 'Sum of price for all COMPLETED bookings, ever.',
+  })
+  totalEarnings!: string;
 }

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApprovalStatus } from '@prisma/client';
 
 /** API.md §7 — never email, phone or address. */
 export class MasterPublicResponseDto {
@@ -57,4 +58,15 @@ export class MasterPublicResponseDto {
     description: 'Portfolio image file ids, in display order (B-45).',
   })
   portfolioImageFileIds!: string[];
+
+  @ApiProperty({
+    description:
+      'Always true on /masters (search) and GET /masters/:id, which only ever return ' +
+      'APPROVED + active masters. Meaningful on GET /favorites, which does not filter — ' +
+      'a favorited master can go inactive or lose approval without disappearing silently.',
+  })
+  isActive!: boolean;
+
+  @ApiProperty({ enum: ApprovalStatus })
+  approvalStatus!: ApprovalStatus;
 }

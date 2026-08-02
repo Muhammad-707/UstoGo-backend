@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ApprovalStatus, Prisma } from '@prisma/client';
+import { ApprovalStatus, BookingStatus, Prisma } from '@prisma/client';
 import type { WorkingDay } from '@prisma/client';
 
 import { FilesService } from '@modules/files/services/files.service';
@@ -42,7 +42,10 @@ const ADMIN_MASTER_INCLUDE = {
 
 type AdminMasterRow = Prisma.MasterProfileGetPayload<{ include: typeof ADMIN_MASTER_INCLUDE }>;
 
-const toAdminMasterListItemDto = (row: AdminMasterRow): AdminMasterListItemResponseDto => {
+const toAdminMasterListItemDto = (
+  row: AdminMasterRow,
+  totalEarnings: string,
+): AdminMasterListItemResponseDto => {
   const dto = new AdminMasterListItemResponseDto();
   const prices = row.services.map((service) => service.price);
 
@@ -56,6 +59,8 @@ const toAdminMasterListItemDto = (row: AdminMasterRow): AdminMasterListItemRespo
   dto.isActive = row.isActive;
   dto.ratingAverage = row.ratingAverage.toFixed(2);
   dto.ratingCount = row.ratingCount;
+  dto.completedBookingsCount = row.completedBookingsCount;
+  dto.totalEarnings = totalEarnings;
   dto.priceFrom =
     prices.length === 0
       ? null
@@ -96,6 +101,8 @@ export const toMasterPublicDto = (
       : prices.reduce((min, price) => (price < min ? price : min)).toFixed(2);
   dto.hasCertificates = row.certificates.length > 0;
   dto.portfolioImageFileIds = row.portfolioImages.map((image) => image.fileId);
+  dto.isActive = row.isActive;
+  dto.approvalStatus = row.approvalStatus;
 
   return dto;
 };
@@ -321,6 +328,21 @@ export class MastersSearchService {
       this.prisma.db.masterProfile.count({ where }),
     ]);
 
-    return { items: rows.map(toAdminMasterListItemDto), total };
+    const earningsByMaster = await this.prisma.db.booking.groupBy({
+      by: ['masterProfileId'],
+      where: {
+        masterProfileId: { in: rows.map((row) => row.id) },
+        status: BookingStatus.COMPLETED,
+      },
+      _sum: { price: true },
+    });
+    const earningsById = new Map(
+      earningsByMaster.map((row) => [row.masterProfileId, row._sum.price?.toFixed(2) ?? '0.00']),
+    );
+
+    return {
+      items: rows.map((row) => toAdminMasterListItemDto(row, earningsById.get(row.id) ?? '0.00')),
+      total,
+    };
   }
 }

@@ -13,6 +13,7 @@ const ROW = {
   isActive: false,
   ratingAverage: { toFixed: (n: number) => (0).toFixed(n) },
   ratingCount: 0,
+  completedBookingsCount: 0,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   city: { name: 'Dushanbe' },
   categories: [{ category: { name: 'Plumbing' } }],
@@ -41,6 +42,7 @@ const build = (
     count?: jest.Mock;
     findFirst?: jest.Mock;
     serviceFindMany?: jest.Mock;
+    bookingGroupBy?: jest.Mock;
   } = {},
 ) => {
   const masterProfileDelegate = {
@@ -52,8 +54,15 @@ const build = (
   const serviceDelegate = {
     findMany: overrides.serviceFindMany ?? jest.fn().mockResolvedValue([]),
   };
+  const bookingDelegate = {
+    groupBy: overrides.bookingGroupBy ?? jest.fn().mockResolvedValue([]),
+  };
   const prisma = {
-    db: { masterProfile: masterProfileDelegate, service: serviceDelegate },
+    db: {
+      masterProfile: masterProfileDelegate,
+      service: serviceDelegate,
+      booking: bookingDelegate,
+    },
   } as unknown as PrismaService;
 
   const files = {
@@ -84,8 +93,22 @@ describe('MastersSearchService.adminSearch', () => {
         approvalStatus: ApprovalStatus.PENDING,
         isActive: false,
         priceFrom: '100.00',
+        completedBookingsCount: 0,
+        totalEarnings: '0.00',
       }),
     ]);
+  });
+
+  it('attaches completed-booking earnings from a batched groupBy', async () => {
+    const { service } = build({
+      bookingGroupBy: jest
+        .fn()
+        .mockResolvedValue([{ masterProfileId: 'mp-1', _sum: { price: 250 } }]),
+    });
+
+    const { items } = await service.adminSearch({ page: 1, limit: 20, skip: 0 });
+
+    expect(items[0]?.totalEarnings).toBe('250.00');
   });
 
   it('filters by approvalStatus, status, cityId and categoryId', async () => {
