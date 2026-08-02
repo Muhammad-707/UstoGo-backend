@@ -1,6 +1,7 @@
 import { AuditAction } from '@prisma/client';
 import request from 'supertest';
 
+import { pollAuditLogs } from '../helpers/audit.helper';
 import { createAdmin, createClient } from '../helpers/auth.helper';
 import { describeAuthzMatrix } from '../helpers/authz-matrix.helper';
 import { createTestApp, truncateAll, type TestApp } from '../helpers/test-app.factory';
@@ -84,7 +85,7 @@ describe('Categories (e2e)', () => {
 
       expect(response.body).toMatchObject({ slug: 'plumbing', depth: 1 });
 
-      const logs = await app.prisma.db.auditLog.findMany({ where: { entityId: response.body.id } });
+      const logs = await pollAuditLogs(app.prisma, response.body.id);
       expect(logs).toHaveLength(1);
       expect(logs[0]?.action).toBe(AuditAction.CATEGORY_CREATED);
       expect(logs[0]?.actorUserId).toBe(admin.id);

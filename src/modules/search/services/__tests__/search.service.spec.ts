@@ -135,4 +135,122 @@ describe('SearchService', () => {
     expect(dataSql).toContain('city_id');
     expect(dataSql).toContain('ORDER BY');
   });
+
+  it('constrains by min and max price when either is given', async () => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, minPrice: 10, maxPrice: 100 });
+
+    const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(dataSql).toContain('s.price >= ');
+    expect(dataSql).toContain('s.price <= ');
+  });
+
+  it('constrains only by min price when max is absent', async () => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, minPrice: 10 });
+
+    const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(dataSql).toContain('s.price >= ');
+    expect(dataSql).not.toContain('s.price <=');
+  });
+
+  it('filters to masters available on a given date', async () => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, availableOn: '2026-08-05' });
+
+    const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(dataSql).toContain('schedule_exceptions');
+    expect(dataSql).toContain('working_days');
+  });
+
+  it('filters by certificate presence when requested', async () => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, hasCertificates: true });
+
+    const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(dataSql).toContain('certificates');
+  });
+
+  it('applies the full-text search condition when a term is given', async () => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, search: 'plumber' });
+
+    const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(dataSql).toContain('search_vector');
+    expect(dataSql).toContain('plainto_tsquery');
+  });
+
+  it('constrains only by max price when min is absent', async () => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, maxPrice: 500 });
+
+    const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(dataSql).toContain('s.price <= ');
+    expect(dataSql).not.toContain('s.price >= ');
+  });
+
+  it('reports no count row as a total of zero', async () => {
+    const queryRaw = jest.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    const { service } = build({ queryRaw });
+
+    const result = await service.search({ page: 1, limit: 20, skip: 0 });
+
+    expect(result.total).toBe(0);
+  });
+
+  it('stops at the level-one descendants when a category has no children', async () => {
+    const categoryFindMany = jest.fn().mockResolvedValueOnce([]);
+    const { service } = build({ categoryFindMany });
+
+    await service.search({ page: 1, limit: 20, skip: 0, categoryId: 'leaf-1' });
+
+    expect(categoryFindMany).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [MasterSort.CREATED_DESC, 'created_at DESC'],
+    [MasterSort.PRICE_DESC, 'min_price DESC'],
+    [MasterSort.RATING_DESC, 'rating_average DESC'],
+  ])('orders by %s', async (sort, fragment) => {
+    const queryRaw = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: BigInt(0) }]);
+    const { service } = build({ queryRaw });
+
+    await service.search({ page: 1, limit: 20, skip: 0, sort });
+
+    const sql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+    expect(sql).toContain(fragment);
+  });
 });

@@ -1,6 +1,7 @@
 import { AuditAction } from '@prisma/client';
 import request from 'supertest';
 
+import { pollAuditLogs } from '../helpers/audit.helper';
 import { createAdmin, createClient } from '../helpers/auth.helper';
 import { describeAuthzMatrix } from '../helpers/authz-matrix.helper';
 import { createTestApp, truncateAll, type TestApp } from '../helpers/test-app.factory';
@@ -23,27 +24,6 @@ const seedConfirmedImage = async (
       isConfirmed: true,
     },
   });
-
-/**
- * `AuditInterceptor` writes the row after the response has already been sent (a
- * fire-and-forget `tap`, by design — the caller must not wait on a side effect of
- * their own request). A test asserting on that row immediately after the response
- * is therefore racing it; this polls briefly instead of asserting on the first read.
- */
-const auditLogsFor = async (
-  prisma: TestApp['prisma'],
-  entityId: string,
-): Promise<{ action: string; actorUserId: string }[]> => {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const logs = await prisma.db.auditLog.findMany({ where: { entityId } });
-    if (logs.length > 0) {
-      return logs;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-
-  return [];
-};
 
 const seedBannerFixture = async (prisma: TestApp['prisma'], adminUserId: string) => {
   const image = await seedConfirmedImage(prisma, adminUserId);
@@ -172,7 +152,7 @@ describe('Banners (e2e)', () => {
         isActive: true,
       });
 
-      const logs = await auditLogsFor(app.prisma, response.body.id);
+      const logs = await pollAuditLogs(app.prisma, response.body.id);
       expect(logs).toHaveLength(1);
       expect(logs[0]?.action).toBe(AuditAction.BANNER_CREATED);
       expect(logs[0]?.actorUserId).toBe(admin.id);
@@ -344,7 +324,7 @@ describe('Banners (e2e)', () => {
 
       expect(response.body).toMatchObject({ title: 'Updated', isActive: false });
 
-      const logs = await auditLogsFor(app.prisma, banner.id);
+      const logs = await pollAuditLogs(app.prisma, banner.id);
       expect(logs.some((log) => log.action === AuditAction.BANNER_UPDATED)).toBe(true);
     });
 

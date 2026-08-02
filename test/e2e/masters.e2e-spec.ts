@@ -1,5 +1,6 @@
 import request from 'supertest';
 
+import { pollAuditLogs } from '../helpers/audit.helper';
 import { anyCityId, createAdmin, createPendingMaster } from '../helpers/auth.helper';
 import { createTestApp, truncateAll, type TestApp } from '../helpers/test-app.factory';
 
@@ -64,7 +65,7 @@ describe('Masters (e2e)', () => {
 
     expect(approved.body.approvalStatus).toBe('APPROVED');
 
-    const audit = await app.prisma.db.auditLog.findMany({ where: { entityId: masterProfileId } });
+    const audit = await pollAuditLogs(app.prisma, masterProfileId);
     expect(audit).toHaveLength(1);
     expect(audit[0]?.action).toBe('MASTER_APPROVED');
 
