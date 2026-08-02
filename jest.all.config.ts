@@ -14,9 +14,17 @@ import e2e from './jest.e2e.config';
  *
  * Jest merges coverage across projects natively, which is why this is a `projects`
  * config rather than two runs and a report merge.
+ *
+ * `testTimeout` and `forceExit` are global options — jest silently ignores the
+ * per-project copies the e2e config carries, so a merged run falls back to the 5s
+ * default and the socket tests time out exactly when the machine is busiest. They
+ * are declared here instead, which is what makes a merged run behave like the
+ * suites it merges.
  */
 const config: Config = {
   rootDir: '.',
+  testTimeout: 60_000,
+  forceExit: true,
   projects: [
     { displayName: 'unit', ...unit },
     { displayName: 'e2e', ...e2e },
