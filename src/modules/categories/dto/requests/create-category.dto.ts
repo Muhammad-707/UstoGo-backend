@@ -5,10 +5,22 @@ import { IsInt, IsOptional, IsString, IsUUID, Length, Matches, MaxLength } from 
 import { SLUG_PATTERN } from '../../constants/category.constants';
 
 export class CreateCategoryDto {
-  @ApiProperty({ minLength: 2, maxLength: 150 })
+  @ApiProperty({ minLength: 2, maxLength: 150, description: 'English (fallback) name.' })
   @IsString()
   @Length(2, 150)
   name!: string;
+
+  @ApiPropertyOptional({ minLength: 2, maxLength: 150, description: 'Tajik name.' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 150)
+  nameTj?: string;
+
+  @ApiPropertyOptional({ minLength: 2, maxLength: 150, description: 'Russian name.' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 150)
+  nameRu?: string;
 
   @ApiProperty({ example: 'plumbing', description: 'Unique, immutable once created.' })
   @IsString()
@@ -21,11 +33,23 @@ export class CreateCategoryDto {
   @IsUUID('4')
   parentId?: string;
 
-  @ApiPropertyOptional({ maxLength: 2000 })
+  @ApiPropertyOptional({ maxLength: 2000, description: 'English (fallback) description.' })
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @ApiPropertyOptional({ maxLength: 2000, description: 'Tajik description.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  descriptionTj?: string;
+
+  @ApiPropertyOptional({ maxLength: 2000, description: 'Russian description.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  descriptionRu?: string;
 
   @ApiPropertyOptional({
     format: 'uuid',

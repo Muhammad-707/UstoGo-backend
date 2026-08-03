@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { ERROR_CODE } from '@common/constants/error-codes.constant';
 import { ResourceNotFoundException } from '@common/exceptions/generic.exceptions';
+import type { Locale } from '@common/utils/locale.util';
 import type { MasterPublicResponseDto } from '@modules/masters/dto/responses/master-public.response.dto';
 import { MasterNotFoundException } from '@modules/masters/exceptions/masters.exceptions';
 import {
@@ -24,7 +25,7 @@ export class FavoritesService {
     return clientProfile.id;
   }
 
-  async list(userId: string): Promise<MasterPublicResponseDto[]> {
+  async list(userId: string, locale: Locale = 'en'): Promise<MasterPublicResponseDto[]> {
     const clientProfileId = await this.clientProfileId(userId);
 
     const favorites = await this.prisma.db.favorite.findMany({
@@ -33,7 +34,7 @@ export class FavoritesService {
       include: { masterProfile: { select: MASTER_PUBLIC_SELECT } },
     });
 
-    return favorites.map((favorite) => toMasterPublicDto(favorite.masterProfile, true));
+    return favorites.map((favorite) => toMasterPublicDto(favorite.masterProfile, true, locale));
   }
 
   /** Idempotent — adding an already-favorited master is a no-op. */

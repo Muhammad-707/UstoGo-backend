@@ -434,6 +434,9 @@ model Service {
 model City {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @unique @db.VarChar(150)
+  /// Tajik/Russian display names; null falls back to `name` (English).
+  nameTj    String?  @map("name_tj") @db.VarChar(150)
+  nameRu    String?  @map("name_ru") @db.VarChar(150)
   slug      String   @unique @db.VarChar(150)
   region    String?  @db.VarChar(150)
   latitude  Decimal? @db.Decimal(9, 6)
@@ -457,7 +460,10 @@ model City {
 model District {
   id        String   @id @default(uuid()) @db.Uuid
   cityId    String   @map("city_id") @db.Uuid
+  /// Seeded in Tajik (the source data), so `name` doubles as the `tj` display value;
+  /// `nameRu` is an optional override, null falls back to `name`.
   name      String   @db.VarChar(150)
+  nameRu    String?  @map("name_ru") @db.VarChar(150)
   slug      String   @db.VarChar(150)
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -559,16 +565,16 @@ model TwoFactorChallenge {
 /// requests carrying the same key race on *inserting* this row rather than on running
 /// the handler twice.
 model IdempotencyKey {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @map("user_id") @db.Uuid
-  key            String    @db.VarChar(200)
-  method         String    @db.VarChar(10)
-  path           String    @db.VarChar(300)
-  requestHash    String    @map("request_hash") @db.VarChar(64)
-  responseStatus Int?      @map("response_status")
-  responseBody   Json?     @map("response_body")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  key            String   @db.VarChar(200)
+  method         String   @db.VarChar(10)
+  path           String   @db.VarChar(300)
+  requestHash    String   @map("request_hash") @db.VarChar(64)
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -649,18 +655,23 @@ model AuditLog {
 /// depth check never has to walk the tree at read time. `slug` has no update path in
 /// code — immutable once created (FEATURES.md › F-05, MODULES.md › CategoriesModule).
 model Category {
-  id          String    @id @default(uuid()) @db.Uuid
-  parentId    String?   @map("parent_id") @db.Uuid
-  slug        String    @unique @db.VarChar(100)
-  name        String    @db.VarChar(150)
-  description String?
-  iconFileId  String?   @map("icon_file_id") @db.Uuid
-  depth       Int       @db.SmallInt
-  sortOrder   Int       @default(0) @map("sort_order")
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+  id            String    @id @default(uuid()) @db.Uuid
+  parentId      String?   @map("parent_id") @db.Uuid
+  slug          String    @unique @db.VarChar(100)
+  name          String    @db.VarChar(150)
+  /// Tajik/Russian display copy; null falls back to `name`/`description` (English).
+  nameTj        String?   @map("name_tj") @db.VarChar(150)
+  nameRu        String?   @map("name_ru") @db.VarChar(150)
+  description   String?
+  descriptionTj String?   @map("description_tj")
+  descriptionRu String?   @map("description_ru")
+  iconFileId    String?   @map("icon_file_id") @db.Uuid
+  depth         Int       @db.SmallInt
+  sortOrder     Int       @default(0) @map("sort_order")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   parent   Category?        @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
   children Category[]       @relation("CategoryTree")
@@ -687,39 +698,39 @@ model Category {
 /// the `SERIALIZABLE` transaction in `BookingsService.accept` is the application-layer
 /// one — both exist, and either alone would be insufficient.
 model Booking {
-  id                 String        @id @default(uuid()) @db.Uuid
-  bookingNumber      String        @unique @map("booking_number") @db.VarChar(20)
-  clientProfileId    String        @map("client_profile_id") @db.Uuid
-  masterProfileId    String        @map("master_profile_id") @db.Uuid
-  serviceId          String        @map("service_id") @db.Uuid
-  cityId             String?       @map("city_id") @db.Uuid
-  status             BookingStatus @default(PENDING)
-  scheduledAt        DateTime      @map("scheduled_at") @db.Timestamptz(3)
-  endsAt             DateTime      @map("ends_at") @db.Timestamptz(3)
-  durationMinutes    Int           @map("duration_minutes")
-  serviceTitle       String        @map("service_title") @db.VarChar(200)
-  price              Decimal       @db.Decimal(12, 2)
-  priceType          PriceType     @map("price_type")
-  currency           String        @db.Char(3)
-  addressLine        String        @map("address_line") @db.VarChar(500)
-  addressDistrict    String        @map("address_district") @db.VarChar(150)
-  contactPhone       String?       @map("contact_phone") @db.VarChar(20)
-  latitude           Decimal?      @db.Decimal(9, 6)
-  longitude          Decimal?      @db.Decimal(9, 6)
-  clientNote         String?       @map("client_note")
-  acceptedAt         DateTime?     @map("accepted_at") @db.Timestamptz(3)
-  startedAt          DateTime?     @map("started_at") @db.Timestamptz(3)
-  completedAt        DateTime?     @map("completed_at") @db.Timestamptz(3)
-  cancelledAt        DateTime?     @map("cancelled_at") @db.Timestamptz(3)
-  cancellationReason String?       @map("cancellation_reason") @db.VarChar(500)
-  cancelledByType    ActorType?    @map("cancelled_by_type")
-  isLateCancellation Boolean       @default(false) @map("is_late_cancellation")
+  id                    String        @id @default(uuid()) @db.Uuid
+  bookingNumber         String        @unique @map("booking_number") @db.VarChar(20)
+  clientProfileId       String        @map("client_profile_id") @db.Uuid
+  masterProfileId       String        @map("master_profile_id") @db.Uuid
+  serviceId             String        @map("service_id") @db.Uuid
+  cityId                String?       @map("city_id") @db.Uuid
+  status                BookingStatus @default(PENDING)
+  scheduledAt           DateTime      @map("scheduled_at") @db.Timestamptz(3)
+  endsAt                DateTime      @map("ends_at") @db.Timestamptz(3)
+  durationMinutes       Int           @map("duration_minutes")
+  serviceTitle          String        @map("service_title") @db.VarChar(200)
+  price                 Decimal       @db.Decimal(12, 2)
+  priceType             PriceType     @map("price_type")
+  currency              String        @db.Char(3)
+  addressLine           String        @map("address_line") @db.VarChar(500)
+  addressDistrict       String        @map("address_district") @db.VarChar(150)
+  contactPhone          String?       @map("contact_phone") @db.VarChar(20)
+  latitude              Decimal?      @db.Decimal(9, 6)
+  longitude             Decimal?      @db.Decimal(9, 6)
+  clientNote            String?       @map("client_note")
+  acceptedAt            DateTime?     @map("accepted_at") @db.Timestamptz(3)
+  startedAt             DateTime?     @map("started_at") @db.Timestamptz(3)
+  completedAt           DateTime?     @map("completed_at") @db.Timestamptz(3)
+  cancelledAt           DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason    String?       @map("cancellation_reason") @db.VarChar(500)
+  cancelledByType       ActorType?    @map("cancelled_by_type")
+  isLateCancellation    Boolean       @default(false) @map("is_late_cancellation")
   /// Set once on the client's first click of the master's WhatsApp link (P0) — the
   /// analytics signal that a client actually reached out off-platform.
-  whatsappLinkClickedAt DateTime?   @map("whatsapp_link_clicked_at") @db.Timestamptz(3)
-  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  whatsappLinkClickedAt DateTime?     @map("whatsapp_link_clicked_at") @db.Timestamptz(3)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
   clientProfile ClientProfile          @relation(fields: [clientProfileId], references: [id], onDelete: Restrict)
   masterProfile MasterProfile          @relation(fields: [masterProfileId], references: [id], onDelete: Restrict)

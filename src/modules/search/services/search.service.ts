@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import type { Locale } from '@common/utils/locale.util';
 import {
   MasterSort,
   type MasterSearchQueryDto,
@@ -31,6 +32,7 @@ export class SearchService {
 
   async search(
     query: MasterSearchQueryDto,
+    locale: Locale = 'en',
   ): Promise<{ items: MasterPublicResponseDto[]; total: number }> {
     const conditions = await this.conditionsFor(query);
     const orderBy = this.orderByFor(query.sort);
@@ -83,7 +85,7 @@ export class SearchService {
     const items = ids
       .map((id) => byId.get(id))
       .filter((row): row is MasterRow => row !== undefined)
-      .map((row) => toMasterPublicDto(row, true));
+      .map((row) => toMasterPublicDto(row, true, locale));
 
     await this.masters.mintAvatarUrls(items);
 

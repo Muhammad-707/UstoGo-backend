@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ApprovalStatus, BookingStatus, Prisma } from '@prisma/client';
 import type { WorkingDay } from '@prisma/client';
 
+import type { Locale } from '@common/utils/locale.util';
 import { FilesService } from '@modules/files/services/files.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
@@ -85,7 +86,7 @@ export class MastersSearchService {
     private readonly files: FilesService,
   ) {}
 
-  async getPublicProfile(id: string): Promise<MasterPublicResponseDto> {
+  async getPublicProfile(id: string, locale: Locale = 'en'): Promise<MasterPublicResponseDto> {
     this.assertUuid(id);
 
     const row = await this.prisma.db.masterProfile.findFirst({
@@ -102,7 +103,7 @@ export class MastersSearchService {
       .update({ where: { id }, data: { profileViews: { increment: 1 } } })
       .catch(() => {});
 
-    return toMasterPublicDto(row, false);
+    return toMasterPublicDto(row, false, locale);
   }
 
   /**

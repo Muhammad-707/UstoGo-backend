@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { FilePurpose, type Category } from '@prisma/client';
 
+import type { Locale } from '@common/utils/locale.util';
 import { PrismaService } from '@prisma-lib/prisma.service';
 import { TransactionManager } from '@prisma-lib/transaction.manager';
 
@@ -10,7 +11,7 @@ import {
   MAX_CATEGORY_DEPTH,
   TREE_CACHE_TTL_MS,
 } from '../constants/category.constants';
-import { buildCategoryTree, type CategoryNode } from '../domain/category-tree.util';
+import { buildCategoryTree, toNodeFields, type CategoryNode } from '../domain/category-tree.util';
 import { reparent } from '../domain/subtree.util';
 import type { CreateCategoryDto } from '../dto/requests/create-category.dto';
 import type { UpdateCategoryDto } from '../dto/requests/update-category.dto';
@@ -23,6 +24,25 @@ import {
 } from '../exceptions/categories.exceptions';
 
 type TreeCache = { readonly expiresAt: number; readonly tree: CategoryNode[] };
+
+type TranslatableFields = {
+  name?: string;
+  nameTj?: string;
+  nameRu?: string;
+  description?: string;
+  descriptionTj?: string;
+  descriptionRu?: string;
+};
+
+/** Only the keys the caller actually sent — undefined stays undefined, never overwrites. */
+const translatablePatch = (dto: TranslatableFields): TranslatableFields => ({
+  ...(dto.name !== undefined ? { name: dto.name } : {}),
+  ...(dto.nameTj !== undefined ? { nameTj: dto.nameTj } : {}),
+  ...(dto.nameRu !== undefined ? { nameRu: dto.nameRu } : {}),
+  ...(dto.description !== undefined ? { description: dto.description } : {}),
+  ...(dto.descriptionTj !== undefined ? { descriptionTj: dto.descriptionTj } : {}),
+  ...(dto.descriptionRu !== undefined ? { descriptionRu: dto.descriptionRu } : {}),
+});
 
 @Injectable()
 export class CategoriesService {
@@ -59,7 +79,7 @@ export class CategoriesService {
   }
 
   /** Ancestors are root-first; the chain and the category itself must all be active. */
-  async getBySlug(slug: string): Promise<CategoryResponseDto> {
+  async getBySlug(slug: string, locale: Locale = 'en'): Promise<CategoryResponseDto> {
     const category = await this.prisma.db.category.findFirst({ where: { slug, isActive: true } });
 
     if (category === null) {
@@ -89,29 +109,17 @@ export class CategoriesService {
     });
 
     const node: CategoryNode = {
-      id: category.id,
-      slug: category.slug,
-      name: category.name,
-      description: category.description,
-      iconFileId: category.iconFileId,
-      depth: category.depth,
-      sortOrder: category.sortOrder,
+      ...toNodeFields(category),
       isLeaf: children.length === 0,
       children: children.map((child) => ({
-        id: child.id,
-        slug: child.slug,
-        name: child.name,
-        description: child.description,
-        iconFileId: child.iconFileId,
-        depth: child.depth,
-        sortOrder: child.sortOrder,
+        ...toNodeFields(child),
         children: [],
         isLeaf: child._count.children === 0,
       })),
     };
 
-    const dto = CategoryResponseDto.fromNode(node);
-    dto.ancestors = ancestors.map((ancestor) => CategoryResponseDto.fromEntity(ancestor));
+    const dto = CategoryResponseDto.fromNode(node, locale);
+    dto.ancestors = ancestors.map((ancestor) => CategoryResponseDto.fromEntity(ancestor, locale));
 
     return dto;
   }
@@ -139,11 +147,11 @@ export class CategoriesService {
 
     const created = await this.prisma.db.category.create({
       data: {
+        ...translatablePatch(dto),
         name: dto.name,
         slug: dto.slug,
         depth,
         ...(dto.parentId !== undefined ? { parentId: dto.parentId } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.iconFileId !== undefined ? { iconFileId: dto.iconFileId } : {}),
         ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
       },
@@ -163,8 +171,7 @@ export class CategoriesService {
 
     const updated = await this.tx.run(async (tx) => {
       const data: Record<string, unknown> = {
-        ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...translatablePatch(dto),
         ...(dto.iconFileId !== undefined ? { iconFileId: dto.iconFileId } : {}),
         ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),

@@ -10,8 +10,10 @@ import { UserRole } from '@prisma/client';
 
 import { ApiAuth } from '@common/decorators/api-auth.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentLocale } from '@common/decorators/locale.decorator';
 import { ErrorResponseDto } from '@common/dto/error-response.dto';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
+import type { Locale } from '@common/utils/locale.util';
 import { MasterPublicResponseDto } from '@modules/masters/dto/responses/master-public.response.dto';
 
 import { FavoritesService } from '../services/favorites.service';
@@ -25,8 +27,11 @@ export class FavoritesController {
   @ApiAuth(UserRole.CLIENT)
   @ApiOperation({ summary: "The caller's saved masters" })
   @ApiOkResponse({ type: MasterPublicResponseDto, isArray: true })
-  async list(@CurrentUser() user: AuthenticatedUser): Promise<MasterPublicResponseDto[]> {
-    return this.favorites.list(user.id);
+  async list(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentLocale() locale: Locale,
+  ): Promise<MasterPublicResponseDto[]> {
+    return this.favorites.list(user.id, locale);
   }
 
   @Post(':masterId')

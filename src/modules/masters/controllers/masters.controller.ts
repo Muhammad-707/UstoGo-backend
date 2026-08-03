@@ -1,7 +1,9 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { CurrentLocale } from '@common/decorators/locale.decorator';
 import { Public } from '@common/decorators/public.decorator';
+import type { Locale } from '@common/utils/locale.util';
 
 import { MasterCertificatePublicResponseDto } from '../dto/responses/master-certificate-public.response.dto';
 import { MasterMediaResponseDto } from '../dto/responses/master-media.response.dto';
@@ -30,8 +32,11 @@ export class MastersController {
   @Public()
   @ApiOperation({ summary: 'A master’s public profile' })
   @ApiOkResponse({ type: MasterPublicResponseDto })
-  async byId(@Param('id') id: string): Promise<MasterPublicResponseDto> {
-    return this.search.getPublicProfile(id);
+  async byId(
+    @Param('id') id: string,
+    @CurrentLocale() locale: Locale,
+  ): Promise<MasterPublicResponseDto> {
+    return this.search.getPublicProfile(id, locale);
   }
 
   @Get(':id/media')

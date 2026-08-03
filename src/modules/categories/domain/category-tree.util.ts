@@ -10,7 +10,11 @@ export type CategoryRow = {
   readonly parentId: string | null;
   readonly slug: string;
   readonly name: string;
+  readonly nameTj: string | null;
+  readonly nameRu: string | null;
   readonly description: string | null;
+  readonly descriptionTj: string | null;
+  readonly descriptionRu: string | null;
   readonly iconFileId: string | null;
   readonly depth: number;
   readonly sortOrder: number;
@@ -19,6 +23,13 @@ export type CategoryRow = {
 export type CategoryNode = Omit<CategoryRow, 'parentId'> & {
   readonly children: readonly CategoryNode[];
   readonly isLeaf: boolean;
+};
+
+/** Strips `parentId` off a row — the shared shape of a leaf `CategoryNode`. */
+export const toNodeFields = (row: CategoryRow): Omit<CategoryNode, 'children' | 'isLeaf'> => {
+  const { parentId: _parentId, ...fields } = row;
+
+  return fields;
 };
 
 const bySortOrder = (rows: readonly CategoryRow[]): CategoryRow[] =>

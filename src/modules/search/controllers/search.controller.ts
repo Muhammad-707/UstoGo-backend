@@ -2,8 +2,10 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiPaginatedResponse } from '@common/decorators/api-paginated-response.decorator';
+import { CurrentLocale } from '@common/decorators/locale.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { PaginatedDto } from '@common/dto/paginated.dto';
+import type { Locale } from '@common/utils/locale.util';
 import { MasterSearchQueryDto } from '@modules/masters/dto/requests/master-search-query.dto';
 import { MasterPublicResponseDto } from '@modules/masters/dto/responses/master-public.response.dto';
 
@@ -21,8 +23,11 @@ export class SearchController {
     description: 'Public. Approved, active, non-deleted masters only (API.md §7).',
   })
   @ApiPaginatedResponse(MasterPublicResponseDto)
-  async list(@Query() query: MasterSearchQueryDto): Promise<PaginatedDto<MasterPublicResponseDto>> {
-    const { items, total } = await this.search.search(query);
+  async list(
+    @Query() query: MasterSearchQueryDto,
+    @CurrentLocale() locale: Locale,
+  ): Promise<PaginatedDto<MasterPublicResponseDto>> {
+    const { items, total } = await this.search.search(query, locale);
 
     return PaginatedDto.from(items, total, query.page, query.limit);
   }

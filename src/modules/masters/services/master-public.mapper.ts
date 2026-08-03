@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
 
+import { localize, type Locale } from '@common/utils/locale.util';
+
 import { stockAvatarUrlFor } from '../constants/stock-media.constants';
 import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 
@@ -27,8 +29,8 @@ export const MASTER_PUBLIC_SELECT = {
   // P0: the WhatsApp line rides every public projection.
   whatsappPhone: true,
   whatsappEnabled: true,
-  city: { select: { name: true } },
-  categories: { include: { category: { select: { name: true } } } },
+  city: { select: { name: true, nameTj: true, nameRu: true } },
+  categories: { include: { category: { select: { name: true, nameTj: true, nameRu: true } } } },
   services: { where: { isActive: true }, select: { price: true } },
   certificates: {
     where: { deletedAt: null, verifiedAt: { not: null } },
@@ -49,6 +51,7 @@ const BIO_PREVIEW_LENGTH = 200;
 export const toMasterPublicDto = (
   row: MasterRow,
   truncateBio: boolean,
+  locale: Locale = 'en',
 ): MasterPublicResponseDto => {
   const dto = new MasterPublicResponseDto();
   const prices = row.services.map((service) => service.price);
@@ -65,8 +68,10 @@ export const toMasterPublicDto = (
       : row.bio;
   dto.yearsOfExperience = row.yearsOfExperience;
   dto.serviceRadiusKm = row.serviceRadiusKm;
-  dto.cityName = row.city.name;
-  dto.categories = row.categories.map((entry) => entry.category.name);
+  dto.cityName = localize(row.city.name, row.city.nameTj, row.city.nameRu, locale);
+  dto.categories = row.categories.map((entry) =>
+    localize(entry.category.name, entry.category.nameTj, entry.category.nameRu, locale),
+  );
   dto.ratingAverage = row.ratingAverage.toFixed(2);
   dto.ratingCount = row.ratingCount;
   dto.completedBookingsCount = row.completedBookingsCount;

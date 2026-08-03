@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { City, District } from '@prisma/client';
 
+import { localize, type Locale } from '@common/utils/locale.util';
+
 import { DistrictResponseDto } from './district.response.dto';
 
 export type CityWithDistricts = City & { districts?: District[] };
@@ -24,17 +26,17 @@ export class CityResponseDto {
   })
   districts!: DistrictResponseDto[];
 
-  static fromEntity(city: CityWithDistricts): CityResponseDto {
+  static fromEntity(city: CityWithDistricts, locale: Locale = 'en'): CityResponseDto {
     return {
       id: city.id,
-      name: city.name,
+      name: localize(city.name, city.nameTj, city.nameRu, locale),
       slug: city.slug,
       region: city.region,
       latitude: city.latitude?.toString() ?? null,
       longitude: city.longitude?.toString() ?? null,
       districts: (city.districts ?? [])
         .filter((district) => district.isActive)
-        .map((district) => DistrictResponseDto.fromEntity(district)),
+        .map((district) => DistrictResponseDto.fromEntity(district, locale)),
     };
   }
 }
