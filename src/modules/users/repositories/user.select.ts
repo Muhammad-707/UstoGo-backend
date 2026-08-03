@@ -56,6 +56,9 @@ export const MASTER_PROFILE_SELECT = {
   ratingAverage: true,
   ratingCount: true,
   completedBookingsCount: true,
+  whatsappPhone: true,
+  whatsappEnabled: true,
+  whatsappChangedAt: true,
 } as const satisfies Prisma.MasterProfileSelect;
 
 /** One round trip for the user and whichever profile their role implies. */

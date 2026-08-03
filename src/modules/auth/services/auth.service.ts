@@ -117,6 +117,9 @@ export class AuthService {
           displayName: dto.displayName,
           cityId: dto.cityId,
           timezone: dto.timezone,
+          // P0: the registration phone *is* the WhatsApp number clients write to —
+          // the master can change it later via PATCH /users/me (24-hour cooldown).
+          whatsappPhone: dto.phone,
           ...(dto.bio !== undefined ? { bio: dto.bio } : {}),
           ...(dto.yearsOfExperience !== undefined
             ? { yearsOfExperience: dto.yearsOfExperience }

@@ -5,9 +5,9 @@ import { ResourceNotFoundException } from '@common/exceptions/generic.exceptions
 import type { MasterPublicResponseDto } from '@modules/masters/dto/responses/master-public.response.dto';
 import { MasterNotFoundException } from '@modules/masters/exceptions/masters.exceptions';
 import {
-  MASTER_PUBLIC_INCLUDE,
+  MASTER_PUBLIC_SELECT,
   toMasterPublicDto,
-} from '@modules/masters/services/masters-search.service';
+} from '@modules/masters/services/master-public.mapper';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
 /** A client's saved-for-later master list — no relation to bookings or reviews. */
@@ -30,7 +30,7 @@ export class FavoritesService {
     const favorites = await this.prisma.db.favorite.findMany({
       where: { clientProfileId },
       orderBy: { createdAt: 'desc' },
-      include: { masterProfile: { include: MASTER_PUBLIC_INCLUDE } },
+      include: { masterProfile: { select: MASTER_PUBLIC_SELECT } },
     });
 
     return favorites.map((favorite) => toMasterPublicDto(favorite.masterProfile, true));

@@ -15,6 +15,12 @@ export class AdminMasterListItemResponseDto {
   @ApiPropertyOptional({ nullable: true })
   phone!: string | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'The master’s WhatsApp number, regardless of whatsappEnabled.',
+  })
+  whatsappPhone!: string | null;
+
   @ApiProperty()
   cityName!: string;
 

@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
-**Last updated:** 2026-07-30
-**Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete).
+**Last updated:** 2026-08-03
+**Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete). Post-1.0.0: P0 (WhatsApp) landed 2026-08-03.
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -181,6 +181,7 @@ would ship its admin routes unaudited and need a retrofit.
 
 ## 🟡 Post-1.0.0: Frontend contract gaps
 
+- [x] **P0 — WhatsApp contact (2026-08-03)**: `whatsapp_phone`/`whatsapp_enabled`/`whatsapp_changed_at` on `MasterProfile`, `whatsapp_link_clicked_at` on `Booking`; registration phone adopted as initial WhatsApp number; `PATCH /users/me` change (E.164, 24 h cooldown, `422 WHATSAPP_CHANGE_COOLDOWN`) + on/off toggle; published on the public profile only while enabled, always in admin listing and (for the client) booking detail; `POST /bookings/:id/whatsapp-click` first-click analytics (client-owner-only, 404 for foreign); demo masters seeded with `+992…` numbers. Migration `20260803210000_add_whatsapp_contact` applied to the deployed Render/Neon DB (connectivity blocked `migrate deploy` locally; applied via `prisma db execute` + manual `_prisma_migrations` record). 1046 tests total (832 unit + 214 e2e). Note: Prisma 6 rejects scalars inside `include` at runtime (`IncludeOnScalar`) — the shared public projection is now `select`-based (`master-public.mapper.ts`, `MASTER_PUBLIC_SELECT`).
 - [x] Favorites (`GET/POST/DELETE /favorites`)
 - [x] B-45 Master portfolio/gallery (`masters/me/portfolio` CRUD + reorder, `PortfolioImage` model, `MasterPublicResponseDto.portfolioImageFileIds`)
 - [x] Search performance pass: split count/data in `SearchService` (parallel `Promise.all` instead of `COUNT(*) OVER()`), four additive indexes (`(approvalStatus, isActive, createdAt DESC)`, `(approvalStatus, isActive, ratingAverage DESC)`, `(approvalStatus, isActive, deletedAt)` covering count, `displayName` GIN trigram for the admin `ILIKE`). Measured at 50k masters: data query 39ms → 0.2ms, count 16ms → 6.1ms, admin `ILIKE` 0.5ms. Migration must be deployed to the Render database (`npm run prisma:migrate:deploy`)

@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsInt,
   IsOptional,
   IsString,
@@ -30,6 +31,8 @@ export const MASTER_ONLY_FIELDS = [
   'yearsOfExperience',
   'timezone',
   'serviceRadiusKm',
+  'whatsappPhone',
+  'whatsappEnabled',
 ] as const;
 
 /**
@@ -116,4 +119,26 @@ export class UpdateProfileDto {
   @Min(1)
   @Max(200)
   serviceRadiusKm?: number;
+
+  @ApiPropertyOptional({
+    example: '+992901234567',
+    description:
+      'Master only — the WhatsApp number clients write to. E.164. Changing it is ' +
+      'limited to once per 24 hours.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(E164, { message: 'whatsappPhone must be in E.164 format, for example +992901234567' })
+  @MaxLength(20)
+  @Transform(trim)
+  whatsappPhone?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Master only — when false, the WhatsApp number is hidden from public profiles ' +
+      'and booking pages.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
 }

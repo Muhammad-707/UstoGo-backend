@@ -41,6 +41,16 @@ const build = (
 };
 
 describe('AvailabilityService', () => {
+  // The service clips windows at the live `now` (availability-calculator.ts).
+  // Pin the clock to the start of the test day so slot assertions are deterministic.
+  beforeEach(() => {
+    jest.useFakeTimers({ now: new Date('2026-08-03T00:00:00.000Z') });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('rejects a range over 31 days before touching the database', async () => {
     const { service, mastersSearch } = build();
 

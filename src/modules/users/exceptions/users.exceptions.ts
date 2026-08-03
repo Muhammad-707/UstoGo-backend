@@ -38,3 +38,14 @@ export class FieldNotApplicableException extends AppException {
     );
   }
 }
+
+/** 422. P0 — a master may change their WhatsApp number at most once per 24 hours. */
+export class WhatsappChangeCooldownException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.WHATSAPP_CHANGE_COOLDOWN,
+      'WhatsApp number can only be changed once every 24 hours.',
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+  }
+}

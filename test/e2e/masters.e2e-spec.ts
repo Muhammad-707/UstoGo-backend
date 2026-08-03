@@ -1,7 +1,12 @@
 import request from 'supertest';
 
 import { pollAuditLogs } from '../helpers/audit.helper';
-import { anyCityId, createAdmin, createPendingMaster } from '../helpers/auth.helper';
+import {
+  anyCityId,
+  createAdmin,
+  createApprovedMaster,
+  createPendingMaster,
+} from '../helpers/auth.helper';
 import { createTestApp, truncateAll, type TestApp } from '../helpers/test-app.factory';
 
 describe('Masters (e2e)', () => {
@@ -76,6 +81,30 @@ describe('Masters (e2e)', () => {
       .get(`/api/v1/masters/${masterProfileId}`)
       .expect(200);
     expect(JSON.stringify(publicProfile.body)).not.toContain('email');
+  });
+
+  it('publishes the master’s WhatsApp number on the public profile and withholds it when disabled (P0)', async () => {
+    const cityId = await anyCityId(app.prisma);
+    const master = await createApprovedMaster(app, cityId);
+    const masterProfileId = await masterProfileIdFor(master.id);
+
+    const publicProfile = await request(app.server)
+      .get(`/api/v1/masters/${masterProfileId}`)
+      .expect(200);
+
+    expect(publicProfile.body.whatsappEnabled).toBe(true);
+    expect(publicProfile.body.whatsappPhone).toMatch(/^\+998/);
+
+    await request(app.server)
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${master.accessToken}`)
+      .send({ whatsappEnabled: false })
+      .expect(200);
+
+    const hidden = await request(app.server).get(`/api/v1/masters/${masterProfileId}`).expect(200);
+
+    expect(hidden.body.whatsappEnabled).toBe(false);
+    expect(hidden.body.whatsappPhone).toBeNull();
   });
 
   it('rejects a pending master with a reason and blocks re-approval without resubmit', async () => {

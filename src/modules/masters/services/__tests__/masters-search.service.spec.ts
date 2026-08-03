@@ -4,7 +4,8 @@ import type { FilesService } from '@modules/files/services/files.service';
 import type { PrismaService } from '@prisma-lib/prisma.service';
 
 import { MasterNotFoundException } from '../../exceptions/masters.exceptions';
-import { MastersSearchService, toMasterPublicDto } from '../masters-search.service';
+import { toMasterPublicDto } from '../master-public.mapper';
+import { MastersSearchService } from '../masters-search.service';
 
 const ROW = {
   id: 'mp-1',
@@ -353,6 +354,35 @@ describe('toMasterPublicDto', () => {
 
     expect(dto.hasCertificates).toBe(true);
     expect(dto.portfolioImageFileIds).toEqual(['img-1', 'img-2']);
+  });
+
+  it('publishes the WhatsApp number while whatsappEnabled is true (P0)', () => {
+    const dto = toMasterPublicDto(
+      { ...ROW, whatsappPhone: '+992901234567', whatsappEnabled: true } as never,
+      false,
+    );
+
+    expect(dto.whatsappEnabled).toBe(true);
+    expect(dto.whatsappPhone).toBe('+992901234567');
+  });
+
+  it('withholds the WhatsApp number when the master disabled it (P0)', () => {
+    const dto = toMasterPublicDto(
+      { ...ROW, whatsappPhone: '+992901234567', whatsappEnabled: false } as never,
+      false,
+    );
+
+    expect(dto.whatsappEnabled).toBe(false);
+    expect(dto.whatsappPhone).toBeNull();
+  });
+
+  it('passes a null number through when the master never set one', () => {
+    const dto = toMasterPublicDto(
+      { ...ROW, whatsappPhone: null, whatsappEnabled: true } as never,
+      false,
+    );
+
+    expect(dto.whatsappPhone).toBeNull();
   });
 });
 

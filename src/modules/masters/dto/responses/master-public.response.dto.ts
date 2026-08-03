@@ -67,6 +67,21 @@ export class MasterPublicResponseDto {
   })
   isActive!: boolean;
 
-  @ApiProperty({ enum: ApprovalStatus })
+  @ApiProperty({
+    enum: ApprovalStatus,
+    enumName: 'ApprovalStatus',
+  })
   approvalStatus!: ApprovalStatus;
+
+  @ApiProperty()
+  whatsappEnabled!: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '+992901234567',
+    description:
+      'The WhatsApp number clients write to directly — public by design (P0). Null when ' +
+      'unset or when `whatsappEnabled` is false.',
+  })
+  whatsappPhone!: string | null;
 }

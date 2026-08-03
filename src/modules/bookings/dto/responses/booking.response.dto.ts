@@ -30,7 +30,11 @@ export type BookingWithParties = {
   cancelledByType: ActorType | null;
   isLateCancellation: boolean;
   createdAt: Date;
-  masterProfile: { displayName: string };
+  masterProfile: {
+    displayName: string;
+    whatsappPhone: string | null;
+    whatsappEnabled: boolean;
+  };
   clientProfile: { firstName: string; lastName: string; user: { phone: string | null } };
 };
 
@@ -61,6 +65,16 @@ export class BookingResponseDto {
 
   @ApiProperty()
   masterDisplayName!: string;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '+992901234567',
+    description: 'The master’s WhatsApp number — present only while whatsappEnabled is true (P0).',
+  })
+  masterWhatsappPhone!: string | null;
+
+  @ApiProperty({ example: true, description: 'Whether the master publishes a WhatsApp line.' })
+  masterWhatsappEnabled!: boolean;
 
   @ApiProperty({ format: 'uuid' })
   clientId!: string;
@@ -157,6 +171,10 @@ export class BookingResponseDto {
     dto.status = booking.status;
     dto.masterId = booking.masterProfileId;
     dto.masterDisplayName = booking.masterProfile.displayName;
+    dto.masterWhatsappEnabled = booking.masterProfile.whatsappEnabled;
+    dto.masterWhatsappPhone = booking.masterProfile.whatsappEnabled
+      ? booking.masterProfile.whatsappPhone
+      : null;
     dto.clientId = booking.clientProfileId;
     dto.clientName = `${booking.clientProfile.firstName} ${booking.clientProfile.lastName}`;
     dto.serviceId = booking.serviceId;

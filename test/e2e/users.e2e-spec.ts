@@ -81,6 +81,18 @@ describe('Users (e2e)', () => {
 
       expect(JSON.stringify(response.body)).not.toContain('passwordHash');
     });
+
+    it('registers the master with the phone as the WhatsApp number (P0)', async () => {
+      const master = await createApprovedMaster(app, cityId);
+
+      const response = await request(app.server)
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${master.accessToken}`)
+        .expect(200);
+
+      expect(response.body.masterProfile.whatsappEnabled).toBe(true);
+      expect(response.body.masterProfile.whatsappPhone).toMatch(/^\+998/);
+    });
   });
 
   describe('GET /users/me/export', () => {
@@ -160,6 +172,50 @@ describe('Users (e2e)', () => {
         .expect(404);
 
       expect(response.body.code).toBe('CITY_NOT_FOUND');
+    });
+
+    it('rejects a WhatsApp field from a client (P0)', async () => {
+      const actor = await createClient(app);
+
+      await request(app.server)
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${actor.accessToken}`)
+        .send({ whatsappPhone: '+998901234567' })
+        .expect(422);
+    });
+
+    it('lets a master set the WhatsApp number and stamps the 24-hour cooldown (P0)', async () => {
+      const master = await createApprovedMaster(app, cityId);
+
+      const set = await request(app.server)
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${master.accessToken}`)
+        .send({ whatsappPhone: '+998901234567' })
+        .expect(200);
+
+      expect(set.body.masterProfile.whatsappPhone).toBe('+998901234567');
+      expect(set.body.masterProfile.whatsappChangedAt).toEqual(expect.any(String));
+
+      const blocked = await request(app.server)
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${master.accessToken}`)
+        .send({ whatsappPhone: '+998905556677' })
+        .expect(422);
+
+      expect(blocked.body.code).toBe('WHATSAPP_CHANGE_COOLDOWN');
+    });
+
+    it('lets a master hide the WhatsApp number without tripping the cooldown (P0)', async () => {
+      const master = await createApprovedMaster(app, cityId);
+
+      const response = await request(app.server)
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${master.accessToken}`)
+        .send({ whatsappEnabled: false })
+        .expect(200);
+
+      expect(response.body.masterProfile.whatsappEnabled).toBe(false);
+      expect(response.body.masterProfile.whatsappChangedAt).toBeNull();
     });
   });
 

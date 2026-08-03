@@ -37,6 +37,19 @@ export class MasterProfileDto {
   ratingAverage!: string;
   @ApiProperty({ example: 27 }) ratingCount!: number;
   @ApiProperty({ example: 31 }) completedBookingsCount!: number;
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '+992901234567',
+    description: 'The number clients reach this master on via WhatsApp.',
+  })
+  whatsappPhone!: string | null;
+  @ApiProperty({ example: true, description: 'Whether the WhatsApp number is published.' })
+  whatsappEnabled!: boolean;
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'When the WhatsApp number was last changed (24-hour cooldown).',
+  })
+  whatsappChangedAt!: Date | null;
 }
 
 /**

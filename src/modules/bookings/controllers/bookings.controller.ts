@@ -110,6 +110,25 @@ export class BookingsController {
     return this.bookingStats.getMasterStats(user.id);
   }
 
+  @Post(':id/whatsapp-click')
+  @HttpCode(HttpStatus.OK)
+  @ApiAuth(UserRole.CLIENT)
+  @ApiOperation({
+    summary: 'Record the client’s first click of the master’s WhatsApp link',
+    description:
+      'P0 analytics: the first click is kept, repeat clicks are no-ops. The client of ' +
+      'the booking only — anyone else gets 404.',
+  })
+  @ApiOkResponse({ type: BookingResponseDto })
+  @ApiNotFoundResponse(BOOKING_NOT_FOUND)
+  async recordWhatsappClick(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<BookingResponseDto> {
+    const booking = await this.bookings.recordWhatsappClick(user.id, id);
+    return BookingResponseDto.fromEntity(booking, user.role);
+  }
+
   @Get(':id')
   @ApiAuth(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Booking detail with status history' })

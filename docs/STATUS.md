@@ -1,7 +1,7 @@
 # Project Status — UstoGo Backend
 
-**Last updated:** 2026-07-30
-**Current phase:** Phase 6 — Hardening & Launch, **complete** (v1.0.0 tagged without an external penetration test — an explicit, recorded decision, not an oversight; see §6 and `CHANGELOG.md`)
+**Last updated:** 2026-08-03
+**Current phase:** Phase 6 — Hardening & Launch, **complete** (v1.0.0 tagged without an external penetration test — an explicit, recorded decision, not an oversight; see §6 and `CHANGELOG.md`). Post-1.0.0 P0 (WhatsApp contact) landed 2026-08-03.
 **Version:** 1.0.0
 **Overall progress:** ▓▓▓▓▓▓▓▓▓▓ 100% of what is implementable in-repo (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, an admin can see the whole platform's health in one call, every account gets a verification email, admins can require 2FA, every device is listable/revocable, retried mutations are safe, personal data is exportable and deletion is anonymised, and access tokens are RS256)
 
@@ -239,6 +239,8 @@ None of these block starting Phase 1; each has a documented default (`docker-com
 ---
 
 ## 8. Next Actions
+
+**P0 — WhatsApp contact landed 2026-08-03**, the first post-1.0.0 feature driven by `MASTER_PROMPT.md` (the client-side product brief). A master's registration phone is adopted as the initial WhatsApp number (`whatsapp_phone`); `PATCH /users/me` can change it (E.164-only, once per 24 h via `whatsapp_changed_at`, `422 WHATSAPP_CHANGE_COOLDOWN` for early retries, same-number resubmission is a no-op) and toggle publishing (`whatsapp_enabled`, on by default). The number is exposed on `MasterPublicResponseDto.whatsappPhone` **only while enabled** (withheld otherwise — privacy-preserving by default), always present on the admin masters listing and on the booking detail for the booking's own client, and seeded on all 15 demo masters (`+992…` numbers, `prisma db seed`). `POST /bookings/:id/whatsapp-click` records a first-click timestamp (`whatsapp_link_clicked_at`, idempotent, client-owner-only, 404 for foreign bookings — the click-to-WhatsApp conversion signal). Migration `20260803210000_add_whatsapp_contact` is additive and has been applied to the deployed Render/Neon database. 1046 tests total (832 unit + 214 e2e), lint/typecheck/build all green. One Prisma 6 note: scalars can no longer ride inside `include` (runtime `IncludeOnScalar` rejection), so the shared public master projection moved to `select` (`master-public.mapper.ts`, `MASTER_PUBLIC_SELECT`).
 
 **Search performance pass landed post-1.0.0**, driven by a real 50,000-master benchmark (measured, not assumed). The search hot path was paying for pagination on every request: `SearchService.search` computed `COUNT(*) OVER()` inside the candidate-id query, forcing a scan of every matching master just to answer "how many pages?" (39ms at 50k rows), and `sort=createdAt:desc` had no `created_at` index at all (seq scan + sort, 34ms). Fix is purely additive: four new indexes — `(approvalStatus, isActive, createdAt DESC)`, `(approvalStatus, isActive, ratingAverage DESC)`, an `(approvalStatus, isActive, deletedAt)` covering index for the count, and a GIN trigram index on `displayName` for the admin masters listing's `ILIKE` search — plus a query split in `SearchService` (data and count now run in parallel via `Promise.all`). Measured against the 50k seed: data query 39ms → 0.2ms, count 16ms → 6.1ms, admin `ILIKE` 0.5ms vs a sequential scan. The migration replays cleanly through `prisma migrate deploy`; nothing was dropped, so no existing query can regress. Apply to the deployed Render database with `npm run prisma:migrate:deploy` against its `DATABASE_URL`.
 

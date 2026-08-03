@@ -134,6 +134,65 @@ describe('Bookings (e2e)', () => {
     expect(completed.body.status).toBe('COMPLETED');
   });
 
+  it('records the client’s WhatsApp click once and surfaces the master’s number (P0)', async () => {
+    const { master, masterProfileId, serviceId, scheduledAt, cityId } =
+      await seedMasterWithService();
+    const client = await createClient(app);
+    const stranger = await createClient(app);
+
+    const created = await request(app.server)
+      .post('/api/v1/bookings')
+      .set('Authorization', bearer(client))
+      .send({
+        masterId: masterProfileId,
+        serviceId,
+        scheduledAt,
+        address: { cityId: cityId, line: '123 Main St', district: 'Downtown' },
+      })
+      .expect(201);
+
+    const bookingId = created.body.id as string;
+
+    // The registration phone *is* the WhatsApp number, published by default (P0).
+    expect(created.body.masterWhatsappEnabled).toBe(true);
+    expect(created.body.masterWhatsappPhone).toMatch(/^\+998/);
+
+    await request(app.server)
+      .post(`/api/v1/bookings/${bookingId}/whatsapp-click`)
+      .set('Authorization', bearer(client))
+      .expect(200);
+
+    const stored = await app.prisma.db.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(stored.whatsappLinkClickedAt).not.toBeNull();
+
+    // Repeat clicks are no-ops — the first click is the analytics signal.
+    const firstClickAt = stored.whatsappLinkClickedAt;
+    await request(app.server)
+      .post(`/api/v1/bookings/${bookingId}/whatsapp-click`)
+      .set('Authorization', bearer(client))
+      .expect(200);
+    const secondClick = (
+      await app.prisma.db.booking.findUniqueOrThrow({ where: { id: bookingId } })
+    ).whatsappLinkClickedAt;
+    expect(secondClick).not.toBeNull();
+    expect(secondClick!.getTime()).toBe(firstClickAt!.getTime());
+
+    // A client who does not own the booking gets 404, never 403.
+    await request(app.server)
+      .post(`/api/v1/bookings/${bookingId}/whatsapp-click`)
+      .set('Authorization', bearer(stranger))
+      .expect(404);
+
+    // A master cannot use the endpoint at all.
+    await request(app.server)
+      .post(`/api/v1/bookings/${bookingId}/whatsapp-click`)
+      .set('Authorization', bearer(master))
+      .expect(403);
+
+    // Unauthenticated callers are rejected up front.
+    await request(app.server).post(`/api/v1/bookings/${bookingId}/whatsapp-click`).expect(401);
+  });
+
   it('rejects an illegal transition with 409 ILLEGAL_BOOKING_TRANSITION', async () => {
     const { masterProfileId, serviceId, scheduledAt, master, cityId } =
       await seedMasterWithService();

@@ -1323,6 +1323,84 @@
         ]
       }
     },
+    "/users/me/banner": {
+      "patch": {
+        "description": "Master role only. Same attach-flow as the avatar: presign, PUT the binary, then attach a confirmed file with purpose BANNER. The previous banner is released.",
+        "operationId": "setBanner",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetBannerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "FILE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "FILE_NOT_CONFIRMED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Attach a confirmed file as the master’s cover banner",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/users/me/export": {
       "get": {
         "description": "Everything the caller is themself the subject of: account, profile, bookings, reviews and notifications, returned synchronously as JSON.",
@@ -2086,71 +2164,6 @@
         ]
       }
     },
-    "/masters/{id}": {
-      "get": {
-        "operationId": "byId",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MasterPublicResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "A master’s public profile",
-        "tags": [
-          "Masters"
-        ]
-      }
-    },
-    "/masters/{id}/services": {
-      "get": {
-        "operationId": "services",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MasterServiceResponseDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "A master’s active services",
-        "tags": [
-          "Masters"
-        ]
-      }
-    },
     "/masters/me/submit": {
       "post": {
         "operationId": "submit",
@@ -2240,6 +2253,64 @@
           }
         ],
         "summary": "Resubmit after a rejection",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/me/availability": {
+      "patch": {
+        "description": "Self-service — only available once the profile is APPROVED.",
+        "operationId": "setAvailability",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAvailabilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterStatusResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Toggle \"accepting bookings\" (vacation mode)",
         "tags": [
           "Master Cabinet"
         ]
@@ -2831,6 +2902,102 @@
         "summary": "Remove a portfolio image",
         "tags": [
           "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/{id}": {
+      "get": {
+        "operationId": "byId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterPublicResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "A master’s public profile",
+        "tags": [
+          "Masters"
+        ]
+      }
+    },
+    "/masters/{id}/media": {
+      "get": {
+        "operationId": "media",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterMediaResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "A master’s avatar, banner and portfolio as short-lived URLs",
+        "tags": [
+          "Masters"
+        ]
+      }
+    },
+    "/masters/{id}/certificates": {
+      "get": {
+        "operationId": "certificates",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MasterCertificatePublicResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "A master’s visible certificates",
+        "tags": [
+          "Masters"
         ]
       }
     },
@@ -3572,6 +3739,40 @@
         ]
       }
     },
+    "/masters/{id}/services": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MasterServiceResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "A master’s active services",
+        "tags": [
+          "Masters"
+        ]
+      }
+    },
     "/masters/me/schedule": {
       "get": {
         "operationId": "list",
@@ -3863,6 +4064,40 @@
         "summary": "Remove a date-specific override",
         "tags": [
           "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/{id}/schedule": {
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkingDayResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "A master’s weekly working hours",
+        "tags": [
+          "Masters"
         ]
       }
     },
@@ -4303,6 +4538,121 @@
           }
         ],
         "summary": "List the caller’s own bookings",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/bookings/me/stats": {
+      "get": {
+        "description": "Total earnings, a 14-day earnings trend, status breakdown and completion rate.",
+        "operationId": "stats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterStatsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Dashboard analytics for the caller",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/whatsapp-click": {
+      "post": {
+        "description": "P0 analytics: the first click is kept, repeat clicks are no-ops. The client of the booking only — anyone else gets 404.",
+        "operationId": "recordWhatsappClick",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BOOKING_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record the client’s first click of the master’s WhatsApp link",
         "tags": [
           "Bookings"
         ]
@@ -8029,6 +8379,11 @@
             "format": "uuid",
             "nullable": true
           },
+          "bannerFileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
           "approvalStatus": {
             "allOf": [
               {
@@ -8061,6 +8416,22 @@
           "completedBookingsCount": {
             "type": "number",
             "example": 31
+          },
+          "whatsappPhone": {
+            "type": "object",
+            "nullable": true,
+            "example": "+992901234567",
+            "description": "The number clients reach this master on via WhatsApp."
+          },
+          "whatsappEnabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the WhatsApp number is published."
+          },
+          "whatsappChangedAt": {
+            "type": "object",
+            "nullable": true,
+            "description": "When the WhatsApp number was last changed (24-hour cooldown)."
           }
         },
         "required": [
@@ -8076,7 +8447,8 @@
           "isActive",
           "ratingAverage",
           "ratingCount",
-          "completedBookingsCount"
+          "completedBookingsCount",
+          "whatsappEnabled"
         ]
       },
       "UserResponseDto": {
@@ -8198,6 +8570,15 @@
             "minimum": 1,
             "maximum": 200,
             "description": "Master only — kilometres"
+          },
+          "whatsappPhone": {
+            "type": "string",
+            "example": "+992901234567",
+            "description": "Master only — the WhatsApp number clients write to. E.164. Changing it is limited to once per 24 hours."
+          },
+          "whatsappEnabled": {
+            "type": "boolean",
+            "description": "Master only — when false, the WhatsApp number is hidden from public profiles and booking pages."
           }
         }
       },
@@ -8208,6 +8589,19 @@
             "type": "string",
             "format": "uuid",
             "description": "A confirmed file with purpose AVATAR"
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "SetBannerDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A confirmed file with purpose BANNER"
           }
         },
         "required": [
@@ -8792,118 +9186,6 @@
           }
         }
       },
-      "MasterPublicResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "avatarFileId": {
-            "type": "object",
-            "format": "uuid",
-            "nullable": true
-          },
-          "bio": {
-            "type": "object",
-            "nullable": true
-          },
-          "cityName": {
-            "type": "string"
-          },
-          "categories": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ratingAverage": {
-            "type": "string"
-          },
-          "ratingCount": {
-            "type": "number"
-          },
-          "completedBookingsCount": {
-            "type": "number"
-          },
-          "priceFrom": {
-            "type": "object",
-            "nullable": true,
-            "description": "The lowest active service price."
-          },
-          "hasCertificates": {
-            "type": "boolean"
-          },
-          "portfolioImageFileIds": {
-            "description": "Portfolio image file ids, in display order (B-45).",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "displayName",
-          "cityName",
-          "categories",
-          "ratingAverage",
-          "ratingCount",
-          "completedBookingsCount",
-          "hasCertificates",
-          "portfolioImageFileIds"
-        ]
-      },
-      "MasterServiceResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "categoryId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "object",
-            "nullable": true
-          },
-          "priceType": {
-            "type": "string",
-            "enum": [
-              "FIXED",
-              "HOURLY",
-              "FROM"
-            ]
-          },
-          "price": {
-            "type": "string"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "durationMinutes": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "categoryId",
-          "title",
-          "priceType",
-          "price",
-          "currency",
-          "durationMinutes"
-        ]
-      },
       "MasterStatusResponseDto": {
         "type": "object",
         "properties": {
@@ -8930,6 +9212,18 @@
         "required": [
           "id",
           "approvalStatus",
+          "isActive"
+        ]
+      },
+      "SetAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "false = \"not accepting bookings\" / vacation mode."
+          }
+        },
+        "required": [
           "isActive"
         ]
       },
@@ -9069,6 +9363,192 @@
           "imageIds"
         ]
       },
+      "MasterPublicResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatarFileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "object",
+            "nullable": true,
+            "description": "Short-lived read URL, when an avatar exists"
+          },
+          "bannerFileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "bio": {
+            "type": "object",
+            "nullable": true
+          },
+          "yearsOfExperience": {
+            "type": "number",
+            "example": 8
+          },
+          "serviceRadiusKm": {
+            "type": "number",
+            "example": 15
+          },
+          "cityName": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ratingAverage": {
+            "type": "string"
+          },
+          "ratingCount": {
+            "type": "number"
+          },
+          "completedBookingsCount": {
+            "type": "number"
+          },
+          "priceFrom": {
+            "type": "object",
+            "nullable": true,
+            "description": "The lowest active service price."
+          },
+          "hasCertificates": {
+            "type": "boolean"
+          },
+          "portfolioImageFileIds": {
+            "description": "Portfolio image file ids, in display order (B-45).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Always true on /masters (search) and GET /masters/:id, which only ever return APPROVED + active masters. Meaningful on GET /favorites, which does not filter — a favorited master can go inactive or lose approval without disappearing silently."
+          },
+          "approvalStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalStatus"
+              }
+            ]
+          },
+          "whatsappEnabled": {
+            "type": "boolean"
+          },
+          "whatsappPhone": {
+            "type": "object",
+            "nullable": true,
+            "example": "+992901234567",
+            "description": "The WhatsApp number clients write to directly — public by design (P0). Null when unset or when `whatsappEnabled` is false."
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "yearsOfExperience",
+          "serviceRadiusKm",
+          "cityName",
+          "categories",
+          "ratingAverage",
+          "ratingCount",
+          "completedBookingsCount",
+          "hasCertificates",
+          "portfolioImageFileIds",
+          "isActive",
+          "approvalStatus",
+          "whatsappEnabled"
+        ]
+      },
+      "MasterPortfolioImageUrlDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "caption": {
+            "type": "object",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "description": "Short-lived presigned read URL"
+          }
+        },
+        "required": [
+          "fileId",
+          "url"
+        ]
+      },
+      "MasterMediaResponseDto": {
+        "type": "object",
+        "properties": {
+          "avatarUrl": {
+            "type": "object",
+            "nullable": true
+          },
+          "bannerUrl": {
+            "type": "object",
+            "nullable": true
+          },
+          "portfolio": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MasterPortfolioImageUrlDto"
+            }
+          }
+        },
+        "required": [
+          "portfolio"
+        ]
+      },
+      "MasterCertificatePublicResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "issuedBy": {
+            "type": "object",
+            "nullable": true
+          },
+          "issuedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "verifiedAt": {
+            "type": "object",
+            "nullable": true,
+            "description": "Set when an admin verified it"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "fileId"
+        ]
+      },
       "AdminMasterListItemResponseDto": {
         "type": "object",
         "properties": {
@@ -9085,6 +9565,11 @@
           "phone": {
             "type": "object",
             "nullable": true
+          },
+          "whatsappPhone": {
+            "type": "object",
+            "nullable": true,
+            "description": "The master’s WhatsApp number, regardless of whatsappEnabled."
           },
           "cityName": {
             "type": "string"
@@ -9120,6 +9605,15 @@
           "createdAt": {
             "format": "date-time",
             "type": "string"
+          },
+          "completedBookingsCount": {
+            "type": "number",
+            "example": 42
+          },
+          "totalEarnings": {
+            "type": "string",
+            "example": "3400.00",
+            "description": "Sum of price for all COMPLETED bookings, ever."
           }
         },
         "required": [
@@ -9132,7 +9626,9 @@
           "isActive",
           "ratingAverage",
           "ratingCount",
-          "createdAt"
+          "createdAt",
+          "completedBookingsCount",
+          "totalEarnings"
         ]
       },
       "ReasonDto": {
@@ -9277,6 +9773,52 @@
             "type": "boolean"
           }
         }
+      },
+      "MasterServiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "priceType": {
+            "type": "string",
+            "enum": [
+              "FIXED",
+              "HOURLY",
+              "FROM"
+            ]
+          },
+          "price": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "categoryId",
+          "title",
+          "priceType",
+          "price",
+          "currency",
+          "durationMinutes"
+        ]
       },
       "WorkingDayResponseDto": {
         "type": "object",
@@ -9532,6 +10074,17 @@
           "masterDisplayName": {
             "type": "string"
           },
+          "masterWhatsappPhone": {
+            "type": "object",
+            "nullable": true,
+            "example": "+992901234567",
+            "description": "The master’s WhatsApp number — present only while whatsappEnabled is true (P0)."
+          },
+          "masterWhatsappEnabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the master publishes a WhatsApp line."
+          },
           "clientId": {
             "type": "string",
             "format": "uuid"
@@ -9647,6 +10200,7 @@
           "status",
           "masterId",
           "masterDisplayName",
+          "masterWhatsappEnabled",
           "clientId",
           "clientName",
           "serviceId",
@@ -9660,6 +10214,127 @@
           "addressDistrict",
           "isLateCancellation",
           "createdAt"
+        ]
+      },
+      "DailyEarningDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-08-01",
+            "description": "ISO date (yyyy-mm-dd), local to UTC."
+          },
+          "total": {
+            "type": "string",
+            "example": "150.00"
+          }
+        },
+        "required": [
+          "date",
+          "total"
+        ]
+      },
+      "CategoryEarningDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string",
+            "example": "Plumbing"
+          },
+          "total": {
+            "type": "string",
+            "example": "1200.00",
+            "description": "Sum of price for COMPLETED bookings in this category."
+          },
+          "completedCount": {
+            "type": "number",
+            "example": 14,
+            "description": "Count of COMPLETED bookings in this category."
+          }
+        },
+        "required": [
+          "categoryId",
+          "categoryName",
+          "total",
+          "completedCount"
+        ]
+      },
+      "MasterStatsResponseDto": {
+        "type": "object",
+        "properties": {
+          "totalEarnings": {
+            "type": "string",
+            "example": "4250.00",
+            "description": "Sum of price for all COMPLETED bookings, ever."
+          },
+          "dailyEarnings": {
+            "description": "Last 14 days, oldest first.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyEarningDto"
+            }
+          },
+          "pendingCount": {
+            "type": "number",
+            "example": 12
+          },
+          "acceptedCount": {
+            "type": "number",
+            "example": 8
+          },
+          "completedCount": {
+            "type": "number",
+            "example": 40
+          },
+          "cancelledCount": {
+            "type": "number",
+            "example": 5
+          },
+          "completionRate": {
+            "type": "number",
+            "example": 78.4,
+            "description": "completed / (completed + cancelled + rejected + expired), as a percentage."
+          },
+          "earningsByCategory": {
+            "description": "Completed earnings by service category, richest first.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryEarningDto"
+            }
+          },
+          "avgAcceptLatencyMinutes": {
+            "type": "object",
+            "example": 22.5,
+            "nullable": true,
+            "description": "Average minutes between a booking being created and accepted. Null with no accepted bookings yet."
+          },
+          "repeatClientRate": {
+            "type": "number",
+            "example": 34.2,
+            "description": "Share of distinct clients (among those with a COMPLETED booking) who booked this master more than once, as a percentage."
+          },
+          "profileViews": {
+            "type": "number",
+            "example": 128,
+            "description": "Total public profile views, all-time."
+          }
+        },
+        "required": [
+          "totalEarnings",
+          "dailyEarnings",
+          "pendingCount",
+          "acceptedCount",
+          "completedCount",
+          "cancelledCount",
+          "completionRate",
+          "earningsByCategory",
+          "avgAcceptLatencyMinutes",
+          "repeatClientRate",
+          "profileViews"
         ]
       },
       "BookingHistoryEntryResponseDto": {
@@ -9758,6 +10433,17 @@
           },
           "masterDisplayName": {
             "type": "string"
+          },
+          "masterWhatsappPhone": {
+            "type": "object",
+            "nullable": true,
+            "example": "+992901234567",
+            "description": "The master’s WhatsApp number — present only while whatsappEnabled is true (P0)."
+          },
+          "masterWhatsappEnabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the master publishes a WhatsApp line."
           },
           "clientId": {
             "type": "string",
@@ -9880,6 +10566,7 @@
           "status",
           "masterId",
           "masterDisplayName",
+          "masterWhatsappEnabled",
           "clientId",
           "clientName",
           "serviceId",
@@ -10086,6 +10773,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "clientName": {
+            "type": "string"
+          },
           "masterId": {
             "type": "string",
             "format": "uuid"
@@ -10127,6 +10817,7 @@
           "id",
           "bookingId",
           "clientId",
+          "clientName",
           "masterId",
           "rating",
           "status",

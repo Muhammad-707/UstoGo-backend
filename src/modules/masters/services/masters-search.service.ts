@@ -5,6 +5,7 @@ import type { WorkingDay } from '@prisma/client';
 import { FilesService } from '@modules/files/services/files.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
+import { MASTER_PUBLIC_SELECT, toMasterPublicDto } from './master-public.mapper';
 import {
   stockAvatarUrlFor,
   stockBannerUrlFor,
@@ -21,25 +22,6 @@ import { MasterPublicResponseDto } from '../dto/responses/master-public.response
 import { MasterServiceResponseDto } from '../dto/responses/master-service.response.dto';
 import { MasterNotFoundException } from '../exceptions/masters.exceptions';
 
-/** Shared with `SearchService` (F-08) — one public projection, one place it is built. */
-export const MASTER_PUBLIC_INCLUDE = {
-  city: { select: { name: true } },
-  categories: { include: { category: { select: { name: true } } } },
-  services: { where: { isActive: true }, select: { price: true } },
-  certificates: {
-    where: { deletedAt: null, verifiedAt: { not: null } },
-    select: { id: true },
-    take: 1,
-  },
-  portfolioImages: {
-    where: { deletedAt: null },
-    orderBy: { sortOrder: 'asc' },
-    select: { fileId: true },
-  },
-} satisfies Prisma.MasterProfileInclude;
-
-export type MasterRow = Prisma.MasterProfileGetPayload<{ include: typeof MASTER_PUBLIC_INCLUDE }>;
-
 /** Projection used by `GET /masters/:id/media` (F-07). */
 const MASTER_MEDIA_SELECT = {
   displayName: true,
@@ -55,12 +37,12 @@ const MASTER_MEDIA_SELECT = {
 
 type MasterMediaRow = Prisma.MasterProfileGetPayload<{ select: typeof MASTER_MEDIA_SELECT }>;
 
-const ADMIN_MASTER_INCLUDE = {
-  ...MASTER_PUBLIC_INCLUDE,
+const ADMIN_MASTER_SELECT = {
+  ...MASTER_PUBLIC_SELECT,
   user: { select: { email: true, phone: true } },
-} satisfies Prisma.MasterProfileInclude;
+} satisfies Prisma.MasterProfileSelect;
 
-type AdminMasterRow = Prisma.MasterProfileGetPayload<{ include: typeof ADMIN_MASTER_INCLUDE }>;
+type AdminMasterRow = Prisma.MasterProfileGetPayload<{ select: typeof ADMIN_MASTER_SELECT }>;
 
 const toAdminMasterListItemDto = (
   row: AdminMasterRow,
@@ -73,6 +55,7 @@ const toAdminMasterListItemDto = (
   dto.displayName = row.displayName;
   dto.email = row.user.email;
   dto.phone = row.user.phone;
+  dto.whatsappPhone = row.whatsappPhone;
   dto.cityName = row.city.name;
   dto.categories = row.categories.map((entry) => entry.category.name);
   dto.approvalStatus = row.approvalStatus;
@@ -86,44 +69,6 @@ const toAdminMasterListItemDto = (
       ? null
       : prices.reduce((min, price) => (price < min ? price : min)).toFixed(2);
   dto.createdAt = row.createdAt;
-
-  return dto;
-};
-
-const BIO_PREVIEW_LENGTH = 200;
-
-export const toMasterPublicDto = (
-  row: MasterRow,
-  truncateBio: boolean,
-): MasterPublicResponseDto => {
-  const dto = new MasterPublicResponseDto();
-  const prices = row.services.map((service) => service.price);
-
-  dto.id = row.id;
-  dto.displayName = row.displayName;
-  dto.avatarFileId = row.avatarFileId;
-  // No uploaded avatar yet (demo master) -> a real stock portrait of the right gender.
-  dto.avatarUrl = row.avatarFileId === null ? stockAvatarUrlFor(row.displayName) : null;
-  dto.bannerFileId = row.bannerFileId;
-  dto.bio =
-    row.bio !== null && truncateBio && row.bio.length > BIO_PREVIEW_LENGTH
-      ? `${row.bio.slice(0, BIO_PREVIEW_LENGTH)}…`
-      : row.bio;
-  dto.yearsOfExperience = row.yearsOfExperience;
-  dto.serviceRadiusKm = row.serviceRadiusKm;
-  dto.cityName = row.city.name;
-  dto.categories = row.categories.map((entry) => entry.category.name);
-  dto.ratingAverage = row.ratingAverage.toFixed(2);
-  dto.ratingCount = row.ratingCount;
-  dto.completedBookingsCount = row.completedBookingsCount;
-  dto.priceFrom =
-    prices.length === 0
-      ? null
-      : prices.reduce((min, price) => (price < min ? price : min)).toFixed(2);
-  dto.hasCertificates = row.certificates.length > 0;
-  dto.portfolioImageFileIds = row.portfolioImages.map((image) => image.fileId);
-  dto.isActive = row.isActive;
-  dto.approvalStatus = row.approvalStatus;
 
   return dto;
 };
@@ -145,7 +90,7 @@ export class MastersSearchService {
 
     const row = await this.prisma.db.masterProfile.findFirst({
       where: { id, approvalStatus: ApprovalStatus.APPROVED, isActive: true },
-      include: MASTER_PUBLIC_INCLUDE,
+      select: MASTER_PUBLIC_SELECT,
     });
 
     if (row === null) {
@@ -153,7 +98,7 @@ export class MastersSearchService {
     }
 
     // Fire-and-forget — a view counter must not slow down or fail the profile response.
-    this.prisma.db.masterProfile
+    void this.prisma.db.masterProfile
       .update({ where: { id }, data: { profileViews: { increment: 1 } } })
       .catch(() => {});
 
@@ -357,7 +302,7 @@ export class MastersSearchService {
     const [rows, total] = await Promise.all([
       this.prisma.db.masterProfile.findMany({
         where,
-        include: ADMIN_MASTER_INCLUDE,
+        select: ADMIN_MASTER_SELECT,
         orderBy: { createdAt: 'desc' },
         skip: query.skip,
         take: query.limit,

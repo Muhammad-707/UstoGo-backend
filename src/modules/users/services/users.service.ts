@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { FilePurpose, UserRole, UserStatus } from '@prisma/client';
+import { FilePurpose, Prisma, UserRole, UserStatus } from '@prisma/client';
 
 import { PrismaService } from '@prisma-lib/prisma.service';
 import { TransactionManager, type PrismaTransaction } from '@prisma-lib/transaction.manager';
@@ -7,6 +7,7 @@ import { TransactionManager, type PrismaTransaction } from '@prisma-lib/transact
 import { REVOKED_REASON } from '../../auth/constants/auth.constants';
 import { TokenService } from '../../auth/services/token.service';
 import { FilesService } from '../../files/services/files.service';
+import { WHATSAPP_CHANGE_COOLDOWN_MS } from '../constants/users.constants';
 import {
   CLIENT_ONLY_FIELDS,
   MASTER_ONLY_FIELDS,
@@ -16,6 +17,7 @@ import {
   CityNotFoundException,
   FieldNotApplicableException,
   UserNotFoundException,
+  WhatsappChangeCooldownException,
 } from '../exceptions/users.exceptions';
 import { USER_WITH_PROFILE_SELECT, type UserWithProfile } from '../repositories/user.select';
 
@@ -58,6 +60,8 @@ export class UsersService {
       await this.assertCityExists(dto.cityId);
     }
 
+    this.assertWhatsappChangeAllowed(current, dto);
+
     await this.tx.run(async (tx) => {
       if (dto.phone !== undefined) {
         await tx.user.update({ where: { id: userId }, data: { phone: dto.phone } });
@@ -66,6 +70,27 @@ export class UsersService {
     });
 
     return this.findMe(userId);
+  }
+
+  /**
+   * P0 — the WhatsApp number may change at most once per 24 hours. Comparing against
+   * the stored value keeps a no-op resubmit (same number, unchanged) out of the
+   * cooldown, so the setting page can load and save the form without tripping it.
+   */
+  private assertWhatsappChangeAllowed(current: UserWithProfile, dto: UpdateProfileDto): void {
+    if (dto.whatsappPhone === undefined || current.role !== UserRole.MASTER) {
+      return;
+    }
+
+    const profile = current.masterProfile;
+    if (profile === null || dto.whatsappPhone === profile.whatsappPhone) {
+      return;
+    }
+
+    const changedAt = profile.whatsappChangedAt;
+    if (changedAt !== null && Date.now() - changedAt.getTime() < WHATSAPP_CHANGE_COOLDOWN_MS) {
+      throw new WhatsappChangeCooldownException();
+    }
   }
 
   /**
@@ -209,9 +234,23 @@ export class UsersService {
     const shared = pick(dto, SHARED_PROFILE_FIELDS);
 
     if (current.role === UserRole.MASTER) {
+      const data: Prisma.MasterProfileUpdateInput = {
+        ...shared,
+        ...pick(dto, MASTER_ONLY_FIELDS),
+      };
+
+      // A real change (already vetted by `assertWhatsappChangeAllowed`) stamps the
+      // cooldown so the next change is rejected for 24 hours.
+      if (
+        dto.whatsappPhone !== undefined &&
+        dto.whatsappPhone !== current.masterProfile?.whatsappPhone
+      ) {
+        data.whatsappChangedAt = new Date();
+      }
+
       await tx.masterProfile.update({
         where: { userId: current.id },
-        data: { ...shared, ...pick(dto, MASTER_ONLY_FIELDS) },
+        data,
       });
       return;
     }

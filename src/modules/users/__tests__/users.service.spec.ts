@@ -7,6 +7,7 @@ import {
   CityNotFoundException,
   FieldNotApplicableException,
   UserNotFoundException,
+  WhatsappChangeCooldownException,
 } from '../exceptions/users.exceptions';
 import { UsersService } from '../services/users.service';
 
@@ -23,7 +24,12 @@ const MASTER = {
   id: 'u2',
   role: 'MASTER',
   clientProfile: null,
-  masterProfile: { id: 'mp1', displayName: 'Bek Plumbing' },
+  masterProfile: {
+    id: 'mp1',
+    displayName: 'Bek Plumbing',
+    whatsappPhone: '+998901234567',
+    whatsappChangedAt: null,
+  },
 };
 
 const build = (options: { user?: unknown; city?: unknown } = {}) => {
@@ -190,6 +196,77 @@ describe('UsersService.updateMe', () => {
     await service.updateMe('u1', { firstName: 'Azizbek' });
 
     expect(cityDelegate.findFirst).not.toHaveBeenCalled();
+  });
+
+  describe('WhatsApp number (P0)', () => {
+    it('rejects a whatsapp field from a client', async () => {
+      const { service } = build();
+
+      await expect(
+        service.updateMe('u1', { whatsappPhone: '+992901234567' }),
+      ).rejects.toBeInstanceOf(FieldNotApplicableException);
+    });
+
+    it('persists a whatsappPhone change and stamps the 24-hour cooldown', async () => {
+      const { service, masterProfile } = build({ user: MASTER });
+
+      await service.updateMe('u2', { whatsappPhone: '+992905667788' });
+
+      const update = firstArg<{ data: Record<string, unknown> }>(masterProfile.update);
+      expect(update.data.whatsappPhone).toBe('+992905667788');
+      expect(update.data.whatsappChangedAt).toBeInstanceOf(Date);
+    });
+
+    it('re-sending the same number neither trips the cooldown nor stamps it', async () => {
+      const { service, masterProfile } = build({ user: MASTER });
+
+      await service.updateMe('u2', { whatsappPhone: '+998901234567' });
+
+      const update = firstArg<{ data: Record<string, unknown> }>(masterProfile.update);
+      expect(update.data.whatsappPhone).toBe('+998901234567');
+      expect(update.data.whatsappChangedAt).toBeUndefined();
+    });
+
+    it('rejects a change inside the 24-hour window', async () => {
+      const recentlyChanged = {
+        ...MASTER,
+        masterProfile: {
+          ...MASTER.masterProfile,
+          whatsappChangedAt: new Date(Date.now() - 60 * 1000),
+        },
+      };
+      const { service } = build({ user: recentlyChanged });
+
+      await expect(
+        service.updateMe('u2', { whatsappPhone: '+992000667788' }),
+      ).rejects.toBeInstanceOf(WhatsappChangeCooldownException);
+    });
+
+    it('allows a change once 24 hours have passed', async () => {
+      const longAgo = {
+        ...MASTER,
+        masterProfile: {
+          ...MASTER.masterProfile,
+          whatsappChangedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+        },
+      };
+      const { service, masterProfile } = build({ user: longAgo });
+
+      await service.updateMe('u2', { whatsappPhone: '+992000667788' });
+
+      const update = firstArg<{ data: Record<string, unknown> }>(masterProfile.update);
+      expect(update.data.whatsappPhone).toBe('+992000667788');
+    });
+
+    it('toggles whatsappEnabled without touching the cooldown', async () => {
+      const { service, masterProfile } = build({ user: MASTER });
+
+      await service.updateMe('u2', { whatsappEnabled: false });
+
+      const update = firstArg<{ data: Record<string, unknown> }>(masterProfile.update);
+      expect(update.data.whatsappEnabled).toBe(false);
+      expect(update.data).not.toHaveProperty('whatsappChangedAt');
+    });
   });
 });
 

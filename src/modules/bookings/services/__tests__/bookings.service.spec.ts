@@ -15,6 +15,8 @@ import {
 } from '../../exceptions/bookings.exceptions';
 import { BookingsService } from '../bookings.service';
 
+const firstArg = <T>(mock: jest.Mock): T => (mock.mock.calls[0] as unknown[])[0] as T;
+
 const CLIENT_PROFILE = { id: 'cp-1', firstName: 'Alice' };
 const MASTER = {
   id: 'mp-1',
@@ -233,6 +235,45 @@ describe('BookingsService — reads', () => {
     const result = await service.getForCaller({ id: 'admin-1', role: 'ADMIN' }, 'booking-1');
 
     expect(result.booking.id).toBe('booking-1');
+  });
+
+  it('recordWhatsappClick stamps the link only once (P0)', async () => {
+    let stamped = false;
+    const findUnique = jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(detailRow({ whatsappLinkClickedAt: stamped ? new Date() : null })),
+      );
+    const update = jest.fn().mockImplementation(() => {
+      stamped = true;
+      return Promise.resolve(detailRow({ whatsappLinkClickedAt: new Date() }));
+    });
+    const { service } = build({ booking: { findUnique, update } });
+
+    await service.recordWhatsappClick('client-user-1', 'booking-1');
+    await service.recordWhatsappClick('client-user-1', 'booking-1');
+
+    expect(update).toHaveBeenCalledTimes(1);
+    const query = firstArg<{ data: { whatsappLinkClickedAt?: Date } }>(update);
+    expect(query.data.whatsappLinkClickedAt).toBeInstanceOf(Date);
+  });
+
+  it('recordWhatsappClick rejects a non-client of the booking (P0)', async () => {
+    const { service } = build({
+      booking: { findUnique: jest.fn().mockResolvedValue(detailRow()) },
+    });
+
+    await expect(service.recordWhatsappClick('stranger', 'booking-1')).rejects.toThrow(
+      BookingNotFoundException,
+    );
+  });
+
+  it('recordWhatsappClick reports BOOKING_NOT_FOUND for an unknown id (P0)', async () => {
+    const { service } = build();
+
+    await expect(service.recordWhatsappClick('client-user-1', 'ghost')).rejects.toThrow(
+      BookingNotFoundException,
+    );
   });
 
   it('listForClient resolves the caller’s clientProfileId and scopes the query', async () => {

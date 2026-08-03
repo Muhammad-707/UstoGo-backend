@@ -222,6 +222,15 @@ describe('AuthService.registerMaster', () => {
     expect(created.data).not.toHaveProperty('yearsOfExperience');
   });
 
+  it('publishes the registration phone as the WhatsApp number (P0)', async () => {
+    const { service, masterProfileDelegate } = build();
+
+    await service.registerMaster(MASTER_DTO, {});
+
+    const created = firstArg<{ data: { whatsappPhone?: string } }>(masterProfileDelegate.create);
+    expect(created.data.whatsappPhone).toBe(MASTER_DTO.phone);
+  });
+
   it('attaches bio and years of experience when supplied', async () => {
     const { service, masterProfileDelegate } = build();
 

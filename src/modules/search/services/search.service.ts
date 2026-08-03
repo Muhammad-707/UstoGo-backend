@@ -7,11 +7,11 @@ import {
 } from '@modules/masters/dto/requests/master-search-query.dto';
 import type { MasterPublicResponseDto } from '@modules/masters/dto/responses/master-public.response.dto';
 import {
-  MASTER_PUBLIC_INCLUDE,
-  MastersSearchService,
+  MASTER_PUBLIC_SELECT,
   toMasterPublicDto,
   type MasterRow,
-} from '@modules/masters/services/masters-search.service';
+} from '@modules/masters/services/master-public.mapper';
+import { MastersSearchService } from '@modules/masters/services/masters-search.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
 /**
@@ -76,7 +76,7 @@ export class SearchService {
 
     const projected = await this.prisma.db.masterProfile.findMany({
       where: { id: { in: ids } },
-      include: MASTER_PUBLIC_INCLUDE,
+      select: MASTER_PUBLIC_SELECT,
     });
 
     const byId = new Map<string, MasterRow>(projected.map((row) => [row.id, row]));

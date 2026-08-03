@@ -147,6 +147,28 @@ export class BookingsService {
   }
 
   /**
+   * P0 — records the client's first click of the master's WhatsApp link. The analytics
+   * signal is "did the client actually reach out", so only the first click is kept and
+   * repeat clicks are no-ops. Non-participants get 404, never 403 (AUTHORIZATION.md §1).
+   */
+  async recordWhatsappClick(userId: string, bookingId: string): Promise<BookingDetailRow> {
+    const booking = await this.findById(bookingId);
+
+    if (booking.clientProfile.user.id !== userId) {
+      throw new BookingNotFoundException();
+    }
+
+    if (booking.whatsappLinkClickedAt === null) {
+      await this.prisma.db.booking.update({
+        where: { id: bookingId },
+        data: { whatsappLinkClickedAt: new Date() },
+      });
+    }
+
+    return this.findById(bookingId);
+  }
+
+  /**
    * FR-7.6: participants and admins only — a non-participant gets `404`, never `403`,
    * so a foreign booking id cannot be confirmed to exist (AUTHORIZATION.md §1).
    */

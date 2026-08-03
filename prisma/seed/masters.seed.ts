@@ -49,6 +49,7 @@ const buildProfileOps = ({
     data: {
       id: userId,
       email: m.email,
+      phone: m.phone,
       passwordHash,
       role: 'MASTER',
       status: 'ACTIVE',
@@ -66,6 +67,8 @@ const buildProfileOps = ({
       yearsOfExperience: m.years,
       cityId,
       timezone: 'Asia/Dushanbe',
+      // P0: demo masters are reachable on WhatsApp at their registration number.
+      whatsappPhone: m.phone,
       approvalStatus: ApprovalStatus.APPROVED,
       isActive: true,
       approvedAt: new Date(),

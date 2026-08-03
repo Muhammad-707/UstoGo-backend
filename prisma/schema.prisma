@@ -256,6 +256,13 @@ model MasterProfile {
   timezone               String         @db.VarChar(64)
   avatarFileId           String?        @map("avatar_file_id") @db.Uuid
   bannerFileId           String?        @map("banner_file_id") @db.Uuid
+  /// The master's WhatsApp number, E.164. Defaults to their registration phone and is
+  /// the number clients reach them on directly — the marketplace's primary channel.
+  /// Only ever published when `whatsappEnabled` is true. Changing it sets
+  /// `whatsappChangedAt` (24-hour cooldown).
+  whatsappPhone          String?        @map("whatsapp_phone") @db.VarChar(20)
+  whatsappEnabled        Boolean        @default(true) @map("whatsapp_enabled")
+  whatsappChangedAt      DateTime?      @map("whatsapp_changed_at") @db.Timestamptz(3)
   approvalStatus         ApprovalStatus @default(PENDING) @map("approval_status")
   rejectionReason        String?        @map("rejection_reason") @db.VarChar(500)
   approvedAt             DateTime?      @map("approved_at") @db.Timestamptz(3)
@@ -707,6 +714,9 @@ model Booking {
   cancellationReason String?       @map("cancellation_reason") @db.VarChar(500)
   cancelledByType    ActorType?    @map("cancelled_by_type")
   isLateCancellation Boolean       @default(false) @map("is_late_cancellation")
+  /// Set once on the client's first click of the master's WhatsApp link (P0) — the
+  /// analytics signal that a client actually reached out off-platform.
+  whatsappLinkClickedAt DateTime?   @map("whatsapp_link_clicked_at") @db.Timestamptz(3)
   createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz(3)

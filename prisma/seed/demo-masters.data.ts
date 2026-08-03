@@ -3,6 +3,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'plumbing',
     email: 'marcus.vance@ustogo.tj',
+    phone: '+992901111111',
     firstName: 'Marcus',
     lastName: 'Vance',
     displayName: 'Marcus Vance',
@@ -16,6 +17,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'electrical',
     email: 'alex.morgan@ustogo.tj',
+    phone: '+992902222222',
     firstName: 'Alex',
     lastName: 'Morgan',
     displayName: 'Alex Morgan',
@@ -29,6 +31,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'ac-repair',
     email: 'robert.miller@ustogo.tj',
+    phone: '+992903333333',
     firstName: 'Robert',
     lastName: 'Miller',
     displayName: 'Robert Miller',
@@ -42,6 +45,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'painting',
     email: 'elena.rostova@ustogo.tj',
+    phone: '+992904444444',
     firstName: 'Elena',
     lastName: 'Rostova',
     displayName: 'Elena Rostova',
@@ -55,6 +59,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'carpentry',
     email: 'daler.rahimov@ustogo.tj',
+    phone: '+992905555555',
     firstName: 'Daler',
     lastName: 'Rahimov',
     displayName: 'Daler Rahimov',
@@ -68,6 +73,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'cleaning',
     email: 'nigora.saidova@ustogo.tj',
+    phone: '+992906666666',
     firstName: 'Nigora',
     lastName: 'Saidova',
     displayName: 'Nigora Saidova',
@@ -81,6 +87,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'appliance-repair',
     email: 'farrukh.karimov@ustogo.tj',
+    phone: '+992907777777',
     firstName: 'Farrukh',
     lastName: 'Karimov',
     displayName: 'Farrukh Karimov',
@@ -94,6 +101,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'masonry',
     email: 'shavkat.yusupov@ustogo.tj',
+    phone: '+992908888888',
     firstName: 'Shavkat',
     lastName: 'Yusupov',
     displayName: 'Shavkat Yusupov',
@@ -107,6 +115,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'welding',
     email: 'jamshed.nazarov@ustogo.tj',
+    phone: '+992909999999',
     firstName: 'Jamshed',
     lastName: 'Nazarov',
     displayName: 'Jamshed Nazarov',
@@ -120,6 +129,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'roofing',
     email: 'bakhtiyor.tashkulov@ustogo.tj',
+    phone: '+992910000000',
     firstName: 'Bakhtiyor',
     lastName: 'Tashkulov',
     displayName: 'Bakhtiyor Tashkulov',
@@ -133,6 +143,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'interior-design',
     email: 'sarah.jenkins@ustogo.tj',
+    phone: '+992911111111',
     firstName: 'Sarah',
     lastName: 'Jenkins',
     displayName: 'Sarah Jenkins',
@@ -146,6 +157,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'cctv-installer',
     email: 'david.chen@ustogo.tj',
+    phone: '+992912222222',
     firstName: 'David',
     lastName: 'Chen',
     displayName: 'David Chen',
@@ -159,6 +171,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'networking',
     email: 'temur.aliev@ustogo.tj',
+    phone: '+992913333333',
     firstName: 'Temur',
     lastName: 'Aliev',
     displayName: 'Temur Aliev',
@@ -172,6 +185,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'locksmith',
     email: 'rustam.qodirov@ustogo.tj',
+    phone: '+992914444444',
     firstName: 'Rustam',
     lastName: 'Qodirov',
     displayName: 'Rustam Qodirov',
@@ -185,6 +199,7 @@ export const DEMO_MASTERS = [
   {
     slug: 'handyman',
     email: 'oleg.petrov@ustogo.tj',
+    phone: '+992915555555',
     firstName: 'Oleg',
     lastName: 'Petrov',
     displayName: 'Oleg Petrov',
