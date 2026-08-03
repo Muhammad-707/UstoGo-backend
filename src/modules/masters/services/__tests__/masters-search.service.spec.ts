@@ -41,14 +41,17 @@ const build = (
     findMany?: jest.Mock;
     count?: jest.Mock;
     findFirst?: jest.Mock;
+    findUnique?: jest.Mock;
     serviceFindMany?: jest.Mock;
     bookingGroupBy?: jest.Mock;
+    fileFindMany?: jest.Mock;
   } = {},
 ) => {
   const masterProfileDelegate = {
     findMany: overrides.findMany ?? jest.fn().mockResolvedValue([ROW]),
     count: overrides.count ?? jest.fn().mockResolvedValue(1),
     findFirst: overrides.findFirst ?? jest.fn().mockResolvedValue(ROW),
+    findUnique: overrides.findUnique ?? jest.fn().mockResolvedValue(null),
     update: jest.fn().mockResolvedValue(ROW),
   };
   const serviceDelegate = {
@@ -62,6 +65,9 @@ const build = (
       masterProfile: masterProfileDelegate,
       service: serviceDelegate,
       booking: bookingDelegate,
+      file: {
+        findMany: overrides.fileFindMany ?? jest.fn().mockResolvedValue([]),
+      },
     },
   } as unknown as PrismaService;
 
@@ -347,5 +353,111 @@ describe('toMasterPublicDto', () => {
 
     expect(dto.hasCertificates).toBe(true);
     expect(dto.portfolioImageFileIds).toEqual(['img-1', 'img-2']);
+  });
+});
+
+describe('MastersSearchService.getPublicMedia', () => {
+  it('falls back to gender-matched stock avatar, profession banner and portfolio', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      displayName: 'Marcus Vance',
+      avatarFileId: null,
+      bannerFileId: null,
+      categories: [{ category: { slug: 'plumbing' } }],
+      portfolioImages: [],
+    });
+    const { service } = build({ findUnique });
+
+    const media = await service.getPublicMedia('47a7c6e9-c411-42c9-8b64-c30a410e9032');
+
+    expect(media.avatarUrl).toMatch(/^https:\/\/images\.unsplash\.com\/photo-\d/);
+    expect(media.bannerUrl).toBe(
+      'https://images.unsplash.com/photo-1585128792020-803d29415281?auto=format&fit=crop&w=1200&q=80',
+    );
+    expect(media.portfolio).toHaveLength(4);
+    for (const image of media.portfolio) {
+      expect(image.fileId).toMatch(/^stock-plumbing-\d$/);
+      expect(image.url).toMatch(/^https:\/\/images\.unsplash\.com\/photo-\d/);
+    }
+  });
+
+  it('uses a female stock avatar for a female first name', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      displayName: 'Sarah Jenkins',
+      avatarFileId: null,
+      bannerFileId: null,
+      categories: [{ category: { slug: 'interior-design' } }],
+      portfolioImages: [],
+    });
+    const { service } = build({ findUnique });
+
+    const media = await service.getPublicMedia('47a7c6e9-c411-42c9-8b64-c30a410e9032');
+
+    expect(media.avatarUrl).toMatch(/^https:\/\/images\.unsplash\.com\/photo-\d/);
+    expect(media.bannerUrl).toBe(
+      'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=80',
+    );
+  });
+
+  it('mints presigned URLs for uploaded files and keeps the uploaded portfolio', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      displayName: 'Marcus Vance',
+      avatarFileId: 'file-avatar',
+      bannerFileId: 'file-banner',
+      categories: [{ category: { slug: 'plumbing' } }],
+      portfolioImages: [{ fileId: 'file-1', caption: 'Bathroom' }],
+    });
+    const fileFindMany = jest.fn().mockResolvedValue([
+      { id: 'file-avatar', key: 'k-avatar' },
+      { id: 'file-banner', key: 'k-banner' },
+      { id: 'file-1', key: 'k-1' },
+    ]);
+    const { service } = build({ findUnique, fileFindMany });
+
+    const media = await service.getPublicMedia('47a7c6e9-c411-42c9-8b64-c30a410e9032');
+
+    expect(media.avatarUrl).toBe('https://cdn/x');
+    expect(media.bannerUrl).toBe('https://cdn/x');
+    expect(media.portfolio).toEqual([
+      { fileId: 'file-1', caption: 'Bathroom', url: 'https://cdn/x' },
+    ]);
+  });
+
+  it('throws MasterNotFoundException when the master is not public', async () => {
+    const { service } = build({ findFirst: jest.fn().mockResolvedValue(null) });
+
+    await expect(
+      service.getPublicMedia('47a7c6e9-c411-42c9-8b64-c30a410e9032'),
+    ).rejects.toBeInstanceOf(MasterNotFoundException);
+  });
+});
+
+describe('mintAvatarUrls', () => {
+  it('leaves the stock avatar untouched and mints only real uploaded files', async () => {
+    const items = [
+      {
+        displayName: 'Marcus Vance',
+        avatarFileId: null,
+        avatarUrl:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      },
+      {
+        displayName: 'Rustam Qodirov',
+        avatarFileId: 'file-avatar',
+        avatarUrl: null,
+      },
+    ] as never[];
+
+    const fileFindMany = jest.fn().mockResolvedValue([{ id: 'file-avatar', key: 'k-avatar' }]);
+    const { service } = build({ fileFindMany });
+
+    const result = await service.mintAvatarUrls(items);
+
+    expect(result[0]?.avatarUrl).toContain('images.unsplash.com');
+    expect(result[1]?.avatarUrl).toBe('https://cdn/x');
+    expect(fileFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: { in: ['file-avatar'] } }),
+      }),
+    );
   });
 });

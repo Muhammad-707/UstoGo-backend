@@ -5,6 +5,11 @@ import type { WorkingDay } from '@prisma/client';
 import { FilesService } from '@modules/files/services/files.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
+import {
+  stockAvatarUrlFor,
+  stockBannerUrlFor,
+  stockGalleryFor,
+} from '../constants/stock-media.constants';
 import type { AdminMasterSearchQueryDto } from '../dto/requests/admin-master-search-query.dto';
 import { AdminMasterListItemResponseDto } from '../dto/responses/admin-master-list-item.response.dto';
 import { MasterCertificatePublicResponseDto } from '../dto/responses/master-certificate-public.response.dto';
@@ -34,6 +39,21 @@ export const MASTER_PUBLIC_INCLUDE = {
 } satisfies Prisma.MasterProfileInclude;
 
 export type MasterRow = Prisma.MasterProfileGetPayload<{ include: typeof MASTER_PUBLIC_INCLUDE }>;
+
+/** Projection used by `GET /masters/:id/media` (F-07). */
+const MASTER_MEDIA_SELECT = {
+  displayName: true,
+  avatarFileId: true,
+  bannerFileId: true,
+  categories: { select: { category: { select: { slug: true } } } },
+  portfolioImages: {
+    where: { deletedAt: null },
+    orderBy: { sortOrder: 'asc' },
+    select: { fileId: true, caption: true },
+  },
+} satisfies Prisma.MasterProfileSelect;
+
+type MasterMediaRow = Prisma.MasterProfileGetPayload<{ select: typeof MASTER_MEDIA_SELECT }>;
 
 const ADMIN_MASTER_INCLUDE = {
   ...MASTER_PUBLIC_INCLUDE,
@@ -82,7 +102,8 @@ export const toMasterPublicDto = (
   dto.id = row.id;
   dto.displayName = row.displayName;
   dto.avatarFileId = row.avatarFileId;
-  dto.avatarUrl = null;
+  // No uploaded avatar yet (demo master) -> a real stock portrait of the right gender.
+  dto.avatarUrl = row.avatarFileId === null ? stockAvatarUrlFor(row.displayName) : null;
   dto.bannerFileId = row.bannerFileId;
   dto.bio =
     row.bio !== null && truncateBio && row.bio.length > BIO_PREVIEW_LENGTH
@@ -153,6 +174,8 @@ export class MastersSearchService {
   /**
    * Mints short-lived read URLs for every avatar in a search page. Presigning is
    * local and cheap, so this is one extra file lookup per non-empty avatar.
+   * Masters without an uploaded avatar already carry a stock portrait
+   * (`toMasterPublicDto`), so only real files are minted here.
    */
   async mintAvatarUrls(items: MasterPublicResponseDto[]): Promise<MasterPublicResponseDto[]> {
     const ids = [
@@ -172,7 +195,9 @@ export class MastersSearchService {
     await Promise.all(
       items.map(async (item) => {
         const key = item.avatarFileId === null ? undefined : keyById.get(item.avatarFileId);
-        item.avatarUrl = key === undefined ? null : await this.files.createReadUrlForKey(key);
+        if (key !== undefined) {
+          item.avatarUrl = await this.files.createReadUrlForKey(key);
+        }
       }),
     );
 
@@ -185,15 +210,7 @@ export class MastersSearchService {
 
     const row = await this.prisma.db.masterProfile.findUnique({
       where: { id: masterId },
-      select: {
-        avatarFileId: true,
-        bannerFileId: true,
-        portfolioImages: {
-          where: { deletedAt: null },
-          orderBy: { sortOrder: 'asc' },
-          select: { fileId: true, caption: true },
-        },
-      },
+      select: MASTER_MEDIA_SELECT,
     });
 
     if (row === null) {
@@ -210,7 +227,19 @@ export class MastersSearchService {
       where: { id: { in: fileIds }, isConfirmed: true, deletedAt: null },
       select: { id: true, key: true },
     });
-    const keyById = new Map(files.map((file) => [file.id, file.key]));
+
+    return this.buildMediaDto(row, new Map(files.map((file) => [file.id, file.key])));
+  }
+
+  /**
+   * Demo masters without uploads get deterministic stock imagery instead of blanks:
+   * gender-matched avatar, profession-scoped banner and portfolio gallery.
+   */
+  private async buildMediaDto(
+    row: MasterMediaRow,
+    keyById: Map<string, string>,
+  ): Promise<MasterMediaResponseDto> {
+    const categorySlug = row.categories[0]?.category.slug ?? null;
 
     const urlFor = async (fileId: string | null): Promise<string | null> => {
       const key = fileId === null ? undefined : keyById.get(fileId);
@@ -218,8 +247,8 @@ export class MastersSearchService {
     };
 
     const [avatarUrl, bannerUrl] = await Promise.all([
-      urlFor(row.avatarFileId),
-      urlFor(row.bannerFileId),
+      row.avatarFileId === null ? stockAvatarUrlFor(row.displayName) : urlFor(row.avatarFileId),
+      row.bannerFileId === null ? stockBannerUrlFor(categorySlug) : urlFor(row.bannerFileId),
     ]);
 
     const dto = new MasterMediaResponseDto();
@@ -235,6 +264,14 @@ export class MastersSearchService {
         })),
       )
     ).filter((image): image is MasterPortfolioImageUrlDto => image.url !== null);
+
+    if (dto.portfolio.length === 0) {
+      dto.portfolio = stockGalleryFor(categorySlug).map((url, index) => ({
+        fileId: `stock-${categorySlug ?? 'generic'}-${index + 1}`,
+        caption: null,
+        url,
+      }));
+    }
 
     return dto;
   }
@@ -339,7 +376,6 @@ export class MastersSearchService {
     const earningsById = new Map(
       earningsByMaster.map((row) => [row.masterProfileId, row._sum.price?.toFixed(2) ?? '0.00']),
     );
-
     return {
       items: rows.map((row) => toAdminMasterListItemDto(row, earningsById.get(row.id) ?? '0.00')),
       total,
