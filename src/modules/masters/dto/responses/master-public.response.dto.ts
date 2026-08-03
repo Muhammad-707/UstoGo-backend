@@ -21,6 +21,14 @@ export class MasterPublicResponseDto {
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   bannerFileId!: string | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Short-lived read URL when a banner exists; a profession-matched stock photo when it ' +
+      "doesn't (demo masters never uploaded one).",
+  })
+  bannerUrl!: string | null;
+
   @ApiPropertyOptional({ nullable: true })
   bio!: string | null;
 

@@ -50,6 +50,7 @@ const build = (
 
   const masters = {
     mintAvatarUrls: jest.fn().mockImplementation((items) => Promise.resolve(items)),
+    mintBannerUrls: jest.fn().mockImplementation((items) => Promise.resolve(items)),
   } as unknown as MastersSearchService;
 
   return { service: new SearchService(prisma, masters), prisma, queryRaw };

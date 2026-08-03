@@ -88,6 +88,7 @@ export class SearchService {
       .map((row) => toMasterPublicDto(row, true, locale));
 
     await this.masters.mintAvatarUrls(items);
+    await this.masters.mintBannerUrls(items);
 
     return { items, total };
   }

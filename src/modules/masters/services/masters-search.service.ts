@@ -124,8 +124,25 @@ export class MastersSearchService {
    * (`toMasterPublicDto`), so only real files are minted here.
    */
   async mintAvatarUrls(items: MasterPublicResponseDto[]): Promise<MasterPublicResponseDto[]> {
+    return this.mintFileUrls(items, 'avatarFileId', 'avatarUrl');
+  }
+
+  /**
+   * Mints short-lived read URLs for every uploaded banner in a search page. Masters
+   * without one already carry a profession-matched stock photo (`toMasterPublicDto`),
+   * so only real files are minted here.
+   */
+  async mintBannerUrls(items: MasterPublicResponseDto[]): Promise<MasterPublicResponseDto[]> {
+    return this.mintFileUrls(items, 'bannerFileId', 'bannerUrl');
+  }
+
+  private async mintFileUrls(
+    items: MasterPublicResponseDto[],
+    fileIdKey: 'avatarFileId' | 'bannerFileId',
+    urlKey: 'avatarUrl' | 'bannerUrl',
+  ): Promise<MasterPublicResponseDto[]> {
     const ids = [
-      ...new Set(items.map((item) => item.avatarFileId).filter((id): id is string => id !== null)),
+      ...new Set(items.map((item) => item[fileIdKey]).filter((id): id is string => id !== null)),
     ];
 
     if (ids.length === 0) {
@@ -140,9 +157,9 @@ export class MastersSearchService {
 
     await Promise.all(
       items.map(async (item) => {
-        const key = item.avatarFileId === null ? undefined : keyById.get(item.avatarFileId);
+        const key = item[fileIdKey] === null ? undefined : keyById.get(item[fileIdKey]);
         if (key !== undefined) {
-          item.avatarUrl = await this.files.createReadUrlForKey(key);
+          item[urlKey] = await this.files.createReadUrlForKey(key);
         }
       }),
     );

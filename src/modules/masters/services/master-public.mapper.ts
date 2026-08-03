@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 
 import { localize, type Locale } from '@common/utils/locale.util';
 
-import { stockAvatarUrlFor } from '../constants/stock-media.constants';
+import { stockAvatarUrlFor, stockBannerUrlFor } from '../constants/stock-media.constants';
 import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 
 /**
@@ -30,7 +30,9 @@ export const MASTER_PUBLIC_SELECT = {
   whatsappPhone: true,
   whatsappEnabled: true,
   city: { select: { name: true, nameTj: true, nameRu: true } },
-  categories: { include: { category: { select: { name: true, nameTj: true, nameRu: true } } } },
+  categories: {
+    include: { category: { select: { slug: true, name: true, nameTj: true, nameRu: true } } },
+  },
   services: { where: { isActive: true }, select: { price: true } },
   certificates: {
     where: { deletedAt: null, verifiedAt: { not: null } },
@@ -62,6 +64,9 @@ export const toMasterPublicDto = (
   // No uploaded avatar yet (demo master) -> a real stock portrait of the right gender.
   dto.avatarUrl = row.avatarFileId === null ? stockAvatarUrlFor(row.displayName) : null;
   dto.bannerFileId = row.bannerFileId;
+  // No uploaded banner yet (demo master) -> a stock photo matched to their profession.
+  dto.bannerUrl =
+    row.bannerFileId === null ? stockBannerUrlFor(row.categories[0]?.category.slug) : null;
   dto.bio =
     row.bio !== null && truncateBio && row.bio.length > BIO_PREVIEW_LENGTH
       ? `${row.bio.slice(0, BIO_PREVIEW_LENGTH)}…`
