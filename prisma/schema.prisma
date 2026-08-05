@@ -119,6 +119,25 @@ enum BannerPosition {
   @@map("banner_position")
 }
 
+/// §6.8 (MASTER_PROMPT.md).
+enum ReportType {
+  SPAM
+  FRAUD
+  ABUSE
+  OTHER
+
+  @@map("report_type")
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+  REJECTED
+
+  @@map("report_status")
+}
+
 enum FilePurpose {
   AVATAR
   CERTIFICATE
@@ -152,6 +171,7 @@ enum AuditAction {
   MASTER_STATS_ACCESSED
   CERTIFICATE_VERIFIED
   CERTIFICATE_REJECTED
+  REPORT_RESOLVED
 
   @@map("audit_action")
 }
@@ -198,6 +218,9 @@ model User {
   hiddenReviews           Review[]                 @relation("ReviewHiddenBy")
   messages                Message[]
   createdBanners          Banner[]
+  reportsFiled            Report[]                 @relation("ReportReporter")
+  reportsReceived         Report[]                 @relation("ReportReported")
+  reportsResolved         Report[]                 @relation("ReportResolvedBy")
 
   @@index([role, status])
   @@index([createdAt])
@@ -959,4 +982,35 @@ model Banner {
 
   @@index([position, isActive, sortOrder])
   @@map("banners")
+}
+
+// ---------------------------------------------------------------------------
+// §13 Trust & Safety
+// ---------------------------------------------------------------------------
+
+/// §6.8 (MASTER_PROMPT.md). Report-and-block between users — a client or master
+/// flags another user; an admin reviews and resolves it. Deliberately not soft-
+/// deletable: a report is itself a moderation record, and BACKLOG.md B-14 names this
+/// exact shape as the whole scope (no separate `Block` model — the platform-side
+/// action a resolved report leads to is `POST /admin/users/:id/block`, already F-02's).
+model Report {
+  id               String       @id @default(uuid()) @db.Uuid
+  reporterUserId   String       @map("reporter_user_id") @db.Uuid
+  reportedUserId   String       @map("reported_user_id") @db.Uuid
+  type             ReportType
+  description      String       @db.VarChar(1000)
+  status           ReportStatus @default(OPEN)
+  adminNote        String?      @map("admin_note") @db.VarChar(1000)
+  resolvedByUserId String?      @map("resolved_by_user_id") @db.Uuid
+  resolvedAt       DateTime?    @map("resolved_at") @db.Timestamptz(3)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  reporter   User  @relation("ReportReporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  reported   User  @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  resolvedBy User? @relation("ReportResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([reportedUserId, status])
+  @@index([status, createdAt])
+  @@map("reports")
 }

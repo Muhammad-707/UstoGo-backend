@@ -193,6 +193,12 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] i18n: `Category.nameTj`/`nameRu`/`descriptionTj`/`descriptionRu`, translated cities/districts, `X-Locale` header threading through categories/cities/search/favorites/masters — closes most of `MASTER_PROMPT.md` §6.2 (Russian) at the data layer; `messages/ru` on the frontend is separately complete
 - [x] Stock media seeded for demo masters; public master listing banner URL fix
 
+### Post-1.0.0, 2026-08-05: report-and-block between users (MASTER_PROMPT.md §6.8, BACKLOG.md B-14, P5)
+
+- [x] `Report` model (SPAM/FRAUD/ABUSE/OTHER; OPEN/REVIEWED/RESOLVED/REJECTED)
+- [x] `POST /reports` (client/master), `GET /admin/reports`, `POST /admin/reports/:id/resolve` — audited (`REPORT_RESOLVED`)
+- [ ] Frontend: report menu on profiles, admin reports queue — tracked as a separate frontend task
+
 ### Post-1.0.0, 2026-08-05: admin user management (MASTER_PROMPT.md §6.11, P5)
 
 - [x] `GET /admin/users` — role/status/city/search/registration-date filters
