@@ -15,6 +15,9 @@ import {
 import { MastersSearchService } from '@modules/masters/services/masters-search.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
+const roundDistance = (km: number | null | undefined): number | null =>
+  km === null || km === undefined ? null : Math.round(km * 10) / 10;
+
 /**
  * F-08 (MODULES.md › SearchModule). Owns nothing — a read-only ranking query over
  * `MastersModule`'s aggregate. The candidate id list and its ordering come from one raw
@@ -34,10 +37,12 @@ export class SearchService {
     query: MasterSearchQueryDto,
     locale: Locale = 'en',
   ): Promise<{ items: MasterPublicResponseDto[]; total: number }> {
-    const conditions = await this.conditionsFor(query);
-    const orderBy = this.orderByFor(query.sort);
+    const hasGeoPoint = query.lat !== undefined && query.lng !== undefined;
+    const conditions = await this.conditionsFor(query, hasGeoPoint);
+    const orderBy = this.orderByFor(query.sort, hasGeoPoint);
     const needsPriceJoin =
       query.sort === MasterSort.PRICE_ASC || query.sort === MasterSort.PRICE_DESC;
+    const geoJoin = hasGeoPoint ? this.geoJoin() : Prisma.empty;
     const where = Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
 
     // Data and count are separate queries, run in parallel. The single `COUNT(*)
@@ -47,9 +52,10 @@ export class SearchService {
     // index (0.2ms) and makes the count an index-only scan (6.1ms) over the
     // deletedAt-covering index.
     const [rows, countRows] = await Promise.all([
-      this.prisma.db.$queryRaw<{ id: string }[]>(Prisma.sql`
-        SELECT mp.id
+      this.prisma.db.$queryRaw<{ id: string; distance_km: number | null }[]>(Prisma.sql`
+        SELECT mp.id, ${hasGeoPoint ? this.distanceExpr(query.lat as number, query.lng as number) : Prisma.sql`NULL`} AS distance_km
         FROM master_profiles mp
+        ${geoJoin}
         ${
           needsPriceJoin
             ? Prisma.sql`LEFT JOIN LATERAL (
@@ -65,6 +71,7 @@ export class SearchService {
       this.prisma.db.$queryRaw<{ total: bigint }[]>(Prisma.sql`
         SELECT COUNT(*) AS total
         FROM master_profiles mp
+        ${geoJoin}
         ${where}
       `),
     ]);
@@ -76,6 +83,21 @@ export class SearchService {
       return { items: [], total };
     }
 
+    const items = await this.hydrate(ids, rows, hasGeoPoint, locale);
+
+    return { items, total };
+  }
+
+  /** Rehydrates the ranked id list through the public projection (field policy stays
+   *  in `toMasterPublicDto`) and, when a geo point was given, attaches `distanceKm`. */
+  private async hydrate(
+    ids: string[],
+    rankedRows: { id: string; distance_km: number | null }[],
+    hasGeoPoint: boolean,
+    locale: Locale,
+  ): Promise<MasterPublicResponseDto[]> {
+    const distanceById = new Map(rankedRows.map((row) => [row.id, row.distance_km]));
+
     const projected = await this.prisma.db.masterProfile.findMany({
       where: { id: { in: ids } },
       select: MASTER_PUBLIC_SELECT,
@@ -85,15 +107,47 @@ export class SearchService {
     const items = ids
       .map((id) => byId.get(id))
       .filter((row): row is MasterRow => row !== undefined)
-      .map((row) => toMasterPublicDto(row, true, locale));
+      .map((row) => {
+        const dto = toMasterPublicDto(row, true, locale);
+        if (hasGeoPoint) {
+          dto.distanceKm = roundDistance(distanceById.get(row.id));
+        }
+        return dto;
+      });
 
     await this.masters.mintAvatarUrls(items);
     await this.masters.mintBannerUrls(items);
 
-    return { items, total };
+    return items;
   }
 
-  private async conditionsFor(query: MasterSearchQueryDto): Promise<Prisma.Sql[]> {
+  /** §6.3: distance to the master's *city* — the only coordinates this schema has. */
+  private geoJoin(): Prisma.Sql {
+    return Prisma.sql`LEFT JOIN cities c ON c.id = mp.city_id`;
+  }
+
+  /**
+   * Haversine, in kilometres. `LEAST`/`GREATEST` clamp the `acos` argument to
+   * [-1, 1] — floating-point rounding can push it a hair outside that domain for
+   * two points that are (near-)identical, which would otherwise raise a Postgres
+   * `22003 numeric argument out of domain` for the most common case (searching
+   * from exactly where a master already is).
+   */
+  private distanceExpr(lat: number, lng: number): Prisma.Sql {
+    return Prisma.sql`(
+      CASE WHEN c.latitude IS NULL OR c.longitude IS NULL THEN NULL ELSE
+        6371 * acos(LEAST(1, GREATEST(-1,
+          cos(radians(${lat})) * cos(radians(c.latitude::float8)) * cos(radians(c.longitude::float8) - radians(${lng}))
+          + sin(radians(${lat})) * sin(radians(c.latitude::float8))
+        )))
+      END
+    )`;
+  }
+
+  private async conditionsFor(
+    query: MasterSearchQueryDto,
+    hasGeoPoint: boolean,
+  ): Promise<Prisma.Sql[]> {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`mp.approval_status = 'APPROVED'`,
       Prisma.sql`mp.is_active = true`,
@@ -112,6 +166,13 @@ export class SearchService {
     }
     if (query.availableOn !== undefined) {
       conditions.push(this.availableOnCondition(query.availableOn));
+    }
+    // radiusKm is only meaningful paired with lat/lng — silently ignored otherwise
+    // rather than a 422, since it is a refinement of the geo point, not its own filter.
+    if (hasGeoPoint && query.radiusKm !== undefined) {
+      conditions.push(
+        Prisma.sql`${this.distanceExpr(query.lat as number, query.lng as number)} <= LEAST(${query.radiusKm}, mp.service_radius_km)`,
+      );
     }
 
     return conditions;
@@ -197,7 +258,10 @@ export class SearchService {
     return [categoryId, ...level1.map((row) => row.id), ...level2.map((row) => row.id)];
   }
 
-  private orderByFor(sort: MasterSort | undefined): Prisma.Sql {
+  /** `distance:asc` without a geo point falls back to the default (rating) — a 422 for
+   *  a sort mode that just doesn't apply yet would be a sharper edge than this API
+   *  draws anywhere else for a missing optional refinement. */
+  private orderByFor(sort: MasterSort | undefined, hasGeoPoint: boolean): Prisma.Sql {
     switch (sort) {
       case MasterSort.CREATED_DESC:
         return Prisma.sql`mp.created_at DESC`;
@@ -205,6 +269,11 @@ export class SearchService {
         return Prisma.sql`price_agg.min_price ASC NULLS LAST`;
       case MasterSort.PRICE_DESC:
         return Prisma.sql`price_agg.min_price DESC NULLS LAST`;
+      case MasterSort.DISTANCE_ASC:
+        if (hasGeoPoint) {
+          return Prisma.sql`distance_km ASC NULLS LAST`;
+        }
+        return Prisma.sql`mp.rating_average DESC`;
       case MasterSort.RATING_DESC:
       default:
         return Prisma.sql`mp.rating_average DESC`;

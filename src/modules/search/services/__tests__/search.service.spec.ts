@@ -188,6 +188,122 @@ describe('SearchService', () => {
     expect(dataSql).toContain('working_days');
   });
 
+  describe('geo search (§6.3)', () => {
+    it('joins cities and selects a distance only when lat/lng are given', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ total: BigInt(0) }]);
+      const { service } = build({ queryRaw });
+
+      await service.search({ page: 1, limit: 20, skip: 0, lat: 38.5, lng: 68.78 });
+
+      const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+      expect(dataSql).toContain('LEFT JOIN cities');
+      expect(dataSql).toContain('acos');
+    });
+
+    it('omits the geo join without lat/lng', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ total: BigInt(0) }]);
+      const { service } = build({ queryRaw });
+
+      await service.search({ page: 1, limit: 20, skip: 0 });
+
+      const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+      expect(dataSql).not.toContain('LEFT JOIN cities');
+    });
+
+    it('attaches distanceKm to hydrated results when a geo point was given', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([{ id: 'm-1', distance_km: 3.456 }])
+        .mockResolvedValueOnce([{ total: BigInt(1) }]);
+      const { service } = build({ queryRaw });
+
+      const result = await service.search({ page: 1, limit: 20, skip: 0, lat: 38.5, lng: 68.78 });
+
+      expect(result.items[0]?.distanceKm).toBe(3.5);
+    });
+
+    it('does not set distanceKm without a geo point', async () => {
+      const { service } = build();
+
+      const result = await service.search({ page: 1, limit: 20, skip: 0 });
+
+      expect(result.items[0]?.distanceKm).toBeUndefined();
+    });
+
+    it('adds a radius filter only when radiusKm accompanies lat/lng', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ total: BigInt(0) }]);
+      const { service } = build({ queryRaw });
+
+      await service.search({
+        page: 1,
+        limit: 20,
+        skip: 0,
+        lat: 38.5,
+        lng: 68.78,
+        radiusKm: 10,
+      });
+
+      const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+      expect(dataSql).toContain('LEAST(');
+      expect(dataSql).toContain('service_radius_km');
+    });
+
+    it('ignores radiusKm without a geo point', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ total: BigInt(0) }]);
+      const { service } = build({ queryRaw });
+
+      await service.search({ page: 1, limit: 20, skip: 0, radiusKm: 10 });
+
+      const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+      expect(dataSql).not.toContain('service_radius_km');
+    });
+
+    it('orders by distance when sort=distance:asc and a geo point was given', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ total: BigInt(0) }]);
+      const { service } = build({ queryRaw });
+
+      await service.search({
+        page: 1,
+        limit: 20,
+        skip: 0,
+        lat: 38.5,
+        lng: 68.78,
+        sort: MasterSort.DISTANCE_ASC,
+      });
+
+      const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+      expect(dataSql).toContain('distance_km ASC');
+    });
+
+    it('falls back to rating when sort=distance:asc has no geo point', async () => {
+      const queryRaw = jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ total: BigInt(0) }]);
+      const { service } = build({ queryRaw });
+
+      await service.search({ page: 1, limit: 20, skip: 0, sort: MasterSort.DISTANCE_ASC });
+
+      const dataSql = (queryRaw.mock.calls[0]?.[0] as { strings: string[] }).strings.join(' ');
+      expect(dataSql).toContain('rating_average DESC');
+    });
+  });
+
   it('filters by certificate presence when requested', async () => {
     const queryRaw = jest
       .fn()

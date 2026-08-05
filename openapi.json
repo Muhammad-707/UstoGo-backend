@@ -4385,7 +4385,8 @@
                 "rating:desc",
                 "price:asc",
                 "price:desc",
-                "createdAt:desc"
+                "createdAt:desc",
+                "distance:asc"
               ]
             }
           },
@@ -4397,6 +4398,37 @@
             "schema": {
               "example": "2026-08-15",
               "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": -90,
+              "maximum": 90,
+              "type": "number"
+            }
+          },
+          {
+            "name": "lng",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": -180,
+              "maximum": 180,
+              "type": "number"
+            }
+          },
+          {
+            "name": "radiusKm",
+            "required": false,
+            "in": "query",
+            "description": "Only meaningful together with lat/lng.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "type": "number"
             }
           }
         ],
@@ -9676,6 +9708,21 @@
           },
           "cityName": {
             "type": "string"
+          },
+          "cityLatitude": {
+            "type": "object",
+            "nullable": true,
+            "description": "City-level coordinates (§6.3)."
+          },
+          "cityLongitude": {
+            "type": "object",
+            "nullable": true,
+            "description": "City-level coordinates (§6.3)."
+          },
+          "distanceKm": {
+            "type": "object",
+            "nullable": true,
+            "description": "Distance from the search point in km — only present when lat/lng were given."
           },
           "categories": {
             "type": "array",

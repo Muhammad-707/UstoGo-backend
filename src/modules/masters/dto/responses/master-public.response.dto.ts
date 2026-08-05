@@ -41,6 +41,18 @@ export class MasterPublicResponseDto {
   @ApiProperty()
   cityName!: string;
 
+  @ApiPropertyOptional({ nullable: true, description: 'City-level coordinates (§6.3).' })
+  cityLatitude!: number | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'City-level coordinates (§6.3).' })
+  cityLongitude!: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Distance from the search point in km — only present when lat/lng were given.',
+  })
+  distanceKm?: number | null;
+
   @ApiProperty({ type: String, isArray: true })
   categories!: string[];
 

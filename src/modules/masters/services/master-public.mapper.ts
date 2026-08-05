@@ -29,7 +29,7 @@ export const MASTER_PUBLIC_SELECT = {
   // P0: the WhatsApp line rides every public projection.
   whatsappPhone: true,
   whatsappEnabled: true,
-  city: { select: { name: true, nameTj: true, nameRu: true } },
+  city: { select: { name: true, nameTj: true, nameRu: true, latitude: true, longitude: true } },
   categories: {
     include: { category: { select: { slug: true, name: true, nameTj: true, nameRu: true } } },
   },
@@ -49,6 +49,9 @@ export const MASTER_PUBLIC_SELECT = {
 export type MasterRow = Prisma.MasterProfileGetPayload<{ select: typeof MASTER_PUBLIC_SELECT }>;
 
 const BIO_PREVIEW_LENGTH = 200;
+
+const toDecimalOrNull = (value: Prisma.Decimal | null | undefined): number | null =>
+  value === null || value === undefined ? null : Number(value);
 
 export const toMasterPublicDto = (
   row: MasterRow,
@@ -74,6 +77,10 @@ export const toMasterPublicDto = (
   dto.yearsOfExperience = row.yearsOfExperience;
   dto.serviceRadiusKm = row.serviceRadiusKm;
   dto.cityName = localize(row.city.name, row.city.nameTj, row.city.nameRu, locale);
+  // §6.3: the master's own precise coordinates are not collected — the city's are
+  // the only ones this schema has, so the map plots at city granularity.
+  dto.cityLatitude = toDecimalOrNull(row.city.latitude);
+  dto.cityLongitude = toDecimalOrNull(row.city.longitude);
   dto.categories = row.categories.map((entry) =>
     localize(entry.category.name, entry.category.nameTj, entry.category.nameRu, locale),
   );

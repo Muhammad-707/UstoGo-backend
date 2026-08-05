@@ -193,6 +193,13 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] i18n: `Category.nameTj`/`nameRu`/`descriptionTj`/`descriptionRu`, translated cities/districts, `X-Locale` header threading through categories/cities/search/favorites/masters — closes most of `MASTER_PROMPT.md` §6.2 (Russian) at the data layer; `messages/ru` on the frontend is separately complete
 - [x] Stock media seeded for demo masters; public master listing banner URL fix
 
+### Post-1.0.0, 2026-08-05: geo search (MASTER_PROMPT.md §6.3, P3)
+
+- [x] `lat`/`lng`/`radiusKm` on `GET /masters` search — haversine distance to `City.latitude/longitude`, filtered by `LEAST(radiusKm, MasterProfile.serviceRadiusKm)`
+- [x] `sort=distance:asc`
+- [x] `MasterPublicResponseDto.cityLatitude/cityLongitude/distanceKm` for the frontend map
+- [ ] Frontend: Leaflet map view on `/search` — tracked as a separate frontend task
+
 ### Post-1.0.0, 2026-08-05: NPS + admin statistics (MASTER_PROMPT.md §5–§6.1, P1)
 
 - [x] `Review.npsScore`/`wouldRecommend` (both optional) collected on `POST /reviews`
