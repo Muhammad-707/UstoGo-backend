@@ -8,8 +8,19 @@ WORKDIR /app
 # installs git hooks. There is no .git directory in the image and no use for hooks in
 # a build; declining to run dependency install scripts is also one less supply-chain
 # surface. Anything genuinely needed at build time is an explicit RUN below.
+#
+# `npm install`, not `npm ci`: a transitive devDependency chain (unrs-resolver, used
+# by eslint-import-resolver-typescript and jest-resolve) optionally pulls a
+# wasm32-wasi fallback binding whose own @napi-rs/wasm-runtime -> @emnapi/* peer
+# chain has repeatedly produced a package-lock.json that `npm ci`'s strict
+# consistency check rejects — reproduced on both npm 10.9.8 (this image) and 11.6.2
+# (local), with a different missing-entry each time depending on the platform the
+# lockfile was last written on. None of it is ever loaded (every optional dependency
+# in this tree is a perf-only native/WASM accelerator with a pure-JS fallback), so
+# `npm install` — which reconciles rather than hard-fails on the same drift — is the
+# stable fix rather than chasing one more version pin.
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 
 COPY prisma ./prisma
 COPY tsconfig*.json nest-cli.json ./
@@ -28,7 +39,7 @@ ENV NODE_ENV=production
 RUN addgroup -S app && adduser -S app -G app
 
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+RUN npm install --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
 # The generated client, not the schema-driven generation step: the runtime image has no
