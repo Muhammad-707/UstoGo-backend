@@ -51,3 +51,26 @@ export class PortfolioLimitExceededException extends AppException {
     );
   }
 }
+
+/** 404. §6.17: certificate moderation. */
+export class CertificateNotFoundException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.CERTIFICATE_NOT_FOUND,
+      'That certificate does not exist.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+}
+
+/** 409. Verifying an already-verified certificate is not idempotent — a second admin
+ *  finding it already handled should see that explicitly, not silently re-stamp it. */
+export class CertificateAlreadyVerifiedException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.CERTIFICATE_ALREADY_VERIFIED,
+      'That certificate has already been verified.',
+      HttpStatus.CONFLICT,
+    );
+  }
+}

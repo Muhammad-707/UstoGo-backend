@@ -1767,7 +1767,9 @@
                 "BANNER_DELETED",
                 "NOTIFICATION_BROADCAST",
                 "CONVERSATION_ACCESSED",
-                "MASTER_STATS_ACCESSED"
+                "MASTER_STATS_ACCESSED",
+                "CERTIFICATE_VERIFIED",
+                "CERTIFICATE_REJECTED"
               ]
             }
           },
@@ -3590,6 +3592,232 @@
           }
         ],
         "summary": "Per-master statistics for admin oversight",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/admin/certificates": {
+      "get": {
+        "description": "`verified=false` (default view) surfaces the moderation queue.",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "verified",
+            "required": false,
+            "in": "query",
+            "description": "Filter by moderation state. Omit to list every certificate.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AdminCertificateResponseDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List certificates for moderation",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/admin/certificates/{id}/verify": {
+      "post": {
+        "operationId": "verify",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCertificateResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CERTIFICATE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Verify a certificate",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/admin/certificates/{id}/reject": {
+      "post": {
+        "description": "Soft-deletes it — the same effect as the master removing it themselves.",
+        "operationId": "reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCertificateResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CERTIFICATE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Reject a certificate",
         "tags": [
           "Admin"
         ]
@@ -9240,7 +9468,9 @@
               "BANNER_DELETED",
               "NOTIFICATION_BROADCAST",
               "CONVERSATION_ACCESSED",
-              "MASTER_STATS_ACCESSED"
+              "MASTER_STATS_ACCESSED",
+              "CERTIFICATE_VERIFIED",
+              "CERTIFICATE_REJECTED"
             ]
           },
           "entityType": {
@@ -10085,6 +10315,54 @@
           "reviewsBreakdown",
           "monthlySeries",
           "topServices"
+        ]
+      },
+      "AdminCertificateResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "masterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "masterDisplayName": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "issuedBy": {
+            "type": "object",
+            "nullable": true
+          },
+          "issuedAt": {
+            "type": "object",
+            "nullable": true,
+            "format": "date"
+          },
+          "verifiedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "masterId",
+          "masterDisplayName",
+          "fileId",
+          "title",
+          "createdAt"
         ]
       },
       "ServiceResponseDto": {
