@@ -1,7 +1,7 @@
 # TODO — UstoGo Backend
 
-**Last updated:** 2026-08-03
-**Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete). Post-1.0.0: P0 (WhatsApp) landed 2026-08-03.
+**Last updated:** 2026-08-05
+**Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete). Post-1.0.0: P0 (WhatsApp) landed 2026-08-03; production DB sync confirmed, observability/security hardening pass (Sentry, Redis health check, helmet/compression) and a Render deploy-pipeline fix landed 2026-08-05.
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
 
@@ -186,7 +186,21 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] B-45 Master portfolio/gallery (`masters/me/portfolio` CRUD + reorder, `PortfolioImage` model, `MasterPublicResponseDto.portfolioImageFileIds`)
 - [x] Search performance pass: split count/data in `SearchService` (parallel `Promise.all` instead of `COUNT(*) OVER()`), four additive indexes (`(approvalStatus, isActive, createdAt DESC)`, `(approvalStatus, isActive, ratingAverage DESC)`, `(approvalStatus, isActive, deletedAt)` covering count, `displayName` GIN trigram for the admin `ILIKE`). Measured at 50k masters: data query 39ms → 0.2ms, count 16ms → 6.1ms, admin `ILIKE` 0.5ms. Migration must be deployed to the Render database (`npm run prisma:migrate:deploy`)
 - [ ] e2e coverage for both (unit-level only so far)
-- [ ] Run `prisma migrate deploy` and re-run `prisma db seed` against the deployed Render database — production currently has 0 masters and the old 3-root category taxonomy
+- [x] Run `prisma migrate deploy` and re-run `prisma db seed` against the deployed Render database — confirmed 2026-08-05: production has real masters/categories/cities (`prisma migrate status` reports the schema up to date; `GET /masters`, `/categories`, `/cities` against the live API all return real seeded data, not the old 3-root taxonomy)
+- [x] `BookingsGateway`: a second Socket.io namespace (alongside `/chat`) pushing live `booking:update` events over websocket — landed with the master dashboard analytics work, undocumented until now
+- [x] Master self-service vacation-mode toggle (`PATCH /masters/me/availability`), `profileViews` counter, verified-badge fix
+- [x] Master dashboard analytics: `GET /bookings/me/stats` (earnings, 14-day trend, completion rate, `earningsByCategory`, `avgAcceptLatencyMinutes`, `repeatClientRate`); admin bookings/earnings endpoints; live favorites status
+- [x] i18n: `Category.nameTj`/`nameRu`/`descriptionTj`/`descriptionRu`, translated cities/districts, `X-Locale` header threading through categories/cities/search/favorites/masters — closes most of `MASTER_PROMPT.md` §6.2 (Russian) at the data layer; `messages/ru` on the frontend is separately complete
+- [x] Stock media seeded for demo masters; public master listing banner URL fix
+
+### Post-1.0.0, 2026-08-05 hardening pass
+
+- [x] `RedisHealthIndicator` added to `/health/ready` — closes the gap `STATUS.md` §1 flagged (rate limiting and both Socket.io namespaces hard-depend on Redis; readiness never checked it)
+- [x] `helmet()` + `compression()` in `main.ts` — baseline security headers (HSTS, X-Content-Type-Options, X-Frame-Options); CSP deliberately left off (`swagger-ui-dist` needs inline scripts)
+- [x] Sentry wired: `initSentry()` in `main.ts` (no-op without `SENTRY_DSN`), `GlobalExceptionFilter` reports every 5xx via `captureException()` — `SENTRY_DSN` had been validated in `env.schema.ts` since Phase 1 but nothing ever called `Sentry.init`
+- [x] `master_profiles.search_vector` declared `Unsupported("tsvector")` with a matching `dbgenerated()` default and both its GIN indexes given matching `map` names — `prisma migrate diff` against production now produces an empty migration, closing a footgun that needed hand-fixing at least three times since F-12
+- [x] Dockerfile: `npm ci` → `npm install` in both stages — a pre-existing (not caused by this pass) lockfile inconsistency in a transitive devDependency (`unrs-resolver`'s optional wasm32-wasi fallback, via `@napi-rs/wasm-runtime`'s `@emnapi/*` peers) made `npm ci` fail unpredictably depending on which platform last wrote `package-lock.json`; `npm install` reconciles instead of hard-failing. Verified against a live Render deploy (`build_failed` → `live`).
+- [x] Root `README.md`/`CLAUDE.md` — corrected the stale "Phase 1, no application code yet" header
 
 ---
 
