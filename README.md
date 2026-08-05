@@ -8,7 +8,7 @@ A production-grade REST API for a two-sided marketplace connecting **clients** w
 
 ## Status
 
-**Phase 1 in progress — Platform Foundation.** The repository scaffold has landed: the application boots on `http://localhost:3000/api/v1` with strict TypeScript, the full lint rule set and git hooks in place. No routes are exposed yet.
+**v1.0.0 shipped, in active post-launch development.** All six roadmap phases are done — the full client journey (search → book → accept → complete → review → message/WhatsApp) works end to end against a deployed instance. Live: API at `https://ustogo-backend.onrender.com/api/v1`, Swagger at `https://ustogo-backend.onrender.com/api/docs`.
 
 The full specification lives in [`docs/`](./docs) and is the source of truth for this project. Current state and the next task: [`docs/STATUS.md`](./docs/STATUS.md) · [`docs/TODO.md`](./docs/TODO.md).
 

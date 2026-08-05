@@ -128,6 +128,10 @@
   "overrides": {
     "@nestjs/swagger": {
       "js-yaml": "^5.2.2"
-    }
+    },
+    "@napi-rs/wasm-runtime": "1.1.4",
+    "@emnapi/core": "1.10.0",
+    "@emnapi/runtime": "1.10.0",
+    "@emnapi/wasi-threads": "1.2.1"
   }
 }

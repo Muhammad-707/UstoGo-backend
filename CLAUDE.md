@@ -17,16 +17,16 @@
 
 ## Where to look
 
-| Question | Document |
-| --- | --- |
-| What are we building? | `docs/PROJECT_OVERVIEW.md` |
-| What must it do? | `docs/FUNCTIONAL_REQUIREMENTS.md`, `docs/SRS.md` |
-| What's the data model? | `docs/DATABASE.md`, `docs/ERD.md` |
-| What endpoints exist? | `docs/API.md` |
-| Who can do what? | `docs/USER_ROLES.md`, `docs/AUTHORIZATION.md` |
-| How is it structured? | `docs/ARCHITECTURE.md`, `docs/MODULES.md`, `docs/FOLDER_STRUCTURE.md` |
-| How do I write code here? | `docs/CODING_STANDARDS.md`, `docs/NAMING_CONVENTIONS.md` |
-| What's next? | `docs/STATUS.md`, `docs/TODO.md` |
+| Question                  | Document                                                              |
+| ------------------------- | --------------------------------------------------------------------- |
+| What are we building?     | `docs/PROJECT_OVERVIEW.md`                                            |
+| What must it do?          | `docs/FUNCTIONAL_REQUIREMENTS.md`, `docs/SRS.md`                      |
+| What's the data model?    | `docs/DATABASE.md`, `docs/ERD.md`                                     |
+| What endpoints exist?     | `docs/API.md`                                                         |
+| Who can do what?          | `docs/USER_ROLES.md`, `docs/AUTHORIZATION.md`                         |
+| How is it structured?     | `docs/ARCHITECTURE.md`, `docs/MODULES.md`, `docs/FOLDER_STRUCTURE.md` |
+| How do I write code here? | `docs/CODING_STANDARDS.md`, `docs/NAMING_CONVENTIONS.md`              |
+| What's next?              | `docs/STATUS.md`, `docs/TODO.md`                                      |
 
 ## Stack
 
@@ -34,4 +34,4 @@ NestJS 11 · TypeScript (strict) · PostgreSQL 16 · Prisma 6 · Passport JWT ·
 
 ## Current state
 
-Phase 0 complete — documentation baseline. **No application code yet.** Phase 1 (Platform Foundation) is next; see `docs/TODO.md`.
+v1.0.0 shipped, in active post-launch development — all six roadmap phases done, the full client journey works end to end against the deployed instance (`https://ustogo-backend.onrender.com/api/v1`). See `docs/STATUS.md` for the authoritative snapshot and `docs/TODO.md` for what's next.
