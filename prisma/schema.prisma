@@ -5,9 +5,12 @@
 // dependencies have not landed are deliberately absent rather than stubbed:
 //   - Certificate (§3.4) arrives with F-03 in Phase 2.
 //   - MasterProfile.searchVector (§3.3) is a generated tsvector for full-text search,
-//     added in raw SQL below rather than as a Prisma field — Prisma cannot express a
-//     `GENERATED ALWAYS AS (...) STORED` column, so it is queried through
-//     `$queryRaw` in SearchService rather than the generated client.
+//     added by raw SQL in 20260729204719_add_schedule_and_search_vector — Prisma
+//     cannot express a `GENERATED ALWAYS AS (...) STORED` column, so it is queried
+//     through `$queryRaw` in SearchService rather than the generated client. It *is*
+//     declared below as `Unsupported("tsvector")` with a matching `dbgenerated()`
+//     default purely so `prisma migrate dev`'s drift detection stops proposing to
+//     drop the column and its GIN index on every unrelated migration.
 
 generator client {
   provider        = "prisma-client-js"
@@ -244,37 +247,46 @@ model Favorite {
 /// written only inside the transaction that causes the change; a nightly job
 /// reconciles them and logs drift as an error.
 model MasterProfile {
-  id                     String         @id @default(uuid()) @db.Uuid
-  userId                 String         @unique @map("user_id") @db.Uuid
-  firstName              String         @map("first_name") @db.VarChar(100)
-  lastName               String         @map("last_name") @db.VarChar(100)
-  displayName            String         @map("display_name") @db.VarChar(150)
+  id                     String                   @id @default(uuid()) @db.Uuid
+  userId                 String                   @unique @map("user_id") @db.Uuid
+  firstName              String                   @map("first_name") @db.VarChar(100)
+  lastName               String                   @map("last_name") @db.VarChar(100)
+  displayName            String                   @map("display_name") @db.VarChar(150)
   bio                    String?
-  yearsOfExperience      Int            @default(0) @map("years_of_experience") @db.SmallInt
-  cityId                 String         @map("city_id") @db.Uuid
-  serviceRadiusKm        Int            @default(15) @map("service_radius_km") @db.SmallInt
-  timezone               String         @db.VarChar(64)
-  avatarFileId           String?        @map("avatar_file_id") @db.Uuid
-  bannerFileId           String?        @map("banner_file_id") @db.Uuid
+  yearsOfExperience      Int                      @default(0) @map("years_of_experience") @db.SmallInt
+  cityId                 String                   @map("city_id") @db.Uuid
+  serviceRadiusKm        Int                      @default(15) @map("service_radius_km") @db.SmallInt
+  timezone               String                   @db.VarChar(64)
+  avatarFileId           String?                  @map("avatar_file_id") @db.Uuid
+  bannerFileId           String?                  @map("banner_file_id") @db.Uuid
   /// The master's WhatsApp number, E.164. Defaults to their registration phone and is
   /// the number clients reach them on directly — the marketplace's primary channel.
   /// Only ever published when `whatsappEnabled` is true. Changing it sets
   /// `whatsappChangedAt` (24-hour cooldown).
-  whatsappPhone          String?        @map("whatsapp_phone") @db.VarChar(20)
-  whatsappEnabled        Boolean        @default(true) @map("whatsapp_enabled")
-  whatsappChangedAt      DateTime?      @map("whatsapp_changed_at") @db.Timestamptz(3)
-  approvalStatus         ApprovalStatus @default(PENDING) @map("approval_status")
-  rejectionReason        String?        @map("rejection_reason") @db.VarChar(500)
-  approvedAt             DateTime?      @map("approved_at") @db.Timestamptz(3)
-  approvedByUserId       String?        @map("approved_by_user_id") @db.Uuid
-  isActive               Boolean        @default(false) @map("is_active")
-  profileViews           Int            @default(0) @map("profile_views")
-  ratingAverage          Decimal        @default(0.00) @map("rating_average") @db.Decimal(3, 2)
-  ratingCount            Int            @default(0) @map("rating_count")
-  completedBookingsCount Int            @default(0) @map("completed_bookings_count")
-  createdAt              DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt              DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt              DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  whatsappPhone          String?                  @map("whatsapp_phone") @db.VarChar(20)
+  whatsappEnabled        Boolean                  @default(true) @map("whatsapp_enabled")
+  whatsappChangedAt      DateTime?                @map("whatsapp_changed_at") @db.Timestamptz(3)
+  approvalStatus         ApprovalStatus           @default(PENDING) @map("approval_status")
+  rejectionReason        String?                  @map("rejection_reason") @db.VarChar(500)
+  approvedAt             DateTime?                @map("approved_at") @db.Timestamptz(3)
+  approvedByUserId       String?                  @map("approved_by_user_id") @db.Uuid
+  isActive               Boolean                  @default(false) @map("is_active")
+  profileViews           Int                      @default(0) @map("profile_views")
+  ratingAverage          Decimal                  @default(0.00) @map("rating_average") @db.Decimal(3, 2)
+  ratingCount            Int                      @default(0) @map("rating_count")
+  completedBookingsCount Int                      @default(0) @map("completed_bookings_count")
+  createdAt              DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt              DateTime?                @map("deleted_at") @db.Timestamptz(3)
+  /// §3.3: `GENERATED ALWAYS AS (...) STORED`, added by raw SQL in
+  /// 20260729204719_add_schedule_and_search_vector. Prisma cannot express the
+  /// generation expression itself, so this is declared `Unsupported` purely so
+  /// `prisma migrate dev`'s drift detection stops treating the column (and its GIN
+  /// index below) as undeclared and proposing to drop both on every unrelated
+  /// migration — a recurring footgun documented in STATUS.md, hit and hand-fixed at
+  /// least three times. Still queried through `$queryRaw` in SearchService, never
+  /// through the generated client.
+  searchVector           Unsupported("tsvector")? @default(dbgenerated("(setweight(to_tsvector('simple'::regconfig, (COALESCE(display_name, ''::character varying))::text), 'A'::\"char\") || setweight(to_tsvector('simple'::regconfig, COALESCE(bio, ''::text)), 'B'::\"char\"))")) @map("search_vector")
 
   user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   city       City  @relation(fields: [cityId], references: [id], onDelete: Restrict)
@@ -304,6 +316,14 @@ model MasterProfile {
   @@index([approvalStatus, isActive, createdAt(sort: Desc)])
   @@index([approvalStatus, isActive, ratingAverage(sort: Desc)])
   @@index([approvalStatus, isActive, deletedAt])
+  /// Matches the GIN index created by raw SQL alongside `searchVector` above — `map`
+  /// pins the name to what already exists in every deployed database so this
+  /// declaration reconciles with migration history instead of describing a new index.
+  @@index([searchVector], map: "master_profiles_search_vector_idx", type: Gin)
+  /// Same reconciliation for the admin masters listing's `ILIKE` trigram index
+  /// (20260801_add_search_performance_indexes) — `pg_trgm`'s `gin_trgm_ops` operator
+  /// class needs `ops: raw(...)`, available now that `postgresqlExtensions` is enabled.
+  @@index([displayName(ops: raw("gin_trgm_ops"))], map: "master_profiles_display_name_trgm_idx", type: Gin)
   @@map("master_profiles")
 }
 
