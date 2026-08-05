@@ -1082,6 +1082,54 @@
         ]
       }
     },
+    "/me/referral": {
+      "get": {
+        "description": "Generates the code on first call if the client does not have one yet.",
+        "operationId": "getMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyReferralResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller’s own referral code, link and reward summary",
+        "tags": [
+          "Referrals"
+        ]
+      }
+    },
     "/users/me": {
       "get": {
         "description": "Returns the user together with whichever profile their role implies. Never returns the password hash, refresh tokens or moderation notes — the projection does not fetch them.",
@@ -9005,6 +9053,11 @@
           "cityId": {
             "type": "string",
             "format": "uuid"
+          },
+          "referralCode": {
+            "type": "string",
+            "example": "AZIZ4F2A",
+            "description": "MASTER_PROMPT.md §6.4 — another client’s referral code, from ?ref=CODE. Silently ignored if it does not match anyone; registration never fails on this field."
           }
         },
         "required": [
@@ -9357,6 +9410,33 @@
           "createdAt",
           "lastActiveAt",
           "current"
+        ]
+      },
+      "MyReferralResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "AZIZ4F2A"
+          },
+          "referredCount": {
+            "type": "number",
+            "description": "Clients who registered with this code."
+          },
+          "rewardCount": {
+            "type": "number",
+            "description": "Referrals that reached a first COMPLETED booking."
+          },
+          "totalBonus": {
+            "type": "number",
+            "description": "Sum of bonusAmount across every reward earned as the referrer."
+          }
+        },
+        "required": [
+          "code",
+          "referredCount",
+          "rewardCount",
+          "totalBonus"
         ]
       },
       "ClientProfileDto": {

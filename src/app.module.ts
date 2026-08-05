@@ -26,6 +26,7 @@ import { FilesModule } from './modules/files/files.module';
 import { IdempotencyModule } from './modules/idempotency/idempotency.module';
 import { MastersModule } from './modules/masters/masters.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { ScheduleModule as MastersScheduleModule } from './modules/schedule/schedule.module';
@@ -103,6 +104,7 @@ import { StorageModule } from './shared/storage/storage.module';
     BannersModule,
     FavoritesModule,
     ReportsModule,
+    ReferralsModule,
     AdminModule,
     JobsModule,
   ],

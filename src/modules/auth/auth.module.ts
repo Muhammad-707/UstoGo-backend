@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 
 import { durationToSeconds } from '@common/utils/duration.util';
 import { AppConfigService } from '@config/app-config.service';
+import { ReferralsModule } from '@modules/referrals/referrals.module';
 
 import { AuthController } from './controllers/auth.controller';
 import { EmailVerificationController } from './controllers/email-verification.controller';
@@ -26,6 +27,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
  */
 @Module({
   imports: [
+    ReferralsModule,
     PassportModule.register({ defaultStrategy: 'jwt', session: false }),
     JwtModule.registerAsync({
       inject: [AppConfigService],

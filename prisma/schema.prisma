@@ -229,28 +229,66 @@ model User {
 
 /// §3.2
 model ClientProfile {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @unique @map("user_id") @db.Uuid
-  firstName      String    @map("first_name") @db.VarChar(100)
-  lastName       String    @map("last_name") @db.VarChar(100)
-  cityId         String?   @map("city_id") @db.Uuid
-  avatarFileId   String?   @map("avatar_file_id") @db.Uuid
-  defaultAddress String?   @map("default_address") @db.VarChar(500)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+  id                        String    @id @default(uuid()) @db.Uuid
+  userId                    String    @unique @map("user_id") @db.Uuid
+  firstName                 String    @map("first_name") @db.VarChar(100)
+  lastName                  String    @map("last_name") @db.VarChar(100)
+  cityId                    String?   @map("city_id") @db.Uuid
+  avatarFileId              String?   @map("avatar_file_id") @db.Uuid
+  defaultAddress            String?   @map("default_address") @db.VarChar(500)
+  /// §6.4 (MASTER_PROMPT.md). Lazily generated on first `GET /me/referral` — nullable
+  /// so this column needs no backfill for clients that existed before the feature.
+  referralCode              String?   @unique @map("referral_code") @db.VarChar(12)
+  /// Set once, at registration, from `?ref=CODE`. Never changes afterward.
+  referredByClientProfileId String?   @map("referred_by_client_profile_id") @db.Uuid
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                 DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  city   City? @relation(fields: [cityId], references: [id], onDelete: Restrict)
-  avatar File? @relation("ClientAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city       City?          @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  avatar     File?          @relation("ClientAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  referredBy ClientProfile? @relation("ClientReferral", fields: [referredByClientProfileId], references: [id], onDelete: SetNull)
 
-  bookings      Booking[]
-  reviews       Review[]
-  conversations Conversation[]
-  favorites     Favorite[]
+  bookings        Booking[]
+  reviews         Review[]
+  conversations   Conversation[]
+  favorites       Favorite[]
+  referredClients ClientProfile[]  @relation("ClientReferral")
+  rewardsEarned   ReferralReward[] @relation("ReferralRewardReferrer")
+  rewardsReceived ReferralReward[] @relation("ReferralRewardReferred")
 
   @@index([cityId])
+  @@index([referredByClientProfileId])
   @@map("client_profiles")
+}
+
+/// §6.4 (MASTER_PROMPT.md). One row per triggering event (a referred client's first
+/// COMPLETED booking) — the referrer and the referred client each earn `bonusAmount`
+/// from that single event, so this is not two rows. There is no wallet yet (§6.14):
+/// this is a ledger of earned-but-not-yet-spendable bonus, same precedent as
+/// `MasterProfile.completedBookingsCount` being tracked before there was a payout
+/// system to read it.
+model ReferralReward {
+  id                      String   @id @default(uuid()) @db.Uuid
+  referrerClientProfileId String   @map("referrer_client_profile_id") @db.Uuid
+  /// `@unique`, not just indexed: this is the concurrency guard. At most one reward
+  /// per referred client ever exists — a second `create` for the same client races
+  /// this constraint into a P2002 rather than a duplicate payout if two of their
+  /// bookings complete near-simultaneously (the listener runs post-commit, outside
+  /// the completing transaction, so this is the only thing enforcing "first booking
+  /// only" under concurrency).
+  referredClientProfileId String   @unique @map("referred_client_profile_id") @db.Uuid
+  triggerBookingId        String   @unique @map("trigger_booking_id") @db.Uuid
+  bonusAmount             Int      @default(5) @map("bonus_amount")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  referrer       ClientProfile @relation("ReferralRewardReferrer", fields: [referrerClientProfileId], references: [id], onDelete: Cascade)
+  referred       ClientProfile @relation("ReferralRewardReferred", fields: [referredClientProfileId], references: [id], onDelete: Cascade)
+  triggerBooking Booking       @relation(fields: [triggerBookingId], references: [id], onDelete: Cascade)
+
+  @@index([referrerClientProfileId])
+  @@map("referral_rewards")
 }
 
 /// A client's bookmarked master — purely a saved-for-later list, no business rule
@@ -778,12 +816,13 @@ model Booking {
   updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt             DateTime?     @map("deleted_at") @db.Timestamptz(3)
 
-  clientProfile ClientProfile          @relation(fields: [clientProfileId], references: [id], onDelete: Restrict)
-  masterProfile MasterProfile          @relation(fields: [masterProfileId], references: [id], onDelete: Restrict)
-  service       Service                @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  city          City?                  @relation(fields: [cityId], references: [id], onDelete: SetNull)
-  history       BookingStatusHistory[]
-  review        Review?
+  clientProfile  ClientProfile          @relation(fields: [clientProfileId], references: [id], onDelete: Restrict)
+  masterProfile  MasterProfile          @relation(fields: [masterProfileId], references: [id], onDelete: Restrict)
+  service        Service                @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  city           City?                  @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  history        BookingStatusHistory[]
+  review         Review?
+  referralReward ReferralReward?
 
   @@index([masterProfileId, status, scheduledAt])
   @@index([clientProfileId, status, scheduledAt])

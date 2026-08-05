@@ -1,6 +1,7 @@
 import type { EventEmitter2 } from '@nestjs/event-emitter';
 import type { User } from '@prisma/client';
 
+import type { ReferralsService } from '@modules/referrals/services/referrals.service';
 import type { PrismaService } from '@prisma-lib/prisma.service';
 import type { TransactionManager } from '@prisma-lib/transaction.manager';
 
@@ -45,6 +46,7 @@ type Stubs = {
   findFirstUser?: unknown;
   findFirstCity?: unknown;
   verify?: boolean | boolean[];
+  resolveReferrer?: string | undefined;
 };
 
 const build = (stubs: Stubs = {}) => {
@@ -99,9 +101,21 @@ const build = (stubs: Stubs = {}) => {
   const twoFactor = {
     issueChallenge: jest.fn().mockResolvedValue('challenge-raw'),
   } as unknown as TwoFactorService;
+  const referrals = {
+    resolveReferrer: jest.fn().mockResolvedValue(stubs.resolveReferrer),
+  } as unknown as ReferralsService;
 
   return {
-    service: new AuthService(prisma, tx, passwords, tokens, events, emailVerification, twoFactor),
+    service: new AuthService(
+      prisma,
+      tx,
+      passwords,
+      tokens,
+      events,
+      emailVerification,
+      twoFactor,
+      referrals,
+    ),
     userDelegate,
     cityDelegate,
     clientProfileDelegate,
@@ -111,6 +125,7 @@ const build = (stubs: Stubs = {}) => {
     events,
     verifyAgainstDummy,
     twoFactor,
+    referrals,
   };
 };
 
@@ -182,6 +197,31 @@ describe('AuthService.registerClient', () => {
     const created = firstArg<{ data: { role: string } }>(userDelegate.create);
 
     expect(created.data.role).toBe('CLIENT');
+  });
+
+  // §6.4: linkage is resolved before the transaction and passed straight through.
+  it('attaches referredByClientProfileId when the referral code resolves', async () => {
+    const { service, clientProfileDelegate, referrals } = build({ resolveReferrer: 'referrer-1' });
+
+    await service.registerClient({ ...CLIENT_DTO, referralCode: 'AZIZ4F2A' }, {});
+
+    expect(referrals.resolveReferrer).toHaveBeenCalledWith('AZIZ4F2A');
+    const created = firstArg<{ data: { referredByClientProfileId?: string } }>(
+      clientProfileDelegate.create,
+    );
+    expect(created.data.referredByClientProfileId).toBe('referrer-1');
+  });
+
+  // A missing, typo'd or stale code is never a reason to fail registration (§6.4).
+  it('omits referredByClientProfileId when the code does not resolve', async () => {
+    const { service, clientProfileDelegate } = build({ resolveReferrer: undefined });
+
+    await service.registerClient({ ...CLIENT_DTO, referralCode: 'NOSUCHCODE' }, {});
+
+    const created = firstArg<{ data: { referredByClientProfileId?: string } }>(
+      clientProfileDelegate.create,
+    );
+    expect(created.data.referredByClientProfileId).toBeUndefined();
   });
 });
 

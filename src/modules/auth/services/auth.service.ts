@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRole, UserStatus, type User } from '@prisma/client';
 
+import { ReferralsService } from '@modules/referrals/services/referrals.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 import { TransactionManager, type PrismaTransaction } from '@prisma-lib/transaction.manager';
 
@@ -51,6 +52,7 @@ export class AuthService {
     private readonly events: EventEmitter2,
     private readonly emailVerification: EmailVerificationService,
     private readonly twoFactor: TwoFactorService,
+    private readonly referrals: ReferralsService,
   ) {}
 
   /**
@@ -65,6 +67,9 @@ export class AuthService {
     if (dto.cityId !== undefined) {
       await this.assertCityExists(dto.cityId);
     }
+    // §6.4: resolved before the transaction, not inside it — an unknown/typo'd code
+    // is `undefined` here, never a reason to fail registration.
+    const referredByClientProfileId = await this.referrals.resolveReferrer(dto.referralCode);
 
     const { user, profileId } = await this.tx.run(async (tx) => {
       const created = await this.createUser(tx, {
@@ -80,6 +85,7 @@ export class AuthService {
           firstName: dto.firstName,
           lastName: dto.lastName,
           ...(dto.cityId !== undefined ? { cityId: dto.cityId } : {}),
+          ...(referredByClientProfileId !== undefined ? { referredByClientProfileId } : {}),
         },
       });
 

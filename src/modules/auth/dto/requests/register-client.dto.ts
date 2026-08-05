@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
 
 import { E164, RegisterBaseDto, trimValue } from './register-base.dto';
 
@@ -18,4 +18,18 @@ export class RegisterClientDto extends RegisterBaseDto {
   @IsOptional()
   @IsUUID('4')
   cityId?: string;
+
+  @ApiPropertyOptional({
+    example: 'AZIZ4F2A',
+    description:
+      'MASTER_PROMPT.md §6.4 — another client’s referral code, from ?ref=CODE. ' +
+      'Silently ignored if it does not match anyone; registration never fails on this field.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(4, 12)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  referralCode?: string;
 }
