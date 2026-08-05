@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../auth/auth.module';
 import { FilesModule } from '../files/files.module';
+import { AdminUsersController } from './controllers/admin-users.controller';
 import { CitiesController } from './controllers/cities.controller';
 import { UsersController } from './controllers/users.controller';
+import { AdminUsersService } from './services/admin-users.service';
 import { CitiesService } from './services/cities.service';
 import { DataExportService } from './services/data-export.service';
 import { UsersService } from './services/users.service';
@@ -17,8 +19,8 @@ import { UsersService } from './services/users.service';
  */
 @Module({
   imports: [AuthModule, FilesModule],
-  controllers: [UsersController, CitiesController],
-  providers: [UsersService, CitiesService, DataExportService],
+  controllers: [UsersController, CitiesController, AdminUsersController],
+  providers: [UsersService, CitiesService, DataExportService, AdminUsersService],
   exports: [UsersService],
 })
 export class UsersModule {}

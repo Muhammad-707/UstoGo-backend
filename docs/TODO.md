@@ -193,6 +193,13 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] i18n: `Category.nameTj`/`nameRu`/`descriptionTj`/`descriptionRu`, translated cities/districts, `X-Locale` header threading through categories/cities/search/favorites/masters — closes most of `MASTER_PROMPT.md` §6.2 (Russian) at the data layer; `messages/ru` on the frontend is separately complete
 - [x] Stock media seeded for demo masters; public master listing banner URL fix
 
+### Post-1.0.0, 2026-08-05: admin user management (MASTER_PROMPT.md §6.11, P5)
+
+- [x] `GET /admin/users` — role/status/city/search/registration-date filters
+- [x] `GET /admin/users/:id` — full detail
+- [x] `POST /admin/users/:id/block` / `:id/unblock` — revokes sessions, audited (reuses existing `USER_BLOCKED`/`USER_UNBLOCKED` actions, no migration needed)
+- [ ] Frontend: admin users page — tracked as a separate frontend task
+
 ### Post-1.0.0, 2026-08-05: certificate moderation (MASTER_PROMPT.md §6.17, P3)
 
 - [x] `GET /admin/certificates?verified=` — moderation queue

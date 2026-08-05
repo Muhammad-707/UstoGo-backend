@@ -1,4 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
+import type { UserStatus } from '@prisma/client';
 
 import { ERROR_CODE } from '@common/constants/error-codes.constant';
 import { AppException, type ErrorDetail } from '@common/exceptions/app.exception';
@@ -46,6 +47,19 @@ export class WhatsappChangeCooldownException extends AppException {
       ERROR_CODE.WHATSAPP_CHANGE_COOLDOWN,
       'WhatsApp number can only be changed once every 24 hours.',
       HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+  }
+}
+
+/** 409. §6.11: blocking an already-blocked account (or unblocking a non-blocked one)
+ *  is not idempotent — a second admin finding it already handled should see that
+ *  explicitly, not silently re-apply it. */
+export class UserAlreadyInStatusException extends AppException {
+  constructor(status: UserStatus) {
+    super(
+      ERROR_CODE.USER_ALREADY_IN_STATUS,
+      `That account is already ${status}.`,
+      HttpStatus.CONFLICT,
     );
   }
 }
