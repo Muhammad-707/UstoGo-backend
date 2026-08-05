@@ -20,7 +20,9 @@ import { Audit } from '../../audit/decorators/audit.decorator';
 import { AdminMasterSearchQueryDto } from '../dto/requests/admin-master-search-query.dto';
 import { ReasonDto } from '../dto/requests/reason.dto';
 import { AdminMasterListItemResponseDto } from '../dto/responses/admin-master-list-item.response.dto';
+import { AdminMasterStatsResponseDto } from '../dto/responses/admin-master-stats.response.dto';
 import { MasterStatusResponseDto } from '../dto/responses/master-status.response.dto';
+import { AdminMasterStatsService } from '../services/admin-master-stats.service';
 import { MasterModerationService } from '../services/master-moderation.service';
 import { MastersSearchService } from '../services/masters-search.service';
 
@@ -33,6 +35,7 @@ export class AdminMastersController {
   constructor(
     private readonly moderation: MasterModerationService,
     private readonly mastersSearch: MastersSearchService,
+    private readonly masterStats: AdminMasterStatsService,
   ) {}
 
   @Get()
@@ -119,5 +122,21 @@ export class AdminMastersController {
     const { master } = await this.moderation.deactivate(id, dto.reason);
 
     return MasterStatusResponseDto.fromEntity(master);
+  }
+
+  @Get(':id/stats')
+  @ApiAuth(UserRole.ADMIN)
+  @Audit(AuditAction.MASTER_STATS_ACCESSED, 'MasterProfile')
+  @ApiOperation({
+    summary: 'Per-master statistics for admin oversight',
+    description:
+      'Clients served, completed/unfinished jobs, rating, NPS, review distribution, ' +
+      'a 6-month series and top services by revenue (MASTER_PROMPT.md §5.2). Audited, ' +
+      'same precedent as CONVERSATION_ACCESSED (BR-63).',
+  })
+  @ApiOkResponse({ type: AdminMasterStatsResponseDto })
+  @ApiNotFoundResponse(NOT_FOUND)
+  async getStats(@Param('id') id: string): Promise<AdminMasterStatsResponseDto> {
+    return this.masterStats.getStats(id);
   }
 }

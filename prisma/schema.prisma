@@ -149,6 +149,7 @@ enum AuditAction {
   BANNER_DELETED
   NOTIFICATION_BROADCAST
   CONVERSATION_ACCESSED
+  MASTER_STATS_ACCESSED
 
   @@map("audit_action")
 }
@@ -798,6 +799,12 @@ model Review {
   masterProfileId String       @map("master_profile_id") @db.Uuid
   rating          Int          @db.SmallInt
   comment         String?      @db.VarChar(2000)
+  /// NPS §6.1 (MASTER_PROMPT.md): 0–10, "how likely are you to recommend this master?"
+  /// Independent of `rating` — a client can rate the work 5/5 and still be a passive on
+  /// the recommend question. Both optional: a client who skips the survey still leaves
+  /// a plain star review.
+  npsScore        Int?         @map("nps_score") @db.SmallInt
+  wouldRecommend  Boolean?     @map("would_recommend")
   status          ReviewStatus @default(VISIBLE)
   hiddenReason    String?      @map("hidden_reason") @db.VarChar(500)
   hiddenByUserId  String?      @map("hidden_by_user_id") @db.Uuid

@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 import { IsSafeText } from '@common/validators/is-safe-text.validator';
 
@@ -21,4 +30,22 @@ export class CreateReviewDto {
   @MaxLength(2000)
   @IsSafeText()
   comment?: string;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 10,
+    description:
+      'NPS §6.1: "How likely are you to recommend this master?" — 0–10. Optional; a ' +
+      'client who skips the survey still leaves a plain star review.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  npsScore?: number;
+
+  @ApiPropertyOptional({ description: 'Companion yes/no to npsScore.' })
+  @IsOptional()
+  @IsBoolean()
+  wouldRecommend?: boolean;
 }

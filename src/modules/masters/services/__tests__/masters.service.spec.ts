@@ -24,6 +24,7 @@ const build = (
     masterCategory?: Partial<Record<string, jest.Mock>>;
     certificate?: Partial<Record<string, jest.Mock>>;
     portfolioImage?: Partial<Record<string, jest.Mock>>;
+    review?: Partial<Record<string, jest.Mock>>;
   } = {},
 ) => {
   const masterProfileDelegate = {
@@ -56,6 +57,10 @@ const build = (
     updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     ...overrides.portfolioImage,
   };
+  const reviewDelegate = {
+    findMany: jest.fn().mockResolvedValue([]),
+    ...overrides.review,
+  };
   const prisma = {
     db: {
       masterProfile: masterProfileDelegate,
@@ -63,6 +68,7 @@ const build = (
       masterCategory: masterCategoryDelegate,
       certificate: certificateDelegate,
       portfolioImage: portfolioImageDelegate,
+      review: reviewDelegate,
     },
     $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
   } as unknown as PrismaService;
@@ -86,6 +92,34 @@ describe('MastersService.getByUserId', () => {
     const { service } = build({ masterProfile: { findUnique: jest.fn().mockResolvedValue(null) } });
 
     await expect(service.getByUserId('ghost')).rejects.toBeInstanceOf(MasterNotFoundException);
+  });
+});
+
+describe('MastersService.getOwnNps', () => {
+  it('throws when no profile exists', async () => {
+    const { service } = build({ masterProfile: { findUnique: jest.fn().mockResolvedValue(null) } });
+
+    await expect(service.getOwnNps('ghost')).rejects.toBeInstanceOf(MasterNotFoundException);
+  });
+
+  it('computes NPS from the caller’s own visible reviews', async () => {
+    const { service } = build({
+      review: {
+        findMany: jest.fn().mockResolvedValue([{ npsScore: 9 }, { npsScore: 10 }, { npsScore: 2 }]),
+      },
+    });
+
+    const result = await service.getOwnNps('user-1');
+
+    expect(result).toEqual({ promoters: 2, passives: 0, detractors: 1, responseCount: 3, nps: 33 });
+  });
+
+  it('reports null nps with zero responses', async () => {
+    const { service } = build();
+
+    const result = await service.getOwnNps('user-1');
+
+    expect(result.nps).toBeNull();
   });
 });
 

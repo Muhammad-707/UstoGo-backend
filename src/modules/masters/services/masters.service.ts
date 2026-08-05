@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   ApprovalStatus,
   FilePurpose,
+  ReviewStatus,
   type Certificate,
   type MasterProfile,
   type PortfolioImage,
@@ -14,9 +15,11 @@ import {
 import { FilesService } from '@modules/files/services/files.service';
 import { PrismaService } from '@prisma-lib/prisma.service';
 
+import { computeNps } from '../../reviews/domain/nps.util';
 import { PORTFOLIO_IMAGE_LIMIT } from '../constants/masters.constants';
 import type { CreateCertificateDto } from '../dto/requests/create-certificate.dto';
 import type { CreatePortfolioImageDto } from '../dto/requests/create-portfolio-image.dto';
+import type { MasterNpsResponseDto } from '../dto/responses/master-nps.response.dto';
 import {
   InvalidApprovalTransitionException,
   MasterNotFoundException,
@@ -40,6 +43,18 @@ export class MastersService {
     }
 
     return master;
+  }
+
+  /** `GET /masters/me/nps` (MASTER_PROMPT.md §6.1) — the caller's own NPS breakdown. */
+  async getOwnNps(userId: string): Promise<MasterNpsResponseDto> {
+    const master = await this.getByUserId(userId);
+
+    const rows = await this.prisma.db.review.findMany({
+      where: { masterProfileId: master.id, status: ReviewStatus.VISIBLE, npsScore: { not: null } },
+      select: { npsScore: true },
+    });
+
+    return computeNps(rows.map((row) => row.npsScore as number));
   }
 
   /**

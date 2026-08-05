@@ -193,6 +193,14 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] i18n: `Category.nameTj`/`nameRu`/`descriptionTj`/`descriptionRu`, translated cities/districts, `X-Locale` header threading through categories/cities/search/favorites/masters — closes most of `MASTER_PROMPT.md` §6.2 (Russian) at the data layer; `messages/ru` on the frontend is separately complete
 - [x] Stock media seeded for demo masters; public master listing banner URL fix
 
+### Post-1.0.0, 2026-08-05: NPS + admin statistics (MASTER_PROMPT.md §5–§6.1, P1)
+
+- [x] `Review.npsScore`/`wouldRecommend` (both optional) collected on `POST /reviews`
+- [x] `GET /admin/masters/:id/stats` — clients served, completed/unfinished jobs, rating, NPS, review distribution, 6-month series, top-5 services; audited (`MASTER_STATS_ACCESSED`)
+- [x] `GET /admin/nps` — platform-wide NPS + by category + by top-10 master
+- [x] `GET /masters/me/nps` — a master's own NPS breakdown
+- [ ] Frontend: NPS survey modal after a completed booking's review, admin master-stats page, admin platform NPS block, master dashboard NPS widget — tracked as a separate frontend task
+
 ### Post-1.0.0, 2026-08-05 hardening pass
 
 - [x] `RedisHealthIndicator` added to `/health/ready` — closes the gap `STATUS.md` §1 flagged (rate limiting and both Socket.io namespaces hard-depend on Redis; readiness never checked it)

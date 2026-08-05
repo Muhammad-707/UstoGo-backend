@@ -120,6 +120,35 @@ describe('ReviewsService.create', () => {
     );
     expect(events.emit).toHaveBeenCalledWith('review.created', expect.anything());
   });
+
+  it('persists npsScore and wouldRecommend when the caller supplies them', async () => {
+    const { service, tx } = build();
+
+    await service.create('user-1', {
+      bookingId: 'booking-1',
+      rating: 5,
+      npsScore: 9,
+      wouldRecommend: true,
+    });
+
+    expect(tx.review.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ npsScore: 9, wouldRecommend: true }),
+      }),
+    );
+  });
+
+  it('omits npsScore/wouldRecommend from the write when the caller skips the survey', async () => {
+    const { service, tx } = build();
+
+    await service.create('user-1', { bookingId: 'booking-1', rating: 5 });
+
+    const { data } = tx.review.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(data).not.toHaveProperty('npsScore');
+    expect(data).not.toHaveProperty('wouldRecommend');
+  });
 });
 
 describe('ReviewsService.update', () => {

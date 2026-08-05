@@ -4,6 +4,7 @@ import { FilesModule } from '../files/files.module';
 import { AdminMastersController } from './controllers/admin-masters.controller';
 import { MastersMeController } from './controllers/masters-me.controller';
 import { MastersController } from './controllers/masters.controller';
+import { AdminMasterStatsService } from './services/admin-master-stats.service';
 import { MasterModerationService } from './services/master-moderation.service';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersService } from './services/masters.service';
@@ -21,7 +22,12 @@ import { MastersService } from './services/masters.service';
    * `PublicScheduleController`), which `AppModule` imports before this module.
    */
   controllers: [MastersMeController, MastersController, AdminMastersController],
-  providers: [MastersService, MastersSearchService, MasterModerationService],
+  providers: [
+    MastersService,
+    MastersSearchService,
+    MasterModerationService,
+    AdminMasterStatsService,
+  ],
   exports: [MastersService, MastersSearchService],
 })
 export class MastersModule {}

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 
 import { DashboardController } from './controllers/dashboard.controller';
+import { NpsController } from './controllers/nps.controller';
 import { DashboardService } from './services/dashboard.service';
+import { NpsService } from './services/nps.service';
 
 /**
  * F-15 (MODULES.md › AdminModule). A composition module sitting at the top of the
@@ -10,7 +12,7 @@ import { DashboardService } from './services/dashboard.service';
  * report has no business rule to delegate: it reads, it does not decide.
  */
 @Module({
-  controllers: [DashboardController],
-  providers: [DashboardService],
+  controllers: [DashboardController, NpsController],
+  providers: [DashboardService, NpsService],
 })
 export class AdminModule {}

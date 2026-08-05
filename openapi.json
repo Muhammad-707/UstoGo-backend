@@ -1451,7 +1451,7 @@
     },
     "/cities": {
       "get": {
-        "description": "Public — no authentication required. Reference data for the city selectors on registration and profile forms. Returned unpaginated because the whole list is meant to be fetched once and cached; withdrawn cities are omitted but remain in the database so historical rows keep resolving.",
+        "description": "Public — no authentication required. Reference data for the city selectors on registration and profile forms. Returned unpaginated because the whole list is meant to be fetched once and cached; withdrawn cities are omitted but remain in the database so historical rows keep resolving. Localized via the `X-Locale` header (`tj` | `ru` | `en`, defaults to `en`).",
         "operationId": "list",
         "parameters": [],
         "responses": {
@@ -1766,7 +1766,8 @@
                 "BANNER_UPDATED",
                 "BANNER_DELETED",
                 "NOTIFICATION_BROADCAST",
-                "CONVERSATION_ACCESSED"
+                "CONVERSATION_ACCESSED",
+                "MASTER_STATS_ACCESSED"
               ]
             }
           },
@@ -1866,7 +1867,7 @@
     },
     "/categories": {
       "get": {
-        "description": "Public. In-process cached for 5 minutes (FR-5.1).",
+        "description": "Public. In-process cached for 5 minutes (FR-5.1). Localized via the `X-Locale` header (`tj` | `ru` | `en`, defaults to `en`).",
         "operationId": "tree",
         "parameters": [],
         "responses": {
@@ -1892,7 +1893,7 @@
     },
     "/categories/{slug}": {
       "get": {
-        "description": "Public. 404s for an inactive category or one with an inactive ancestor.",
+        "description": "Public. 404s for an inactive category or one with an inactive ancestor. Localized via the `X-Locale` header (`tj` | `ru` | `en`, defaults to `en`).",
         "operationId": "bySlug",
         "parameters": [
           {
@@ -2311,6 +2312,53 @@
           }
         ],
         "summary": "Toggle \"accepting bookings\" (vacation mode)",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/me/nps": {
+      "get": {
+        "operationId": "nps",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterNpsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller’s own NPS breakdown (MASTER_PROMPT.md §6.1)",
         "tags": [
           "Master Cabinet"
         ]
@@ -3475,6 +3523,73 @@
           }
         ],
         "summary": "Deactivate an approved master",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/admin/masters/{id}/stats": {
+      "get": {
+        "description": "Clients served, completed/unfinished jobs, rating, NPS, review distribution, a 6-month series and top services by revenue (MASTER_PROMPT.md §5.2). Audited, same precedent as CONVERSATION_ACCESSED (BR-63).",
+        "operationId": "getStats",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMasterStatsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MASTER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Per-master statistics for admin oversight",
         "tags": [
           "Admin"
         ]
@@ -7636,6 +7751,83 @@
           "Admin"
         ]
       }
+    },
+    "/admin/nps": {
+      "get": {
+        "description": "Overall NPS plus breakdown by category and by (top 10) master (MASTER_PROMPT.md §6.1). `from`/`to` independently optional, same 30-day-default/366-day-cap as `GET /admin/dashboard`.",
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "ISO-8601, inclusive lower bound. Defaults per `to`.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "ISO-8601, inclusive upper bound. Defaults to now.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "DATE_RANGE_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Platform-wide NPS",
+        "tags": [
+          "Admin"
+        ]
+      }
     }
   },
   "info": {
@@ -9015,7 +9207,8 @@
               "BANNER_UPDATED",
               "BANNER_DELETED",
               "NOTIFICATION_BROADCAST",
-              "CONVERSATION_ACCESSED"
+              "CONVERSATION_ACCESSED",
+              "MASTER_STATS_ACCESSED"
             ]
           },
           "entityType": {
@@ -9124,7 +9317,20 @@
           "name": {
             "type": "string",
             "minLength": 2,
-            "maxLength": 150
+            "maxLength": 150,
+            "description": "English (fallback) name."
+          },
+          "nameTj": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "description": "Tajik name."
+          },
+          "nameRu": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "description": "Russian name."
           },
           "slug": {
             "type": "string",
@@ -9138,7 +9344,18 @@
           },
           "description": {
             "type": "string",
-            "maxLength": 2000
+            "maxLength": 2000,
+            "description": "English (fallback) description."
+          },
+          "descriptionTj": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Tajik description."
+          },
+          "descriptionRu": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Russian description."
           },
           "iconFileId": {
             "type": "string",
@@ -9161,7 +9378,20 @@
           "name": {
             "type": "string",
             "minLength": 2,
-            "maxLength": 150
+            "maxLength": 150,
+            "description": "English (fallback) name."
+          },
+          "nameTj": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "description": "Tajik name."
+          },
+          "nameRu": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "description": "Russian name."
           },
           "parentId": {
             "type": "object",
@@ -9171,7 +9401,18 @@
           },
           "description": {
             "type": "string",
-            "maxLength": 2000
+            "maxLength": 2000,
+            "description": "English (fallback) description."
+          },
+          "descriptionTj": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Tajik description."
+          },
+          "descriptionRu": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Russian description."
           },
           "iconFileId": {
             "type": "object",
@@ -9225,6 +9466,34 @@
         },
         "required": [
           "isActive"
+        ]
+      },
+      "MasterNpsResponseDto": {
+        "type": "object",
+        "properties": {
+          "nps": {
+            "type": "object",
+            "nullable": true,
+            "description": "null when there are no responses yet."
+          },
+          "promoters": {
+            "type": "number"
+          },
+          "passives": {
+            "type": "number"
+          },
+          "detractors": {
+            "type": "number"
+          },
+          "responseCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "promoters",
+          "passives",
+          "detractors",
+          "responseCount"
         ]
       },
       "AttachCategoryDto": {
@@ -9387,6 +9656,11 @@
             "type": "object",
             "format": "uuid",
             "nullable": true
+          },
+          "bannerUrl": {
+            "type": "object",
+            "nullable": true,
+            "description": "Short-lived read URL when a banner exists; a profession-matched stock photo when it doesn't (demo masters never uploaded one)."
           },
           "bio": {
             "type": "object",
@@ -9642,6 +9916,128 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "MasterStatsMonthPointDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "YYYY-MM"
+          },
+          "bookings": {
+            "type": "number"
+          },
+          "completed": {
+            "type": "number"
+          },
+          "revenue": {
+            "type": "string",
+            "description": "Sum of completed bookings’ price, as a decimal string."
+          }
+        },
+        "required": [
+          "month",
+          "bookings",
+          "completed",
+          "revenue"
+        ]
+      },
+      "MasterStatsTopServiceDto": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "completedCount": {
+            "type": "number"
+          },
+          "revenue": {
+            "type": "string",
+            "description": "Sum of this service’s completed bookings’ price."
+          }
+        },
+        "required": [
+          "serviceId",
+          "title",
+          "completedCount",
+          "revenue"
+        ]
+      },
+      "AdminMasterStatsResponseDto": {
+        "type": "object",
+        "properties": {
+          "masterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "totalClientsServed": {
+            "type": "number",
+            "description": "Distinct clients across every COMPLETED booking."
+          },
+          "completedJobs": {
+            "type": "number"
+          },
+          "unfinishedJobs": {
+            "type": "number",
+            "description": "PENDING + ACCEPTED + IN_PROGRESS + every CANCELLED_*/REJECTED/EXPIRED booking."
+          },
+          "avgRating": {
+            "type": "number"
+          },
+          "ratingCount": {
+            "type": "number"
+          },
+          "nps": {
+            "type": "object",
+            "nullable": true,
+            "description": "null when there are no NPS responses yet."
+          },
+          "npsResponseCount": {
+            "type": "number",
+            "description": "NPS response count backing `nps`."
+          },
+          "reviewsBreakdown": {
+            "type": "object",
+            "description": "Visible-review star distribution, keys 1–5.",
+            "example": {
+              "1": 0,
+              "2": 0,
+              "3": 1,
+              "4": 3,
+              "5": 10
+            }
+          },
+          "monthlySeries": {
+            "description": "Last 6 months.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MasterStatsMonthPointDto"
+            }
+          },
+          "topServices": {
+            "description": "Top 5 by revenue.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MasterStatsTopServiceDto"
+            }
+          }
+        },
+        "required": [
+          "masterId",
+          "totalClientsServed",
+          "completedJobs",
+          "unfinishedJobs",
+          "avgRating",
+          "ratingCount",
+          "npsResponseCount",
+          "reviewsBreakdown",
+          "monthlySeries",
+          "topServices"
         ]
       },
       "ServiceResponseDto": {
@@ -10731,6 +11127,16 @@
           "comment": {
             "type": "string",
             "maxLength": 2000
+          },
+          "npsScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "NPS §6.1: \"How likely are you to recommend this master?\" — 0–10. Optional; a client who skips the survey still leaves a plain star review."
+          },
+          "wouldRecommend": {
+            "type": "boolean",
+            "description": "Companion yes/no to npsScore."
           }
         },
         "required": [
@@ -10786,6 +11192,16 @@
             "maximum": 5
           },
           "comment": {
+            "type": "object",
+            "nullable": true
+          },
+          "npsScore": {
+            "type": "object",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 10
+          },
+          "wouldRecommend": {
             "type": "object",
             "nullable": true
           },
@@ -11394,6 +11810,97 @@
           "reviews",
           "topCategories",
           "series"
+        ]
+      },
+      "NpsByCategoryDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "nps": {
+            "type": "object",
+            "nullable": true
+          },
+          "responseCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "categoryId",
+          "categoryName",
+          "responseCount"
+        ]
+      },
+      "NpsByMasterDto": {
+        "type": "object",
+        "properties": {
+          "masterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "nps": {
+            "type": "object",
+            "nullable": true
+          },
+          "responseCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "masterId",
+          "displayName",
+          "responseCount"
+        ]
+      },
+      "NpsResponseDto": {
+        "type": "object",
+        "properties": {
+          "overallNps": {
+            "type": "object",
+            "nullable": true,
+            "description": "null when there are no responses yet."
+          },
+          "promoters": {
+            "type": "number"
+          },
+          "passives": {
+            "type": "number"
+          },
+          "detractors": {
+            "type": "number"
+          },
+          "responseCount": {
+            "type": "number"
+          },
+          "byCategory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsByCategoryDto"
+            }
+          },
+          "byMaster": {
+            "description": "Top 10 masters by response count.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NpsByMasterDto"
+            }
+          }
+        },
+        "required": [
+          "promoters",
+          "passives",
+          "detractors",
+          "responseCount",
+          "byCategory",
+          "byMaster"
         ]
       }
     }

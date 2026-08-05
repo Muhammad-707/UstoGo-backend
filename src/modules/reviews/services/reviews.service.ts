@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BookingStatus, ReviewStatus } from '@prisma/client';
+import { BookingStatus, ReviewStatus, type Prisma } from '@prisma/client';
 
 import { ERROR_CODE } from '@common/constants/error-codes.constant';
 import { ResourceNotFoundException } from '@common/exceptions/generic.exceptions';
@@ -26,6 +26,20 @@ const REVIEW_INCLUDE = {
   clientProfile: { select: { firstName: true, lastName: true } },
 } as const;
 
+type OptionalReviewFields = Pick<
+  Prisma.ReviewUncheckedCreateInput,
+  'comment' | 'npsScore' | 'wouldRecommend'
+>;
+
+/** `comment`/`npsScore`/`wouldRecommend` are each independently optional (§6.1). */
+const buildOptionalReviewFields = (
+  dto: Pick<CreateReviewDto, 'comment' | 'npsScore' | 'wouldRecommend'>,
+): OptionalReviewFields => ({
+  ...(dto.comment !== undefined ? { comment: dto.comment } : {}),
+  ...(dto.npsScore !== undefined ? { npsScore: dto.npsScore } : {}),
+  ...(dto.wouldRecommend !== undefined ? { wouldRecommend: dto.wouldRecommend } : {}),
+});
+
 /** F-10 (MODULES.md › ReviewsModule). Depends on `BookingsModule` for the gating check. */
 @Injectable()
 export class ReviewsService {
@@ -42,8 +56,42 @@ export class ReviewsService {
       throw new ResourceNotFoundException(ERROR_CODE.USER_NOT_FOUND, 'Client profile not found.');
     }
 
+    const booking = await this.resolveEligibleBooking(dto.bookingId, clientProfile.id);
+
+    const review = await this.transactionManager.run(async (tx) => {
+      const created = await tx.review.create({
+        data: {
+          bookingId: booking.id,
+          clientProfileId: clientProfile.id,
+          masterProfileId: booking.masterProfileId,
+          rating: dto.rating,
+          ...buildOptionalReviewFields(dto),
+        },
+        include: REVIEW_INCLUDE,
+      });
+
+      await this.recomputeAggregate(tx, booking.masterProfileId);
+
+      return created;
+    });
+
+    const master = await this.prisma.db.masterProfile.findUniqueOrThrow({
+      where: { id: booking.masterProfileId },
+      select: { userId: true },
+    });
+
+    this.events.emit(
+      REVIEW_EVENT.CREATED,
+      new ReviewCreatedEvent(review.id, master.userId, clientProfile.firstName, review.rating),
+    );
+
+    return review;
+  }
+
+  /** The six ordered pre-conditions FR-8.1 names, minus the caller-owns-a-client-profile check. */
+  private async resolveEligibleBooking(bookingId: string, clientProfileId: string) {
     const booking = await this.prisma.db.booking.findFirst({
-      where: { id: dto.bookingId, clientProfileId: clientProfile.id },
+      where: { id: bookingId, clientProfileId },
     });
     if (booking === null) {
       throw new ResourceNotFoundException(
@@ -65,34 +113,7 @@ export class ReviewsService {
       throw new ReviewWindowClosedException();
     }
 
-    const review = await this.transactionManager.run(async (tx) => {
-      const created = await tx.review.create({
-        data: {
-          bookingId: booking.id,
-          clientProfileId: clientProfile.id,
-          masterProfileId: booking.masterProfileId,
-          rating: dto.rating,
-          ...(dto.comment !== undefined ? { comment: dto.comment } : {}),
-        },
-        include: REVIEW_INCLUDE,
-      });
-
-      await this.recomputeAggregate(tx, booking.masterProfileId);
-
-      return created;
-    });
-
-    const master = await this.prisma.db.masterProfile.findUniqueOrThrow({
-      where: { id: booking.masterProfileId },
-      select: { userId: true },
-    });
-
-    this.events.emit(
-      REVIEW_EVENT.CREATED,
-      new ReviewCreatedEvent(review.id, master.userId, clientProfile.firstName, review.rating),
-    );
-
-    return review;
+    return booking;
   }
 
   /** FR-8.2 — author only, within 24 hours of creation. */

@@ -32,6 +32,7 @@ import { CreatePortfolioImageDto } from '../dto/requests/create-portfolio-image.
 import { ReorderPortfolioDto } from '../dto/requests/reorder-portfolio.dto';
 import { SetAvailabilityDto } from '../dto/requests/set-availability.dto';
 import { CertificateResponseDto } from '../dto/responses/certificate.response.dto';
+import { MasterNpsResponseDto } from '../dto/responses/master-nps.response.dto';
 import { MasterStatusResponseDto } from '../dto/responses/master-status.response.dto';
 import { PortfolioImageResponseDto } from '../dto/responses/portfolio-image.response.dto';
 import { MastersService } from '../services/masters.service';
@@ -80,6 +81,14 @@ export class MastersMeController {
     const master = await this.masters.setAvailability(user.id, dto.isActive);
 
     return MasterStatusResponseDto.fromEntity(master);
+  }
+
+  @Get('nps')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({ summary: 'The caller’s own NPS breakdown (MASTER_PROMPT.md §6.1)' })
+  @ApiOkResponse({ type: MasterNpsResponseDto })
+  async nps(@CurrentUser() user: AuthenticatedUser): Promise<MasterNpsResponseDto> {
+    return this.masters.getOwnNps(user.id);
   }
 
   @Get('categories')

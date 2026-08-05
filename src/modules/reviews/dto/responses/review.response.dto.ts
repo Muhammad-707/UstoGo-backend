@@ -31,6 +31,12 @@ export class ReviewResponseDto {
   @ApiPropertyOptional({ nullable: true })
   comment!: string | null;
 
+  @ApiPropertyOptional({ nullable: true, minimum: 0, maximum: 10 })
+  npsScore!: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  wouldRecommend!: boolean | null;
+
   @ApiProperty({ enum: ReviewStatus })
   status!: ReviewStatus;
 
@@ -53,6 +59,8 @@ export class ReviewResponseDto {
     dto.masterId = entity.masterProfileId;
     dto.rating = entity.rating;
     dto.comment = entity.comment;
+    dto.npsScore = entity.npsScore;
+    dto.wouldRecommend = entity.wouldRecommend;
     dto.status = entity.status;
     dto.editedAt = entity.editedAt?.toISOString() ?? null;
     dto.createdAt = entity.createdAt.toISOString();
