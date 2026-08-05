@@ -9,6 +9,7 @@ import {
 import type { Response } from 'express';
 
 import { mapPrismaError } from './prisma-exception.mapper';
+import { captureException } from '../../shared/sentry/sentry.init';
 import { ERROR_CODE, type ErrorCode } from '../constants/error-codes.constant';
 import { AppException, type ErrorDetail } from '../exceptions/app.exception';
 import type { AppRequest } from '../types/app-request.type';
@@ -143,6 +144,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (body.statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(context, exception instanceof Error ? exception.stack : String(exception));
+      // Only the unexpected half: a validation 422 or a not-found 404 is normal
+      // traffic, not an incident. Sentry.captureException is itself a no-op when
+      // Sentry.init was never called (SENTRY_DSN unset), so this is safe everywhere.
+      captureException(exception);
       return;
     }
 

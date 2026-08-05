@@ -10,6 +10,7 @@ import { AppConfigService } from './config/app-config.service';
 import { InvalidEnvironmentException } from './config/invalid-environment.exception';
 import { loadEnv } from './config/load-env';
 import { RedisIoAdapter } from './modules/chat/gateway/redis-io.adapter';
+import { initSentry } from './shared/sentry/sentry.init';
 
 /**
  * Operational probes stay off the versioned prefix. The container HEALTHCHECK
@@ -25,7 +26,12 @@ async function bootstrap(): Promise<void> {
   // ExceptionHandler logs it with a DI stack trace before this file can format it — and
   // an operator staring at `Injector.instantiateClass` learns nothing about which
   // variable is wrong. The result is memoised, so ConfigModule reuses this parse.
-  loadEnv();
+  const env = loadEnv();
+
+  // Initialised as early as possible so a crash during the rest of bootstrap (a bad
+  // Redis URL, a Nest DI failure) is still reported, not just exceptions thrown after
+  // the app is listening.
+  initSentry(env.SENTRY_DSN, env.NODE_ENV);
 
   // bufferLogs holds anything logged during bootstrap until the Pino logger is
   // installed, so early lines keep the same format and redaction as everything else.

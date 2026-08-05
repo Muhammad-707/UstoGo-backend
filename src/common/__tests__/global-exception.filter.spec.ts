@@ -2,9 +2,14 @@ import { HttpStatus, NotFoundException as NestNotFoundException } from '@nestjs/
 import type { ArgumentsHost } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import { captureException } from '../../shared/sentry/sentry.init';
 import { ERROR_CODE } from '../constants/error-codes.constant';
 import { ConflictException, ValidationFailedException } from '../exceptions/generic.exceptions';
 import { GlobalExceptionFilter } from '../filters/global-exception.filter';
+
+jest.mock('../../shared/sentry/sentry.init', () => ({
+  captureException: jest.fn(),
+}));
 
 type CapturedBody = {
   statusCode: number;
@@ -59,6 +64,7 @@ describe('GlobalExceptionFilter', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    jest.mocked(captureException).mockClear();
   });
 
   describe('the envelope', () => {
@@ -158,6 +164,21 @@ describe('GlobalExceptionFilter', () => {
       expect(runFilter('a string was thrown').body.statusCode).toBe(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    });
+
+    it('reports the raw exception to Sentry', () => {
+      const error = new Error('connect ECONNREFUSED 10.0.0.5:5432');
+      runFilter(error);
+
+      expect(captureException).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('expected failures', () => {
+    it('does not report a 4xx to Sentry — it is traffic, not an incident', () => {
+      runFilter(new ConflictException());
+
+      expect(captureException).not.toHaveBeenCalled();
     });
   });
 });
