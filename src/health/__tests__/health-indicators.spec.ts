@@ -1,8 +1,10 @@
 import type { AppConfigService } from '@config/app-config.service';
 import type { PrismaService } from '@prisma-lib/prisma.service';
+import type { RedisService } from '@shared/redis/redis.service';
 
 import { withTimeout } from '../health-check.type';
 import { DatabaseHealthIndicator } from '../indicators/database.health-indicator';
+import { RedisHealthIndicator } from '../indicators/redis.health-indicator';
 import { StorageHealthIndicator } from '../indicators/storage.health-indicator';
 
 describe('withTimeout', () => {
@@ -109,5 +111,41 @@ describe('StorageHealthIndicator', () => {
     jest.spyOn(global, 'fetch').mockRejectedValue(new Error('x'));
 
     await expect(indicator.check()).resolves.toBeDefined();
+  });
+});
+
+describe('RedisHealthIndicator', () => {
+  const indicatorWith = (ping: jest.Mock): RedisHealthIndicator =>
+    new RedisHealthIndicator({ client: { ping } } as unknown as RedisService);
+
+  it('reports up when PING succeeds', async () => {
+    const result = await indicatorWith(jest.fn().mockResolvedValue('PONG')).check();
+
+    expect(result).toMatchObject({ name: 'redis', status: 'up' });
+    expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('reports down when PING fails', async () => {
+    const result = await indicatorWith(
+      jest.fn().mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.6:6379')),
+    ).check();
+
+    expect(result).toMatchObject({ name: 'redis', status: 'down', reason: 'connection failed' });
+    expect(JSON.stringify(result)).not.toContain('10.0.0.6');
+  });
+
+  it('distinguishes a timeout from a connection failure', async () => {
+    const result = await indicatorWith(
+      jest.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 5000))),
+    ).check();
+
+    expect(result).toMatchObject({ status: 'down' });
+    expect(result.reason).toMatch(/^timed out/);
+  }, 10000);
+
+  it('does not throw — a failing probe must still report', async () => {
+    await expect(
+      indicatorWith(jest.fn().mockRejectedValue(new Error('x'))).check(),
+    ).resolves.toBeDefined();
   });
 });

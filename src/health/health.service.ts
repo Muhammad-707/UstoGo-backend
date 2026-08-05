@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DependencyUnavailableException } from './exceptions/dependency-unavailable.exception';
 import type { HealthCheckResult, HealthIndicator } from './health-check.type';
 import { DatabaseHealthIndicator } from './indicators/database.health-indicator';
+import { RedisHealthIndicator } from './indicators/redis.health-indicator';
 import { StorageHealthIndicator } from './indicators/storage.health-indicator';
 
 export type ReadinessReport = {
@@ -14,8 +15,12 @@ export class HealthService {
   private readonly logger = new Logger(HealthService.name);
   private readonly indicators: readonly HealthIndicator[];
 
-  constructor(database: DatabaseHealthIndicator, storage: StorageHealthIndicator) {
-    this.indicators = [database, storage];
+  constructor(
+    database: DatabaseHealthIndicator,
+    storage: StorageHealthIndicator,
+    redis: RedisHealthIndicator,
+  ) {
+    this.indicators = [database, storage, redis];
   }
 
   /**

@@ -1,5 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import compression from 'compression';
+import helmet from 'helmet';
 import { Logger as PinoLogger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
@@ -31,6 +33,15 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(PinoLogger));
 
   const { app: appConfig } = app.get(AppConfigService);
+
+  // Baseline HTTP security headers (X-Content-Type-Options, HSTS, X-Frame-Options,
+  // Referrer-Policy, …). CSP is left off: this is a JSON API plus Swagger UI at
+  // SWAGGER_PATH, and swagger-ui-dist relies on inline scripts/styles a strict default
+  // CSP would break — enabling it needs a nonce-based policy scoped to that one route,
+  // not a blanket directive that risks breaking every response for a header the API
+  // itself never renders HTML into.
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(compression());
 
   app.setGlobalPrefix(appConfig.apiPrefix, { exclude: UNVERSIONED_ROUTES });
 

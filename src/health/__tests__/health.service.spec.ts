@@ -4,6 +4,7 @@ import { DependencyUnavailableException } from '../exceptions/dependency-unavail
 import type { HealthCheckResult, HealthIndicator } from '../health-check.type';
 import { HealthService } from '../health.service';
 import type { DatabaseHealthIndicator } from '../indicators/database.health-indicator';
+import type { RedisHealthIndicator } from '../indicators/redis.health-indicator';
 import type { StorageHealthIndicator } from '../indicators/storage.health-indicator';
 
 const indicator = (result: HealthCheckResult, delayMs = 0): HealthIndicator => ({
@@ -24,10 +25,18 @@ const down = (name: string, reason = 'connection failed'): HealthCheckResult => 
   reason,
 });
 
-// The service takes the two concrete indicators; the casts let each test supply a
-// stub without constructing a PrismaClient or reaching the network.
-const serviceWith = (database: HealthIndicator, storage: HealthIndicator): HealthService =>
-  new HealthService(database as DatabaseHealthIndicator, storage as StorageHealthIndicator);
+// The service takes the three concrete indicators; the casts let each test supply a
+// stub without constructing a PrismaClient, an ioredis client or reaching the network.
+const serviceWith = (
+  database: HealthIndicator,
+  storage: HealthIndicator,
+  redis: HealthIndicator = indicator(up('redis')),
+): HealthService =>
+  new HealthService(
+    database as DatabaseHealthIndicator,
+    storage as StorageHealthIndicator,
+    redis as RedisHealthIndicator,
+  );
 
 describe('HealthService.checkReadiness', () => {
   beforeEach(() => {
@@ -35,14 +44,29 @@ describe('HealthService.checkReadiness', () => {
   });
 
   it('reports every dependency when all are up', async () => {
-    const service = serviceWith(indicator(up('database', 3)), indicator(up('objectStorage', 11)));
+    const service = serviceWith(
+      indicator(up('database', 3)),
+      indicator(up('objectStorage', 11)),
+      indicator(up('redis', 2)),
+    );
 
     await expect(service.checkReadiness()).resolves.toEqual({
       checks: {
         database: { status: 'up', latencyMs: 3 },
         objectStorage: { status: 'up', latencyMs: 11 },
+        redis: { status: 'up', latencyMs: 2 },
       },
     });
+  });
+
+  it('throws a 503 when only redis is down', async () => {
+    const service = serviceWith(
+      indicator(up('database')),
+      indicator(up('objectStorage')),
+      indicator(down('redis', 'unreachable')),
+    );
+
+    await expect(service.checkReadiness()).rejects.toBeInstanceOf(DependencyUnavailableException);
   });
 
   it('throws a 503 when a dependency is down', async () => {
