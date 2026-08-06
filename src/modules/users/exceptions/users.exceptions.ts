@@ -63,3 +63,25 @@ export class UserAlreadyInStatusException extends AppException {
     );
   }
 }
+
+/** 404. B-50 — a foreign or unknown saved-address id, never 403 (AUTHORIZATION.md §1). */
+export class SavedAddressNotFoundException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.SAVED_ADDRESS_NOT_FOUND,
+      'That saved address does not exist.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+}
+
+/** 422. B-50 — a client may keep at most `MAX_SAVED_ADDRESSES` live rows. */
+export class SavedAddressLimitExceededException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.SAVED_ADDRESS_LIMIT_EXCEEDED,
+      'You have reached the maximum number of saved addresses.',
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+  }
+}

@@ -238,6 +238,14 @@ would ship its admin routes unaudited and need a retrofit.
 
 ---
 
+### Post-1.0.0, 2026-08-06: multiple saved addresses (BACKLOG.md B-50)
+
+- [x] `SavedAddress` model (`20260806140000_add_saved_addresses`) — labeled, reusable client addresses; `ClientProfile.defaultAddress` untouched
+- [x] `GET/POST /users/me/addresses`, `PATCH /users/me/addresses/:id` (partial update + default promotion), `DELETE /users/me/addresses/:id`
+- [x] Cap at 10 live rows (`SAVED_ADDRESS_LIMIT_EXCEEDED`), ownership-scoped 404s, single-default invariant enforced in-service
+- [x] Unit tests (`saved-addresses.service.spec.ts`) and e2e tests (round trip, city validation, stranger 404, cap)
+- [ ] Frontend: address book UI on the booking flow — tracked as a separate frontend task
+
 ### Post-1.0.0, 2026-08-06: booking rescheduling (BACKLOG.md B-51)
 
 - [x] `Booking.rescheduleCount` column + `NotificationType.BOOKING_RESCHEDULED` (`20260806130000_add_booking_reschedule`)

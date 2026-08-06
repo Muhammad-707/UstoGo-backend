@@ -135,13 +135,17 @@ Defined once in `ERROR_HANDLING.md`:
 
 ## 4. Users — `/users`
 
-| Method | Path               | Auth   | Description                                                         |
-| ------ | ------------------ | ------ | ------------------------------------------------------------------- |
-| GET    | `/users/me`        | Any    | Own user + role profile                                             |
-| PATCH  | `/users/me`        | Any    | Partial profile update                                              |
-| PATCH  | `/users/me/avatar` | Any    | Attach a confirmed `fileId` (see FR-3.3 on why the id, not the key) |
-| DELETE | `/users/me`        | Any    | Soft-delete and anonymise own account, revoke all sessions → 204    |
-| GET    | `/cities`          | Public | Reference list of active cities                                     |
+| Method | Path                      | Auth   | Description                                                         |
+| ------ | ------------------------- | ------ | ------------------------------------------------------------------- |
+| GET    | `/users/me`               | Any    | Own user + role profile                                             |
+| PATCH  | `/users/me`               | Any    | Partial profile update                                              |
+| PATCH  | `/users/me/avatar`        | Any    | Attach a confirmed `fileId` (see FR-3.3 on why the id, not the key) |
+| DELETE | `/users/me`               | Any    | Soft-delete and anonymise own account, revoke all sessions → 204    |
+| GET    | `/users/me/addresses`     | CLIENT | B-50: list saved addresses                                          |
+| POST   | `/users/me/addresses`     | CLIENT | Save a new address (cap 10, `SAVED_ADDRESS_LIMIT_EXCEEDED`)         |
+| PATCH  | `/users/me/addresses/:id` | CLIENT | Update, or `{ isDefault: true }` to promote                         |
+| DELETE | `/users/me/addresses/:id` | CLIENT | Remove (soft delete) → 204                                          |
+| GET    | `/cities`                 | Public | Reference list of active cities                                     |
 
 ---
 

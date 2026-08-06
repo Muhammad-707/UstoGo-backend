@@ -123,6 +123,12 @@ Invariants
 `id`, `userId` (unique FK → User, cascade), `firstName`, `lastName`, `cityId?`, `avatarFileId?`, `defaultAddress?` (varchar 500), timestamps, `deletedAt`.
 Index: `(cityId)`.
 
+### 3.2.1 `SavedAddress` (B-50)
+
+`id`, `clientProfileId` (FK → ClientProfile, cascade), `label` (varchar 50, e.g. "Home"/"Work"), `addressLine` (varchar 500), `addressDistrict` (varchar 150), `cityId` (FK → City, restrict), `contactPhone?` (varchar 20), `latitude?`/`longitude?` (Decimal(9,6)), `isDefault` (boolean, default false), timestamps, `deletedAt`.
+
+Index: `(clientProfileId, deletedAt)`. A client keeps at most 10 live rows (`MAX_SAVED_ADDRESSES`, application-checked — `422 SAVED_ADDRESS_LIMIT_EXCEEDED`). At most one live row per client has `isDefault = true`; enforced in `SavedAddressesService` rather than a partial unique index, since this is a low-write-volume, single-owner table where a declarative Prisma constraint isn't available. Coexists with `ClientProfile.defaultAddress` (a single free-text field) rather than replacing it — `POST /bookings` still takes an ad-hoc address, and this is reusable, richer, structured storage the client app prefills a booking from.
+
 ### 3.3 `MasterProfile`
 
 | Column                           | Type             | Notes                              |

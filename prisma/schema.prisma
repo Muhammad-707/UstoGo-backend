@@ -255,6 +255,7 @@ model ClientProfile {
   reviews         Review[]
   conversations   Conversation[]
   favorites       Favorite[]
+  savedAddresses  SavedAddress[]
   referredClients ClientProfile[]  @relation("ClientReferral")
   rewardsEarned   ReferralReward[] @relation("ReferralRewardReferrer")
   rewardsReceived ReferralReward[] @relation("ReferralRewardReferred")
@@ -262,6 +263,35 @@ model ClientProfile {
   @@index([cityId])
   @@index([referredByClientProfileId])
   @@map("client_profiles")
+}
+
+/// B-50. A client's labeled, reusable addresses (Home, Work, ...) — richer and
+/// plural where `ClientProfile.defaultAddress` is a single free-text field kept for
+/// backward compatibility. `POST /bookings` still takes an ad-hoc address; the
+/// client app is expected to prefill it from one of these.
+model SavedAddress {
+  id              String    @id @default(uuid()) @db.Uuid
+  clientProfileId String    @map("client_profile_id") @db.Uuid
+  label           String    @db.VarChar(50)
+  addressLine     String    @map("address_line") @db.VarChar(500)
+  addressDistrict String    @map("address_district") @db.VarChar(150)
+  cityId          String    @map("city_id") @db.Uuid
+  contactPhone    String?   @map("contact_phone") @db.VarChar(20)
+  latitude        Decimal?  @db.Decimal(9, 6)
+  longitude       Decimal?  @db.Decimal(9, 6)
+  /// At most one live row per client may be true — enforced in `SavedAddressesService`,
+  /// not the database: a partial unique index needs a predicate Prisma cannot express
+  /// declaratively without raw SQL, and this is a low-write-volume, single-owner table.
+  isDefault       Boolean   @default(false) @map("is_default")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  city          City          @relation(fields: [cityId], references: [id], onDelete: Restrict)
+
+  @@index([clientProfileId, deletedAt])
+  @@map("saved_addresses")
 }
 
 /// §6.4 (MASTER_PROMPT.md). One row per triggering event (a referred client's first
@@ -534,6 +564,7 @@ model City {
   masterProfiles MasterProfile[]
   districts      District[]
   bookings       Booking[]
+  savedAddresses SavedAddress[]
 
   @@map("cities")
 }

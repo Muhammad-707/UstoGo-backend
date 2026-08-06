@@ -3,6 +3,7 @@ import request from 'supertest';
 import { VALID_PASSWORD } from '../fixtures/user.fixture';
 import {
   anyCityId,
+  bearer,
   createAdmin,
   createApprovedMaster,
   createClient,
@@ -293,6 +294,122 @@ describe('Users (e2e)', () => {
         .get('/api/v1/users/me')
         .set('Authorization', `Bearer ${token}`)
         .expect(401);
+    });
+  });
+
+  describe('Saved addresses (B-50)', () => {
+    const addressBody = (overrides: Partial<Record<string, unknown>> = {}) => ({
+      label: 'Home',
+      cityId,
+      line: '123 Main St',
+      district: 'Downtown',
+      ...overrides,
+    });
+
+    it('creates, lists, promotes to default, and removes a saved address', async () => {
+      const client = await createClient(app);
+
+      const first = await request(app.server)
+        .post('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(client))
+        .send(addressBody({ label: 'Home' }))
+        .expect(201);
+      expect(first.body.isDefault).toBe(false);
+
+      const second = await request(app.server)
+        .post('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(client))
+        .send(addressBody({ label: 'Work', isDefault: true }))
+        .expect(201);
+      expect(second.body.isDefault).toBe(true);
+
+      const list = await request(app.server)
+        .get('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(client))
+        .expect(200);
+      expect(list.body).toHaveLength(2);
+
+      const promoted = await request(app.server)
+        .patch(`/api/v1/users/me/addresses/${first.body.id}`)
+        .set('Authorization', bearer(client))
+        .send({ isDefault: true })
+        .expect(200);
+      expect(promoted.body.isDefault).toBe(true);
+
+      const listAfterPromotion = await request(app.server)
+        .get('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(client))
+        .expect(200);
+      const defaults = listAfterPromotion.body.filter(
+        (address: { isDefault: boolean }) => address.isDefault,
+      );
+      expect(defaults).toHaveLength(1);
+      expect(defaults[0].id).toBe(first.body.id);
+
+      await request(app.server)
+        .delete(`/api/v1/users/me/addresses/${first.body.id}`)
+        .set('Authorization', bearer(client))
+        .expect(204);
+
+      const listAfterDelete = await request(app.server)
+        .get('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(client))
+        .expect(200);
+      expect(listAfterDelete.body).toHaveLength(1);
+    });
+
+    it('rejects an unknown city with 404 CITY_NOT_FOUND', async () => {
+      const client = await createClient(app);
+
+      await request(app.server)
+        .post('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(client))
+        .send(addressBody({ cityId: '00000000-0000-4000-8000-000000000000' }))
+        .expect(404)
+        .expect((res) => expect(res.body.code).toBe('CITY_NOT_FOUND'));
+    });
+
+    it('rejects a stranger updating or deleting another client’s address with 404, never 403', async () => {
+      const owner = await createClient(app);
+      const stranger = await createClient(app);
+
+      const created = await request(app.server)
+        .post('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(owner))
+        .send(addressBody())
+        .expect(201);
+
+      await request(app.server)
+        .patch(`/api/v1/users/me/addresses/${created.body.id}`)
+        .set('Authorization', bearer(stranger))
+        .send({ label: 'Hijacked' })
+        .expect(404)
+        .expect((res) => expect(res.body.code).toBe('SAVED_ADDRESS_NOT_FOUND'));
+
+      await request(app.server)
+        .delete(`/api/v1/users/me/addresses/${created.body.id}`)
+        .set('Authorization', bearer(stranger))
+        .expect(404)
+        .expect((res) => expect(res.body.code).toBe('SAVED_ADDRESS_NOT_FOUND'));
+    });
+
+    it('enforces the cap with 422 SAVED_ADDRESS_LIMIT_EXCEEDED', async () => {
+      const client = await createClient(app);
+
+      for (let i = 0; i < 10; i += 1) {
+        await request(app.server)
+          .post('/api/v1/users/me/addresses')
+          .set('Authorization', bearer(client))
+          .send(addressBody({ label: `Address ${i}` }))
+          .expect(201);
+      }
+
+      await request(app.server)
+        .post('/api/v1/users/me/addresses')
+        .set('Authorization', bearer(client))
+        .send(addressBody({ label: 'One too many' }))
+        .expect(422)
+        .expect((res) => expect(res.body.code).toBe('SAVED_ADDRESS_LIMIT_EXCEEDED'));
     });
   });
 

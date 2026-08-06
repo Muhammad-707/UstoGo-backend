@@ -129,12 +129,14 @@ Codes are unique across the API and are exported as a single const object consum
 
 ### Registration & users
 
-| Code                   | Status |
-| ---------------------- | ------ |
-| `EMAIL_ALREADY_EXISTS` | 409    |
-| `PHONE_ALREADY_EXISTS` | 409    |
-| `USER_NOT_FOUND`       | 404    |
-| `CITY_NOT_FOUND`       | 404    |
+| Code                           | Status |
+| ------------------------------ | ------ |
+| `EMAIL_ALREADY_EXISTS`         | 409    |
+| `PHONE_ALREADY_EXISTS`         | 409    |
+| `USER_NOT_FOUND`               | 404    |
+| `CITY_NOT_FOUND`               | 404    |
+| `SAVED_ADDRESS_NOT_FOUND`      | 404    |
+| `SAVED_ADDRESS_LIMIT_EXCEEDED` | 422    |
 
 ### Masters & moderation
 
