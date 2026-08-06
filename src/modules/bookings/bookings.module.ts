@@ -8,6 +8,7 @@ import { BookingsController } from './controllers/bookings.controller';
 import { BookingsGateway } from './gateway/bookings.gateway';
 import { AdminBookingTransitionService } from './services/admin-booking-transition.service';
 import { BookingJobsService } from './services/booking-jobs.service';
+import { BookingRescheduleService } from './services/booking-reschedule.service';
 import { BookingStatsService } from './services/booking-stats.service';
 import { BookingTransitionService } from './services/booking-transition.service';
 import { BookingsService } from './services/bookings.service';
@@ -23,6 +24,7 @@ import { BookingsService } from './services/bookings.service';
   providers: [
     BookingsService,
     BookingTransitionService,
+    BookingRescheduleService,
     AdminBookingTransitionService,
     BookingJobsService,
     BookingStatsService,
@@ -31,6 +33,7 @@ import { BookingsService } from './services/bookings.service';
   exports: [
     BookingsService,
     BookingTransitionService,
+    BookingRescheduleService,
     AdminBookingTransitionService,
     BookingJobsService,
     BookingStatsService,

@@ -13,6 +13,7 @@ export const BOOKING_EVENT = Object.freeze({
   CANCELLED: 'booking.cancelled',
   EXPIRED: 'booking.expired',
   REMINDER: 'booking.reminder',
+  RESCHEDULED: 'booking.rescheduled',
 } as const);
 
 export class BookingCreatedEvent {
@@ -81,6 +82,16 @@ export class BookingReminderEvent {
   constructor(
     readonly bookingId: string,
     readonly notifyUserId: string,
+    readonly scheduledAt: Date,
+  ) {}
+}
+
+export class BookingRescheduledEvent {
+  constructor(
+    readonly bookingId: string,
+    /** The master — the client is always the actor for a reschedule (B-51). */
+    readonly notifyUserId: string,
+    readonly previousScheduledAt: Date,
     readonly scheduledAt: Date,
   ) {}
 }

@@ -134,6 +134,73 @@ describe('Bookings (e2e)', () => {
     expect(completed.body.status).toBe('COMPLETED');
   });
 
+  it('reschedules a booking once (B-51), then rejects a second attempt with 409', async () => {
+    const { masterProfileId, serviceId, scheduledAt, cityId } = await seedMasterWithService();
+    const client = await createClient(app);
+
+    const created = await request(app.server)
+      .post('/api/v1/bookings')
+      .set('Authorization', bearer(client))
+      .send({
+        masterId: masterProfileId,
+        serviceId,
+        scheduledAt,
+        address: { cityId, line: '123 Main St', district: 'Downtown' },
+      })
+      .expect(201);
+    const bookingId = created.body.id as string;
+
+    // The following Monday, same time — also inside the master's recurring working hours.
+    const nextMonday = new Date(scheduledAt);
+    nextMonday.setUTCDate(nextMonday.getUTCDate() + 7);
+    const secondSlot = nextMonday.toISOString();
+
+    const rescheduled = await request(app.server)
+      .post(`/api/v1/bookings/${bookingId}/reschedule`)
+      .set('Authorization', bearer(client))
+      .send({ scheduledAt: secondSlot })
+      .expect(200);
+    expect(rescheduled.body.scheduledAt).toBe(secondSlot);
+    expect(rescheduled.body.rescheduleCount).toBe(1);
+
+    const thirdMonday = new Date(secondSlot);
+    thirdMonday.setUTCDate(thirdMonday.getUTCDate() + 7);
+
+    await request(app.server)
+      .post(`/api/v1/bookings/${bookingId}/reschedule`)
+      .set('Authorization', bearer(client))
+      .send({ scheduledAt: thirdMonday.toISOString() })
+      .expect(409)
+      .expect((res) => expect(res.body.code).toBe('RESCHEDULE_LIMIT_EXCEEDED'));
+  });
+
+  it('rejects a reschedule attempt made by a stranger with 404, never 403', async () => {
+    const { masterProfileId, serviceId, scheduledAt, cityId } = await seedMasterWithService();
+    const client = await createClient(app);
+    const stranger = await createClient(app);
+
+    const created = await request(app.server)
+      .post('/api/v1/bookings')
+      .set('Authorization', bearer(client))
+      .send({
+        masterId: masterProfileId,
+        serviceId,
+        scheduledAt,
+        address: { cityId, line: '123 Main St', district: 'Downtown' },
+      })
+      .expect(201);
+
+    const nextMonday = new Date(scheduledAt);
+    nextMonday.setUTCDate(nextMonday.getUTCDate() + 7);
+
+    await request(app.server)
+      .post(`/api/v1/bookings/${created.body.id}/reschedule`)
+      .set('Authorization', bearer(stranger))
+      .send({ scheduledAt: nextMonday.toISOString() })
+      .expect(404)
+      .expect((res) => expect(res.body.code).toBe('BOOKING_NOT_FOUND'));
+  });
+
   it('records the client’s WhatsApp click once and surfaces the master’s number (P0)', async () => {
     const { master, masterProfileId, serviceId, scheduledAt, cityId } =
       await seedMasterWithService();

@@ -183,6 +183,8 @@ Codes are unique across the API and are exported as a single const object consum
 | `ILLEGAL_BOOKING_TRANSITION` | 409    | Not permitted by the state machine                 |
 | `TOO_EARLY_TO_START`         | 422    | Earlier than 30 minutes before the slot            |
 | `BOOKING_NOT_COMPLETED`      | 409    | Review attempted on a non-completed booking        |
+| `RESCHEDULE_WINDOW_CLOSED`   | 422    | Less than 24h before the booking's current slot    |
+| `RESCHEDULE_LIMIT_EXCEEDED`  | 409    | Booking has already been rescheduled once (B-51)   |
 
 ### Reviews
 

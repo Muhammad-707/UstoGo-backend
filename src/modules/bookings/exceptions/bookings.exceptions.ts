@@ -111,3 +111,25 @@ export class ReasonRequiredException extends AppException {
     super(ERROR_CODE.REASON_REQUIRED, 'A reason is required.', HttpStatus.UNPROCESSABLE_ENTITY);
   }
 }
+
+/** 422. B-51: a reschedule must be requested at least 24h before the current slot. */
+export class RescheduleWindowClosedException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.RESCHEDULE_WINDOW_CLOSED,
+      'This booking can no longer be rescheduled — its slot is less than 24 hours away.',
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+  }
+}
+
+/** 409. B-51: a booking may be rescheduled once. */
+export class RescheduleLimitExceededException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.RESCHEDULE_LIMIT_EXCEEDED,
+      'This booking has already been rescheduled once. Cancel and rebook instead.',
+      HttpStatus.CONFLICT,
+    );
+  }
+}

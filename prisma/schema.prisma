@@ -90,6 +90,7 @@ enum NotificationType {
   BOOKING_COMPLETED
   BOOKING_CANCELLED
   BOOKING_EXPIRED
+  BOOKING_RESCHEDULED
   MASTER_REGISTERED
   MASTER_APPROVED
   MASTER_REJECTED
@@ -809,6 +810,9 @@ model Booking {
   cancellationReason    String?       @map("cancellation_reason") @db.VarChar(500)
   cancelledByType       ActorType?    @map("cancelled_by_type")
   isLateCancellation    Boolean       @default(false) @map("is_late_cancellation")
+  /// B-51: a client may move a PENDING/ACCEPTED booking once, >=24h before its current
+  /// slot. Not a status transition — `scheduledAt`/`endsAt` change, `status` does not.
+  rescheduleCount       Int           @default(0) @map("reschedule_count")
   /// Set once on the client's first click of the master's WhatsApp link (P0) — the
   /// analytics signal that a client actually reached out off-platform.
   whatsappLinkClickedAt DateTime?     @map("whatsapp_link_clicked_at") @db.Timestamptz(3)

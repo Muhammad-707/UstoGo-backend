@@ -83,14 +83,14 @@ Size: **S** ≤ 3 days · **M** ≤ 2 weeks · **L** ≤ 6 weeks · **XL** a qua
 
 ## Client Experience
 
-| ID   | Item                                                       | Priority | Size |
-| ---- | ---------------------------------------------------------- | -------- | ---- |
-| B-50 | Multiple saved addresses                                   | P1       | S    |
-| B-51 | Booking rescheduling (rather than cancel + rebook)         | P1       | M    |
-| B-52 | Referral programme                                         | P2       | M    |
-| B-53 | Loyalty/repeat-booking incentives                          | P3       | M    |
-| B-54 | Photo attachments on a booking request                     | P2       | S    |
-| B-55 | Multi-language content (category and service translations) | P2       | L    |
+| ID   | Item                                                                             | Priority | Size |
+| ---- | -------------------------------------------------------------------------------- | -------- | ---- |
+| B-50 | Multiple saved addresses                                                         | P1       | S    |
+| B-51 | ~~Booking rescheduling~~ — **done**, `POST /bookings/:id/reschedule` (STATUS.md) | P1       | M    |
+| B-52 | Referral programme                                                               | P2       | M    |
+| B-53 | Loyalty/repeat-booking incentives                                                | P3       | M    |
+| B-54 | Photo attachments on a booking request                                           | P2       | S    |
+| B-55 | Multi-language content (category and service translations)                       | P2       | L    |
 
 ---
 

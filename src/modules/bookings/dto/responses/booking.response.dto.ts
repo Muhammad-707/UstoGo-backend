@@ -29,6 +29,7 @@ export type BookingWithParties = {
   cancellationReason: string | null;
   cancelledByType: ActorType | null;
   isLateCancellation: boolean;
+  rescheduleCount: number;
   createdAt: Date;
   masterProfile: {
     displayName: string;
@@ -157,6 +158,9 @@ export class BookingResponseDto {
   @ApiProperty()
   isLateCancellation!: boolean;
 
+  @ApiProperty({ description: 'B-51: 0 until rescheduled once; capped at 1 in v1.' })
+  rescheduleCount!: number;
+
   @ApiProperty()
   createdAt!: string;
 
@@ -191,6 +195,7 @@ export class BookingResponseDto {
     dto.cancellationReason = booking.cancellationReason;
     dto.cancelledByType = booking.cancelledByType;
     dto.isLateCancellation = booking.isLateCancellation;
+    dto.rescheduleCount = booking.rescheduleCount;
     dto.createdAt = booking.createdAt.toISOString();
 
     applyContactFields(dto, booking, discloseContact);

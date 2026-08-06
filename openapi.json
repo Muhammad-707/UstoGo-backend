@@ -5774,6 +5774,103 @@
         ]
       }
     },
+    "/bookings/{id}/reschedule": {
+      "post": {
+        "description": "B-51 — client only, once per booking, and only while the current slot is still at least 24h away. The new slot is re-validated against the same availability/overlap rules as creating a booking.",
+        "operationId": "reschedule",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RescheduleBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BOOKING_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RESCHEDULE_LIMIT_EXCEEDED | ILLEGAL_BOOKING_TRANSITION | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | BOOKING_OVERLAP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "RESCHEDULE_WINDOW_CLOSED | SLOT_TOO_SOON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Move a booking to a new time",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
     "/bookings/{id}/start": {
       "post": {
         "description": "Not earlier than 30 minutes before.",
@@ -11655,6 +11752,10 @@
           "isLateCancellation": {
             "type": "boolean"
           },
+          "rescheduleCount": {
+            "type": "number",
+            "description": "B-51: 0 until rescheduled once; capped at 1 in v1."
+          },
           "createdAt": {
             "type": "string"
           }
@@ -11678,6 +11779,7 @@
           "durationMinutes",
           "addressDistrict",
           "isLateCancellation",
+          "rescheduleCount",
           "createdAt"
         ]
       },
@@ -12015,6 +12117,10 @@
           "isLateCancellation": {
             "type": "boolean"
           },
+          "rescheduleCount": {
+            "type": "number",
+            "description": "B-51: 0 until rescheduled once; capped at 1 in v1."
+          },
           "createdAt": {
             "type": "string"
           },
@@ -12044,6 +12150,7 @@
           "durationMinutes",
           "addressDistrict",
           "isLateCancellation",
+          "rescheduleCount",
           "createdAt",
           "history"
         ]
@@ -12071,6 +12178,18 @@
           }
         }
       },
+      "RescheduleBookingDto": {
+        "type": "object",
+        "properties": {
+          "scheduledAt": {
+            "type": "string",
+            "example": "2026-08-10T09:00:00.000Z"
+          }
+        },
+        "required": [
+          "scheduledAt"
+        ]
+      },
       "NotificationResponseDto": {
         "type": "object",
         "properties": {
@@ -12088,6 +12207,7 @@
               "BOOKING_COMPLETED",
               "BOOKING_CANCELLED",
               "BOOKING_EXPIRED",
+              "BOOKING_RESCHEDULED",
               "MASTER_REGISTERED",
               "MASTER_APPROVED",
               "MASTER_REJECTED",
@@ -12159,6 +12279,7 @@
               "BOOKING_COMPLETED",
               "BOOKING_CANCELLED",
               "BOOKING_EXPIRED",
+              "BOOKING_RESCHEDULED",
               "MASTER_REGISTERED",
               "MASTER_APPROVED",
               "MASTER_REJECTED",

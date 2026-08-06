@@ -223,16 +223,17 @@ All are `@Roles(MASTER)`. Service and schedule mutations additionally require `M
 
 ## 9. Bookings — `/bookings`
 
-| Method | Path                     | Role                | Description                                     |
-| ------ | ------------------------ | ------------------- | ----------------------------------------------- |
-| POST   | `/bookings`              | CLIENT              | Create → 201, status `PENDING`                  |
-| GET    | `/bookings`              | CLIENT, MASTER      | Own bookings; filters `status`, `from`, `to`    |
-| GET    | `/bookings/:id`          | participants, ADMIN | Detail + status history                         |
-| POST   | `/bookings/:id/accept`   | MASTER              | `PENDING → ACCEPTED`                            |
-| POST   | `/bookings/:id/reject`   | MASTER              | `PENDING → REJECTED`, `{ reason }`              |
-| POST   | `/bookings/:id/cancel`   | CLIENT, MASTER      | → `CANCELLED_BY_*`; reason required for masters |
-| POST   | `/bookings/:id/start`    | MASTER              | `ACCEPTED → IN_PROGRESS`                        |
-| POST   | `/bookings/:id/complete` | MASTER              | `IN_PROGRESS → COMPLETED`                       |
+| Method | Path                       | Role                | Description                                     |
+| ------ | -------------------------- | ------------------- | ----------------------------------------------- |
+| POST   | `/bookings`                | CLIENT              | Create → 201, status `PENDING`                  |
+| GET    | `/bookings`                | CLIENT, MASTER      | Own bookings; filters `status`, `from`, `to`    |
+| GET    | `/bookings/:id`            | participants, ADMIN | Detail + status history                         |
+| POST   | `/bookings/:id/accept`     | MASTER              | `PENDING → ACCEPTED`                            |
+| POST   | `/bookings/:id/reject`     | MASTER              | `PENDING → REJECTED`, `{ reason }`              |
+| POST   | `/bookings/:id/cancel`     | CLIENT, MASTER      | → `CANCELLED_BY_*`; reason required for masters |
+| POST   | `/bookings/:id/reschedule` | CLIENT              | B-51: move `scheduledAt`, once, ≥24h out        |
+| POST   | `/bookings/:id/start`      | MASTER              | `ACCEPTED → IN_PROGRESS`                        |
+| POST   | `/bookings/:id/complete`   | MASTER              | `IN_PROGRESS → COMPLETED`                       |
 
 **Create request**
 

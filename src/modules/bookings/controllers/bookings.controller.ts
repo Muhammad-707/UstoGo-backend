@@ -24,9 +24,11 @@ import { CancelBookingDto } from '../dto/requests/cancel-booking.dto';
 import { CreateBookingDto } from '../dto/requests/create-booking.dto';
 import { ListBookingsQueryDto } from '../dto/requests/list-bookings-query.dto';
 import { RejectBookingDto } from '../dto/requests/reject-booking.dto';
+import { RescheduleBookingDto } from '../dto/requests/reschedule-booking.dto';
 import { BookingDetailResponseDto } from '../dto/responses/booking-detail.response.dto';
 import { BookingResponseDto } from '../dto/responses/booking.response.dto';
 import { MasterStatsResponseDto } from '../dto/responses/master-stats.response.dto';
+import { BookingRescheduleService } from '../services/booking-reschedule.service';
 import { BookingStatsService } from '../services/booking-stats.service';
 import { BookingTransitionService } from '../services/booking-transition.service';
 import { BookingsService } from '../services/bookings.service';
@@ -39,6 +41,7 @@ export class BookingsController {
   constructor(
     private readonly bookings: BookingsService,
     private readonly transitions: BookingTransitionService,
+    private readonly reschedules: BookingRescheduleService,
     private readonly bookingStats: BookingStatsService,
   ) {}
 
@@ -194,6 +197,37 @@ export class BookingsController {
       id,
       dto.reason,
     );
+    return BookingResponseDto.fromEntity(booking, user.role);
+  }
+
+  @Post(':id/reschedule')
+  @HttpCode(HttpStatus.OK)
+  @ApiAuth(UserRole.CLIENT)
+  @ApiOperation({
+    summary: 'Move a booking to a new time',
+    description:
+      'B-51 — client only, once per booking, and only while the current slot is ' +
+      'still at least 24h away. The new slot is re-validated against the same ' +
+      'availability/overlap rules as creating a booking.',
+  })
+  @ApiOkResponse({ type: BookingResponseDto })
+  @ApiNotFoundResponse(BOOKING_NOT_FOUND)
+  @ApiUnprocessableEntityResponse({
+    description: 'RESCHEDULE_WINDOW_CLOSED | SLOT_TOO_SOON',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'RESCHEDULE_LIMIT_EXCEEDED | ILLEGAL_BOOKING_TRANSITION | ' +
+      'SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | BOOKING_OVERLAP',
+    type: ErrorResponseDto,
+  })
+  async reschedule(
+    @Param('id') id: string,
+    @Body() dto: RescheduleBookingDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<BookingResponseDto> {
+    const booking = await this.reschedules.reschedule(user.id, id, dto);
     return BookingResponseDto.fromEntity(booking, user.role);
   }
 

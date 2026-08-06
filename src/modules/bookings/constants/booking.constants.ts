@@ -14,6 +14,14 @@ export const EARLY_START_WINDOW_MINUTES = 30;
 export const REASON_MIN_LENGTH = 10;
 export const REASON_MAX_LENGTH = 500;
 
+/**
+ * B-51: a client may reschedule a PENDING/ACCEPTED booking once, and only while its
+ * current slot is at least this many hours away — mirrors `BACKLOG.md`'s own framing
+ * of the feature ("rather than cancel + rebook").
+ */
+export const RESCHEDULE_WINDOW_HOURS = 24;
+export const MAX_RESCHEDULE_COUNT = 1;
+
 /** FR-7.5: the expiry job's cadence and batch size. */
 export const EXPIRY_JOB_CRON = '*/10 * * * *';
 export const EXPIRY_BATCH_SIZE = 100;

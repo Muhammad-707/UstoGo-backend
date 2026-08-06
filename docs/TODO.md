@@ -1,6 +1,6 @@
 # TODO — UstoGo Backend
 
-**Last updated:** 2026-08-05
+**Last updated:** 2026-08-06
 **Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete). Post-1.0.0: P0 (WhatsApp) landed 2026-08-03; production DB sync confirmed, observability/security hardening pass (Sentry, Redis health check, helmet/compression) and a Render deploy-pipeline fix landed 2026-08-05.
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
@@ -237,6 +237,14 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] Root `README.md`/`CLAUDE.md` — corrected the stale "Phase 1, no application code yet" header
 
 ---
+
+### Post-1.0.0, 2026-08-06: booking rescheduling (BACKLOG.md B-51)
+
+- [x] `Booking.rescheduleCount` column + `NotificationType.BOOKING_RESCHEDULED` (`20260806130000_add_booking_reschedule`)
+- [x] `POST /bookings/:id/reschedule` — client-owner only, `PENDING`/`ACCEPTED` only, once, ≥24h before the current slot; new slot re-validated (lead time, availability, client overlap, master overlap under `SERIALIZABLE`)
+- [x] `BookingRescheduleService` (new file, keeps `BookingsService` under the 300-line cap) + booking notification listener case
+- [x] Unit tests (`booking-reschedule.service.spec.ts`) and e2e tests (`bookings.e2e-spec.ts`: success + limit + non-owner 404)
+- [ ] Frontend: reschedule action on the client's booking detail screen — tracked as a separate frontend task
 
 ## 📌 Standing Rules
 

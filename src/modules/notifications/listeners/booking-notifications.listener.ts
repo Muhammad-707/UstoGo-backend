@@ -11,6 +11,7 @@ import {
   type BookingExpiredEvent,
   type BookingReminderEvent,
   type BookingRejectedEvent,
+  type BookingRescheduledEvent,
   type BookingStartedEvent,
 } from '@modules/bookings/events/booking.events';
 
@@ -98,6 +99,15 @@ export class BookingNotificationsListener {
   async onReminder(event: BookingReminderEvent): Promise<void> {
     await this.notifications.create(event.notifyUserId, NotificationType.BOOKING_REMINDER, {
       bookingId: event.bookingId,
+      scheduledAt: event.scheduledAt.toISOString(),
+    });
+  }
+
+  @OnEvent(BOOKING_EVENT.RESCHEDULED)
+  async onRescheduled(event: BookingRescheduledEvent): Promise<void> {
+    await this.notifications.create(event.notifyUserId, NotificationType.BOOKING_RESCHEDULED, {
+      bookingId: event.bookingId,
+      previousScheduledAt: event.previousScheduledAt.toISOString(),
       scheduledAt: event.scheduledAt.toISOString(),
     });
   }
