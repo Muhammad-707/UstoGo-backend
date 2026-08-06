@@ -2992,6 +2992,64 @@
         ]
       }
     },
+    "/masters/me/instant-book": {
+      "patch": {
+        "description": "Enabling this alone does not make bookings auto-accept — the master also needs a qualifying `reliabilityScore` (see `GET .../nps` sibling stats). Both are checked at booking-creation time.",
+        "operationId": "setInstantBook",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetInstantBookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterStatusResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Opt in/out of auto-accepting bookings (B-24)",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
     "/masters/me/nps": {
       "get": {
         "operationId": "nps",
@@ -3628,6 +3686,418 @@
         ]
       }
     },
+    "/masters/me/pricing-suggestion": {
+      "get": {
+        "description": "Drawn from other masters’ active service prices in the caller’s own city, falling back to a category-wide sample when the city has too few listings.",
+        "operationId": "pricingSuggestionFor",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingSuggestionResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CATEGORY_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "A market-rate price suggestion for a category (B-41-adjacent)",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/me/recently-viewed": {
+      "get": {
+        "description": "CLIENT only — the one route on this \"Master Cabinet\" controller a client calls, kept here rather than a new controller so it stays registered ahead of the `masters/:id` wildcard (see MastersModule's route-order note).",
+        "operationId": "recentlyViewedMasters",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MasterPublicResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller’s recently viewed master profiles",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/me/quick-replies": {
+      "get": {
+        "operationId": "list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuickReplyResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller’s chat quick replies, in display order",
+        "tags": [
+          "Master Cabinet"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuickReplyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickReplyResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MASTER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED | QUICK_REPLY_LIMIT_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add a canned reply for chat",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/me/quick-replies/{replyId}": {
+      "patch": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "replyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQuickReplyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuickReplyResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QUICK_REPLY_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Edit a quick reply",
+        "tags": [
+          "Master Cabinet"
+        ]
+      },
+      "delete": {
+        "description": "Soft delete; idempotent.",
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "replyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a quick reply",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
+    "/masters/leaderboard": {
+      "get": {
+        "operationId": "leaderboardList",
+        "parameters": [
+          {
+            "name": "cityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MasterLeaderboardEntryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Top masters by rating, with earned badges",
+        "tags": [
+          "Masters"
+        ]
+      }
+    },
     "/masters/{id}": {
       "get": {
         "operationId": "byId",
@@ -3719,6 +4189,66 @@
           }
         },
         "summary": "A master’s visible certificates",
+        "tags": [
+          "Masters"
+        ]
+      }
+    },
+    "/masters/{id}/view": {
+      "post": {
+        "description": "Feeds `GET /masters/me/recently-viewed`. Idempotent — bumps `viewedAt`.",
+        "operationId": "recordView",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MASTER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record that the caller viewed this profile",
         "tags": [
           "Masters"
         ]
@@ -5422,7 +5952,7 @@
             }
           },
           "404": {
-            "description": "MASTER_NOT_FOUND",
+            "description": "MASTER_NOT_FOUND | FILE_NOT_FOUND",
             "content": {
               "application/json": {
                 "schema": {
@@ -5432,7 +5962,7 @@
             }
           },
           "409": {
-            "description": "MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | IDEMPOTENCY_KEY_REUSED | IDEMPOTENCY_KEY_IN_PROGRESS",
+            "description": "MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | FILE_NOT_CONFIRMED | IDEMPOTENCY_KEY_REUSED | IDEMPOTENCY_KEY_IN_PROGRESS",
             "content": {
               "application/json": {
                 "schema": {
@@ -5634,6 +6164,64 @@
           }
         ],
         "summary": "Dashboard analytics for the caller",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/bookings/me/schedule-optimizer": {
+      "get": {
+        "description": "Nearest-neighbor route over that day’s ACCEPTED/IN_PROGRESS bookings with coordinates. Read-only — reorders how the day is read, never reschedules.",
+        "operationId": "scheduleOptimizerFor",
+        "parameters": [
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-08-10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleOptimizerResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Suggest a travel-minimising visiting order for a day’s bookings",
         "tags": [
           "Bookings"
         ]
@@ -6292,6 +6880,293 @@
         ]
       }
     },
+    "/bookings/me/schedule.ics": {
+      "get": {
+        "description": "ACCEPTED/IN_PROGRESS bookings in the next 180 days. A one-time download, not a live subscription feed — re-download to refresh.",
+        "operationId": "exportSchedule",
+        "parameters": [],
+        "responses": {
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Export the caller’s upcoming work schedule as an .ics calendar file",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/attachments/{fileId}/url": {
+      "get": {
+        "description": "B-54 — scoped by booking participancy, not upload ownership: the master can view a photo the client attached, unlike the uploader-only `GET /files/:id/url`.",
+        "operationId": "getAttachmentUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadUrlResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT, MASTER, ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BOOKING_NOT_FOUND | FILE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "A short-lived read URL for one of the booking's attached photos",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/receipt.pdf": {
+      "get": {
+        "operationId": "receipt",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT, MASTER, ADMIN",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BOOKING_NOT_FOUND",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "BOOKING_NOT_COMPLETED",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Download a PDF receipt for a completed booking",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/certificate": {
+      "get": {
+        "description": "Issued automatically when the booking reaches COMPLETED. Rendering `verificationCode`/`verifyPath` as a QR image is a frontend concern.",
+        "operationId": "certificate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionCertificateResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT, MASTER, ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BOOKING_NOT_FOUND | COMPLETION_CERTIFICATE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The QR-verifiable completion certificate for a completed booking",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/certificates/verify/{code}": {
+      "get": {
+        "operationId": "verify",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionCertificateResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "COMPLETION_CERTIFICATE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verify a completion certificate by its code",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
     "/admin/bookings": {
       "get": {
         "description": "Filterable by status, participant, date.",
@@ -6807,6 +7682,123 @@
           }
         ],
         "summary": "Mark every notification read",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/notifications/preferences": {
+      "get": {
+        "description": "Every `NotificationType`, defaulting to `true` where the caller has no override — only push/email/SMS channels do not exist yet to gate independently.",
+        "operationId": "preferences",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "example": {
+                    "BOOKING_REMINDER": false,
+                    "BOOKING_CREATED": true
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller’s per-type notification preferences (B-36)",
+        "tags": [
+          "Notifications"
+        ]
+      },
+      "patch": {
+        "operationId": "updatePreferences",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationPreferencesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "example": {
+                    "BOOKING_REMINDER": false,
+                    "BOOKING_CREATED": true
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | ACCOUNT_BLOCKED | ACCOUNT_INACTIVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Enable or disable specific notification types",
         "tags": [
           "Notifications"
         ]
@@ -8952,6 +9944,425 @@
         ]
       }
     },
+    "/quotes": {
+      "post": {
+        "operationId": "create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MASTER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "MASTER_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "SERVICE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Ask a master for a price estimate before booking (B-44)",
+        "tags": [
+          "Quotes"
+        ]
+      },
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "RESPONDED",
+                "DECLINED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/QuoteResponseDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT, MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List the caller’s own quotes (sent or received)",
+        "tags": [
+          "Quotes"
+        ]
+      }
+    },
+    "/quotes/{id}": {
+      "get": {
+        "operationId": "findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT, MASTER, ADMIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QUOTE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Quote detail",
+        "tags": [
+          "Quotes"
+        ]
+      }
+    },
+    "/quotes/{id}/respond": {
+      "post": {
+        "operationId": "respond",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QUOTE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "QUOTE_ALREADY_RESPONDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Answer a pending quote with an estimated price",
+        "tags": [
+          "Quotes"
+        ]
+      }
+    },
+    "/quotes/{id}/decline": {
+      "post": {
+        "operationId": "decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QUOTE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "QUOTE_ALREADY_RESPONDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Decline a pending quote request",
+        "tags": [
+          "Quotes"
+        ]
+      }
+    },
     "/admin/dashboard": {
       "get": {
         "description": "User/master/booking counts, completion/cancellation/acceptance rates, review aggregate, top 10 categories by booking volume and a daily booking time series (FR-11.1). `from`/`to` are independently optional; a missing bound defaults to a 30-day window, capped at 366 days.",
@@ -10554,7 +11965,8 @@
           "BANNER",
           "MESSAGE_ATTACHMENT",
           "CATEGORY_ICON",
-          "PORTFOLIO_IMAGE"
+          "PORTFOLIO_IMAGE",
+          "BOOKING_ATTACHMENT"
         ]
       },
       "PresignRequestDto": {
@@ -10953,12 +12365,22 @@
           "rejectionReason": {
             "type": "object",
             "nullable": true
+          },
+          "reliabilityScore": {
+            "type": "object",
+            "nullable": true,
+            "description": "B-15 — null until any resolved booking."
+          },
+          "instantBookEnabled": {
+            "type": "boolean",
+            "description": "B-24 — opted in to auto-accepting eligible bookings."
           }
         },
         "required": [
           "id",
           "approvalStatus",
-          "isActive"
+          "isActive",
+          "instantBookEnabled"
         ]
       },
       "SetAvailabilityDto": {
@@ -10971,6 +12393,18 @@
         },
         "required": [
           "isActive"
+        ]
+      },
+      "SetInstantBookDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "B-24 — opt in to auto-accepting bookings once eligible."
+          }
+        },
+        "required": [
+          "enabled"
         ]
       },
       "MasterNpsResponseDto": {
@@ -11137,6 +12571,41 @@
           "imageIds"
         ]
       },
+      "PricingSuggestionResponseDto": {
+        "type": "object",
+        "properties": {
+          "basis": {
+            "type": "string",
+            "enum": [
+              "CITY",
+              "CATEGORY_WIDE"
+            ],
+            "description": "CITY when the master’s own city has enough active listings; falls back otherwise."
+          },
+          "sampleSize": {
+            "type": "number",
+            "description": "Active services this suggestion is drawn from."
+          },
+          "suggestedMin": {
+            "type": "object",
+            "nullable": true,
+            "description": "Cheapest active listing in the sample."
+          },
+          "suggestedMedian": {
+            "type": "object",
+            "nullable": true
+          },
+          "suggestedMax": {
+            "type": "object",
+            "nullable": true,
+            "description": "Priciest active listing in the sample."
+          }
+        },
+        "required": [
+          "basis",
+          "sampleSize"
+        ]
+      },
       "MasterPublicResponseDto": {
         "type": "object",
         "properties": {
@@ -11247,6 +12716,10 @@
             "nullable": true,
             "example": "+992901234567",
             "description": "The WhatsApp number clients write to directly — public by design (P0). Null when unset or when `whatsappEnabled` is false."
+          },
+          "isFastResponder": {
+            "type": "boolean",
+            "description": "True when this master accepts bookings quickly (avg <= 30 min) and has a track record (>= 5 completed bookings) — a search/trust signal, not raw stats."
           }
         },
         "required": [
@@ -11263,7 +12736,89 @@
           "portfolioImageFileIds",
           "isActive",
           "approvalStatus",
-          "whatsappEnabled"
+          "whatsappEnabled",
+          "isFastResponder"
+        ]
+      },
+      "QuickReplyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "sortOrder",
+          "createdAt"
+        ]
+      },
+      "CreateQuickReplyDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "I'm running about 15 minutes late.",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "UpdateQuickReplyDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "MasterLeaderboardEntryDto": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "number",
+            "example": 1,
+            "description": "1-based position in this result set."
+          },
+          "badges": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "TOP_RATED",
+                "MOST_BOOKED",
+                "FAST_RESPONDER",
+                "RISING_STAR"
+              ]
+            }
+          },
+          "master": {
+            "$ref": "#/components/schemas/MasterPublicResponseDto"
+          }
+        },
+        "required": [
+          "rank",
+          "badges",
+          "master"
         ]
       },
       "MasterPortfolioImageUrlDto": {
@@ -11984,6 +13539,14 @@
           "note": {
             "type": "string",
             "maxLength": 1000
+          },
+          "attachmentKeys": {
+            "description": "B-54: up to 5 of the caller’s own confirmed File ids (photos of the problem), not raw storage keys — resolved ownership-scoped the same way chat attachments are.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
@@ -12128,6 +13691,20 @@
             "type": "object",
             "nullable": true
           },
+          "cancellationReasonCode": {
+            "type": "string",
+            "enum": [
+              "CHANGED_MIND",
+              "FOUND_ANOTHER_PROVIDER",
+              "PRICE_TOO_HIGH",
+              "SCHEDULING_CONFLICT",
+              "NO_LONGER_NEEDED",
+              "UNRESPONSIVE_OTHER_PARTY",
+              "EMERGENCY",
+              "OTHER"
+            ],
+            "nullable": true
+          },
           "cancelledByType": {
             "type": "string",
             "enum": [
@@ -12144,6 +13721,14 @@
           "rescheduleCount": {
             "type": "number",
             "description": "B-51: 0 until rescheduled once; capped at 1 in v1."
+          },
+          "attachmentFileIds": {
+            "description": "B-54: File ids of photos attached at creation. Resolve a URL via GET /files/:id/url.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "createdAt": {
             "type": "string"
@@ -12169,6 +13754,7 @@
           "addressDistrict",
           "isLateCancellation",
           "rescheduleCount",
+          "attachmentFileIds",
           "createdAt"
         ]
       },
@@ -12291,6 +13877,75 @@
           "avgAcceptLatencyMinutes",
           "repeatClientRate",
           "profileViews"
+        ]
+      },
+      "OptimizedStopDto": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "number",
+            "example": 1,
+            "description": "1-based suggested visiting order."
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bookingNumber": {
+            "type": "string",
+            "example": "UG-2026-000123"
+          },
+          "serviceTitle": {
+            "type": "string"
+          },
+          "scheduledAt": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "order",
+          "bookingId",
+          "bookingNumber",
+          "serviceTitle",
+          "scheduledAt",
+          "district"
+        ]
+      },
+      "ScheduleOptimizerResponseDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-08-10"
+          },
+          "stops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OptimizedStopDto"
+            }
+          },
+          "totalDistanceKm": {
+            "type": "number",
+            "description": "Total travel distance (km) in the suggested order."
+          },
+          "chronologicalDistanceKm": {
+            "type": "number",
+            "description": "What the same stops would cost in plain chronological order."
+          },
+          "estimatedSavingsKm": {
+            "type": "number",
+            "description": "chronologicalDistanceKm - totalDistanceKm, floored at 0."
+          }
+        },
+        "required": [
+          "date",
+          "stops",
+          "totalDistanceKm",
+          "chronologicalDistanceKm",
+          "estimatedSavingsKm"
         ]
       },
       "BookingHistoryEntryResponseDto": {
@@ -12493,6 +14148,20 @@
             "type": "object",
             "nullable": true
           },
+          "cancellationReasonCode": {
+            "type": "string",
+            "enum": [
+              "CHANGED_MIND",
+              "FOUND_ANOTHER_PROVIDER",
+              "PRICE_TOO_HIGH",
+              "SCHEDULING_CONFLICT",
+              "NO_LONGER_NEEDED",
+              "UNRESPONSIVE_OTHER_PARTY",
+              "EMERGENCY",
+              "OTHER"
+            ],
+            "nullable": true
+          },
           "cancelledByType": {
             "type": "string",
             "enum": [
@@ -12509,6 +14178,14 @@
           "rescheduleCount": {
             "type": "number",
             "description": "B-51: 0 until rescheduled once; capped at 1 in v1."
+          },
+          "attachmentFileIds": {
+            "description": "B-54: File ids of photos attached at creation. Resolve a URL via GET /files/:id/url.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "createdAt": {
             "type": "string"
@@ -12540,6 +14217,7 @@
           "addressDistrict",
           "isLateCancellation",
           "rescheduleCount",
+          "attachmentFileIds",
           "createdAt",
           "history"
         ]
@@ -12564,6 +14242,19 @@
             "type": "string",
             "minLength": 10,
             "maxLength": 500
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "CHANGED_MIND",
+              "FOUND_ANOTHER_PROVIDER",
+              "PRICE_TOO_HIGH",
+              "SCHEDULING_CONFLICT",
+              "NO_LONGER_NEEDED",
+              "UNRESPONSIVE_OTHER_PARTY",
+              "EMERGENCY",
+              "OTHER"
+            ]
           }
         }
       },
@@ -12577,6 +14268,49 @@
         },
         "required": [
           "scheduledAt"
+        ]
+      },
+      "CompletionCertificateResponseDto": {
+        "type": "object",
+        "properties": {
+          "verificationCode": {
+            "type": "string",
+            "example": "A1B2-C3D4-E5F6",
+            "description": "The QR payload / manually-typeable code."
+          },
+          "verifyPath": {
+            "type": "string",
+            "example": "/api/v1/certificates/verify/A1B2-C3D4-E5F6"
+          },
+          "issuedAt": {
+            "type": "string"
+          },
+          "bookingNumber": {
+            "type": "string",
+            "example": "UG-2026-000123"
+          },
+          "serviceTitle": {
+            "type": "string"
+          },
+          "masterDisplayName": {
+            "type": "string"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "completedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "verificationCode",
+          "verifyPath",
+          "issuedAt",
+          "bookingNumber",
+          "serviceTitle",
+          "masterDisplayName",
+          "clientName",
+          "completedAt"
         ]
       },
       "NotificationResponseDto": {
@@ -12606,7 +14340,10 @@
               "REVIEW_INVITATION",
               "BOOKING_REMINDER",
               "MESSAGE_RECEIVED",
-              "SYSTEM_ANNOUNCEMENT"
+              "SYSTEM_ANNOUNCEMENT",
+              "QUOTE_REQUESTED",
+              "QUOTE_RESPONDED",
+              "QUOTE_DECLINED"
             ]
           },
           "payload": {
@@ -12638,6 +14375,58 @@
         },
         "required": [
           "count"
+        ]
+      },
+      "NotificationPreferenceItemDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "BOOKING_CREATED",
+              "BOOKING_ACCEPTED",
+              "BOOKING_REJECTED",
+              "BOOKING_STARTED",
+              "BOOKING_COMPLETED",
+              "BOOKING_CANCELLED",
+              "BOOKING_EXPIRED",
+              "BOOKING_RESCHEDULED",
+              "MASTER_REGISTERED",
+              "MASTER_APPROVED",
+              "MASTER_REJECTED",
+              "MASTER_DEACTIVATED",
+              "REVIEW_RECEIVED",
+              "REVIEW_REPLIED",
+              "REVIEW_INVITATION",
+              "BOOKING_REMINDER",
+              "MESSAGE_RECEIVED",
+              "SYSTEM_ANNOUNCEMENT",
+              "QUOTE_REQUESTED",
+              "QUOTE_RESPONDED",
+              "QUOTE_DECLINED"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "enabled"
+        ]
+      },
+      "UpdateNotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "preferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationPreferenceItemDto"
+            }
+          }
+        },
+        "required": [
+          "preferences"
         ]
       },
       "BroadcastNotificationDto": {
@@ -12678,7 +14467,10 @@
               "REVIEW_INVITATION",
               "BOOKING_REMINDER",
               "MESSAGE_RECEIVED",
-              "SYSTEM_ANNOUNCEMENT"
+              "SYSTEM_ANNOUNCEMENT",
+              "QUOTE_REQUESTED",
+              "QUOTE_RESPONDED",
+              "QUOTE_DECLINED"
             ]
           },
           "payload": {
@@ -13356,6 +15148,144 @@
           "status"
         ]
       },
+      "CreateQuoteDto": {
+        "type": "object",
+        "properties": {
+          "masterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serviceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Narrows the inquiry to one service."
+          },
+          "description": {
+            "type": "string",
+            "example": "Kitchen sink is leaking under the cabinet.",
+            "minLength": 10,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "masterId",
+          "description"
+        ]
+      },
+      "QuoteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "masterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "masterDisplayName": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "serviceTitle": {
+            "type": "object",
+            "nullable": true
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RESPONDED",
+              "DECLINED"
+            ]
+          },
+          "estimatedPrice": {
+            "type": "object",
+            "nullable": true
+          },
+          "priceType": {
+            "type": "object",
+            "nullable": true
+          },
+          "masterNote": {
+            "type": "object",
+            "nullable": true
+          },
+          "declineReason": {
+            "type": "object",
+            "nullable": true
+          },
+          "respondedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "masterId",
+          "masterDisplayName",
+          "clientId",
+          "clientName",
+          "description",
+          "status",
+          "createdAt"
+        ]
+      },
+      "RespondQuoteDto": {
+        "type": "object",
+        "properties": {
+          "estimatedPrice": {
+            "type": "number",
+            "example": 45
+          },
+          "priceType": {
+            "type": "string",
+            "enum": [
+              "FIXED",
+              "HOURLY",
+              "FROM"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "estimatedPrice",
+          "priceType"
+        ]
+      },
+      "DeclineQuoteDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
       "DashboardUsersDto": {
         "type": "object",
         "properties": {
@@ -13452,6 +15382,24 @@
           "acceptanceRate"
         ]
       },
+      "DashboardCancellationReasonDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "object",
+            "example": "PRICE_TOO_HIGH",
+            "nullable": true,
+            "description": "null = no code given"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "count"
+        ]
+      },
       "DashboardReviewsDto": {
         "type": "object",
         "properties": {
@@ -13522,6 +15470,12 @@
           "rates": {
             "$ref": "#/components/schemas/DashboardRatesDto"
           },
+          "cancellationReasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardCancellationReasonDto"
+            }
+          },
           "reviews": {
             "$ref": "#/components/schemas/DashboardReviewsDto"
           },
@@ -13543,6 +15497,7 @@
           "masters",
           "bookings",
           "rates",
+          "cancellationReasons",
           "reviews",
           "topCategories",
           "series"

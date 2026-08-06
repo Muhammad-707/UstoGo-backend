@@ -3,6 +3,7 @@ import type { Server, Socket } from 'socket.io';
 
 import type { AppConfigService } from '@config/app-config.service';
 import type { JwtStrategy } from '@modules/auth/strategies/jwt.strategy';
+import type { PrismaService } from '@prisma-lib/prisma.service';
 
 import {
   BookingAcceptedEvent,
@@ -14,7 +15,13 @@ import {
 } from '../../events/booking.events';
 import { BookingsGateway } from '../bookings.gateway';
 
-const build = () => {
+const ACTIVE_BOOKING = {
+  status: 'IN_PROGRESS',
+  masterProfile: { user: { id: 'master-1' } },
+  clientProfile: { user: { id: 'client-1' } },
+};
+
+const build = (overrides: { booking?: Partial<Record<string, jest.Mock>> } = {}) => {
   const jwt = {
     verifyAsync: jest.fn().mockResolvedValue({ sub: 'user-1' }),
   } as unknown as JwtService;
@@ -24,15 +31,23 @@ const build = () => {
   const config = {
     jwt: { accessPublicKey: 'pub', issuer: 'ustogo', audience: 'ustogo' },
   } as unknown as AppConfigService;
+  const prisma = {
+    db: {
+      booking: {
+        findUnique: jest.fn().mockResolvedValue(ACTIVE_BOOKING),
+        ...overrides.booking,
+      },
+    },
+  } as unknown as PrismaService;
 
-  const gateway = new BookingsGateway(jwt, jwtStrategy, config);
+  const gateway = new BookingsGateway(jwt, jwtStrategy, config, prisma);
 
   const emit = jest.fn();
   const to = jest.fn().mockReturnValue({ emit });
   const server = { to } as unknown as Server;
   Object.defineProperty(gateway, 'server', { value: server, writable: true });
 
-  return { gateway, jwt, jwtStrategy, to, emit };
+  return { gateway, jwt, jwtStrategy, prisma, to, emit };
 };
 
 const mockSocket = (token: string | undefined): Socket =>
@@ -41,6 +56,7 @@ const mockSocket = (token: string | undefined): Socket =>
     join: jest.fn().mockResolvedValue(undefined),
     emit: jest.fn(),
     disconnect: jest.fn(),
+    data: {},
   }) as unknown as Socket;
 
 describe('BookingsGateway.handleConnection', () => {
@@ -136,5 +152,79 @@ describe('BookingsGateway event relays', () => {
 
     expect(to).toHaveBeenCalledWith('user:master-1');
     expect(emit).toHaveBeenCalledWith('booking:update', { bookingId: 'b-1', status: 'CANCELLED' });
+  });
+});
+
+const socketFor = (userId: string | undefined): Socket =>
+  ({ data: userId === undefined ? {} : { user: { id: userId } } }) as unknown as Socket;
+
+describe('BookingsGateway.handleLocationUpdate', () => {
+  it('relays the location to the booking’s client when the sender owns an IN_PROGRESS booking', async () => {
+    const { gateway, to, emit } = build();
+    const socket = socketFor('master-1');
+
+    await gateway.handleLocationUpdate(socket, { bookingId: 'b-1', lat: 38.5, lng: 68.7 });
+
+    expect(to).toHaveBeenCalledWith('user:client-1');
+    expect(emit).toHaveBeenCalledWith(
+      'location:update',
+      expect.objectContaining({ bookingId: 'b-1', lat: 38.5, lng: 68.7 }),
+    );
+  });
+
+  it('does nothing for an unauthenticated socket', async () => {
+    const { gateway, to } = build();
+    const socket = socketFor(undefined);
+
+    await gateway.handleLocationUpdate(socket, { bookingId: 'b-1', lat: 38.5, lng: 68.7 });
+
+    expect(to).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a malformed payload', async () => {
+    const { gateway, to } = build();
+    const socket = socketFor('master-1');
+
+    await gateway.handleLocationUpdate(socket, { bookingId: 'b-1' });
+
+    expect(to).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the sender does not own the booking', async () => {
+    const { gateway, to } = build({
+      booking: {
+        findUnique: jest.fn().mockResolvedValue({
+          ...ACTIVE_BOOKING,
+          masterProfile: { user: { id: 'someone-else' } },
+        }),
+      },
+    });
+    const socket = socketFor('master-1');
+
+    await gateway.handleLocationUpdate(socket, { bookingId: 'b-1', lat: 38.5, lng: 68.7 });
+
+    expect(to).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the booking is not IN_PROGRESS', async () => {
+    const { gateway, to } = build({
+      booking: {
+        findUnique: jest.fn().mockResolvedValue({ ...ACTIVE_BOOKING, status: 'ACCEPTED' }),
+      },
+    });
+    const socket = socketFor('master-1');
+
+    await gateway.handleLocationUpdate(socket, { bookingId: 'b-1', lat: 38.5, lng: 68.7 });
+
+    expect(to).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for an unknown booking', async () => {
+    const { gateway, to } = build({ booking: { findUnique: jest.fn().mockResolvedValue(null) } });
+    const socket = socketFor('master-1');
+
+    await gateway.handleLocationUpdate(socket, { bookingId: 'ghost', lat: 38.5, lng: 68.7 });
+
+    expect(to).not.toHaveBeenCalled();
   });
 });

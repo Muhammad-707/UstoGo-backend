@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ActorType, BookingStatus, PriceType, UserRole } from '@prisma/client';
+import {
+  ActorType,
+  BookingStatus,
+  CancellationReasonCode,
+  PriceType,
+  UserRole,
+} from '@prisma/client';
 
 export type BookingWithParties = {
   id: string;
@@ -27,6 +33,7 @@ export type BookingWithParties = {
   completedAt: Date | null;
   cancelledAt: Date | null;
   cancellationReason: string | null;
+  cancellationReasonCode: CancellationReasonCode | null;
   cancelledByType: ActorType | null;
   isLateCancellation: boolean;
   rescheduleCount: number;
@@ -37,6 +44,7 @@ export type BookingWithParties = {
     whatsappEnabled: boolean;
   };
   clientProfile: { firstName: string; lastName: string; user: { phone: string | null } };
+  attachments: { fileId: string }[];
 };
 
 /** Statuses from which the master may see the client's exact contact details (FR-7.6). */
@@ -152,6 +160,9 @@ export class BookingResponseDto {
   @ApiPropertyOptional({ nullable: true })
   cancellationReason!: string | null;
 
+  @ApiPropertyOptional({ enum: CancellationReasonCode, nullable: true })
+  cancellationReasonCode!: CancellationReasonCode | null;
+
   @ApiPropertyOptional({ enum: ActorType, nullable: true })
   cancelledByType!: ActorType | null;
 
@@ -160,6 +171,14 @@ export class BookingResponseDto {
 
   @ApiProperty({ description: 'B-51: 0 until rescheduled once; capped at 1 in v1.' })
   rescheduleCount!: number;
+
+  @ApiProperty({
+    type: [String],
+    format: 'uuid',
+    description:
+      'B-54: File ids of photos attached at creation. Resolve a URL via GET /files/:id/url.',
+  })
+  attachmentFileIds!: string[];
 
   @ApiProperty()
   createdAt!: string;
@@ -193,9 +212,11 @@ export class BookingResponseDto {
     dto.cityId = booking.cityId;
     dto.clientNote = booking.clientNote;
     dto.cancellationReason = booking.cancellationReason;
+    dto.cancellationReasonCode = booking.cancellationReasonCode;
     dto.cancelledByType = booking.cancelledByType;
     dto.isLateCancellation = booking.isLateCancellation;
     dto.rescheduleCount = booking.rescheduleCount;
+    dto.attachmentFileIds = booking.attachments.map((attachment) => attachment.fileId);
     dto.createdAt = booking.createdAt.toISOString();
 
     applyContactFields(dto, booking, discloseContact);

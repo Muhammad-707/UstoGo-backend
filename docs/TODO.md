@@ -1,6 +1,6 @@
 # TODO — UstoGo Backend
 
-**Last updated:** 2026-08-06
+**Last updated:** 2026-08-07
 **Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete). Post-1.0.0: P0 (WhatsApp) landed 2026-08-03; production DB sync confirmed, observability/security hardening pass (Sentry, Redis health check, helmet/compression) and a Render deploy-pipeline fix landed 2026-08-05.
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
@@ -253,6 +253,26 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] `BookingRescheduleService` (new file, keeps `BookingsService` under the 300-line cap) + booking notification listener case
 - [x] Unit tests (`booking-reschedule.service.spec.ts`) and e2e tests (`bookings.e2e-spec.ts`: success + limit + non-owner 404)
 - [ ] Frontend: reschedule action on the client's booking detail screen — tracked as a separate frontend task
+
+### Post-1.0.0, 2026-08-06/07: feature batch (BACKLOG.md B-54, B-44, B-35, B-36, B-40 partial, B-15, B-24)
+
+- [x] B-54 photo attachments: `BookingAttachment`, `attachmentKeys` on `POST /bookings`, participancy-scoped `GET /bookings/:id/attachments/:fileId/url`
+- [x] B-44 quotes: `QuotesModule` (`Quote`, `POST/GET /quotes`, respond/decline)
+- [x] B-35 quick replies: `QuickReply`, `masters/me/quick-replies` CRUD, own controller
+- [x] Public fast-responder badge: `MasterProfile.avgAcceptLatencyMinutes`, `MasterPublicResponseDto.isFastResponder`
+- [x] Structured cancellation reasons: `Booking.cancellationReasonCode`, admin dashboard breakdown
+- [x] B-36 notification preferences (scoped to type): `NotificationPreference`, `GET/PATCH /notifications/preferences`
+- [x] Recently viewed masters: `RecentlyViewedMaster`, `POST /masters/:id/view`, `GET /masters/me/recently-viewed`
+- [x] B-40 (partial) `.ics` export: `GET /bookings/me/schedule.ics`
+- [x] PDF completion receipt: `GET /bookings/:id/receipt.pdf`, hand-rolled writer
+- [x] Masters leaderboard: `GET /masters/leaderboard` with badges
+- [x] B-15/B-24 reliability score + instant-book: `MasterProfile.reliabilityScore`/`instantBookEnabled`, auto-accept at creation
+- [x] Pricing suggestion: `GET /masters/me/pricing-suggestion`
+- [x] Schedule optimizer: `GET /bookings/me/schedule-optimizer`
+- [x] QR completion certificate: `CompletionCertificate`, `GET /bookings/:id/certificate`, public `GET /certificates/verify/:code`
+- [x] Live GPS relay: `/bookings` namespace `location:update`
+- [x] Seven new migrations, all additive; full unit (981) + e2e (220) suites green; `lint`/`typecheck`/`build` green
+- [ ] Frontend: all fourteen — tracked as separate frontend tasks (QR image rendering, leaderboard UI, live map for GPS relay, etc.)
 
 ## 📌 Standing Rules
 

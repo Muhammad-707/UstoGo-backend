@@ -1,5 +1,6 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { NotificationType } from '@prisma/client';
 
 import { ApiAuth } from '@common/decorators/api-auth.decorator';
 import { ApiPaginatedResponse } from '@common/decorators/api-paginated-response.decorator';
@@ -8,9 +9,16 @@ import { PaginatedDto } from '@common/dto/paginated.dto';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 
 import { NotificationsQueryDto } from '../dto/requests/notifications-query.dto';
+import { UpdateNotificationPreferencesDto } from '../dto/requests/update-notification-preferences.dto';
 import { NotificationResponseDto } from '../dto/responses/notification.response.dto';
 import { UnreadCountResponseDto } from '../dto/responses/unread-count.response.dto';
 import { NotificationsService } from '../services/notifications.service';
+
+const PREFERENCES_SCHEMA = {
+  type: 'object' as const,
+  additionalProperties: { type: 'boolean' as const },
+  example: { BOOKING_REMINDER: false, BOOKING_CREATED: true },
+};
 
 /** F-11 (API.md §11). Every route is scoped strictly to the caller — no admin override. */
 @ApiTags('Notifications')
@@ -61,5 +69,31 @@ export class NotificationsController {
   @ApiNoContentResponse()
   async markAllRead(@CurrentUser() user: AuthenticatedUser): Promise<void> {
     await this.notifications.markAllRead(user.id);
+  }
+
+  @Get('preferences')
+  @ApiAuth()
+  @ApiOperation({
+    summary: 'The caller’s per-type notification preferences (B-36)',
+    description:
+      'Every `NotificationType`, defaulting to `true` where the caller has no ' +
+      'override — only push/email/SMS channels do not exist yet to gate independently.',
+  })
+  @ApiOkResponse({ schema: PREFERENCES_SCHEMA })
+  async preferences(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Record<NotificationType, boolean>> {
+    return this.notifications.listPreferences(user.id);
+  }
+
+  @Patch('preferences')
+  @ApiAuth()
+  @ApiOperation({ summary: 'Enable or disable specific notification types' })
+  @ApiOkResponse({ schema: PREFERENCES_SCHEMA })
+  async updatePreferences(
+    @Body() dto: UpdateNotificationPreferencesDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Record<NotificationType, boolean>> {
+    return this.notifications.updatePreferences(user.id, dto.preferences);
   }
 }

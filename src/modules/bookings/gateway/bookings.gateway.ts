@@ -2,18 +2,24 @@ import { Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
 import {
+  ConnectedSocket,
+  MessageBody,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
   type OnGatewayConnection,
   type OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { BookingStatus } from '@prisma/client';
 import type { Server, Socket } from 'socket.io';
 
 import { Public } from '@common/decorators/public.decorator';
+import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 import type { JwtPayload } from '@common/types/jwt-payload.type';
 import { AppConfigService } from '@config/app-config.service';
 import { AUTH } from '@modules/auth/constants/auth.constants';
 import { JwtStrategy } from '@modules/auth/strategies/jwt.strategy';
+import { PrismaService } from '@prisma-lib/prisma.service';
 
 import { userRoom } from './user-room.util';
 import {
@@ -25,6 +31,12 @@ import {
   type BookingRejectedEvent,
   type BookingStartedEvent,
 } from '../events/booking.events';
+
+type LocationPayload = { readonly bookingId: string; readonly lat: number; readonly lng: number };
+
+// See ChatGateway's own comment: `Socket['data']` is untyped upstream, so `Omit`
+// has to remove it before the typed replacement can stick.
+type AuthenticatedSocket = Omit<Socket, 'data'> & { data: { user?: AuthenticatedUser } };
 
 /**
  * `/bookings` namespace — a thin live-push layer over the booking lifecycle,
@@ -50,6 +62,7 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly jwt: JwtService,
     private readonly jwtStrategy: JwtStrategy,
     private readonly config: AppConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async handleConnection(socket: Socket): Promise<void> {
@@ -67,6 +80,7 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
         clockTolerance: AUTH.CLOCK_SKEW_SECONDS,
       });
       const user = await this.jwtStrategy.validate(payload);
+      (socket as AuthenticatedSocket).data.user = user;
 
       await socket.join(userRoom(user.id));
     } catch (error) {
@@ -112,6 +126,82 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   private push(userId: string, bookingId: string, status: string): void {
     this.server.to(userRoom(userId)).emit('booking:update', { bookingId, status });
+  }
+
+  /**
+   * "On my way" live location. Ephemeral — never persisted, purely relayed — but
+   * unlike `typing`, it fans out to a *different* user (the client), so it cannot
+   * skip validation the way `typing` does: any connected socket could otherwise
+   * spoof a location update to an arbitrary client by guessing a `bookingId`. The
+   * booking must belong to the sending master and be `IN_PROGRESS` before anything
+   * is relayed.
+   */
+  @SubscribeMessage('location:update')
+  async handleLocationUpdate(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: unknown,
+  ): Promise<void> {
+    const user = (socket as AuthenticatedSocket).data.user;
+    const location = this.locationPayloadOf(payload);
+    if (user === undefined || location === undefined) {
+      return;
+    }
+
+    const clientUserId = await this.clientUserIdForActiveMasterBooking(user.id, location.bookingId);
+    if (clientUserId === undefined) {
+      return;
+    }
+
+    this.server.to(userRoom(clientUserId)).emit('location:update', {
+      bookingId: location.bookingId,
+      lat: location.lat,
+      lng: location.lng,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  private async clientUserIdForActiveMasterBooking(
+    masterUserId: string,
+    bookingId: string,
+  ): Promise<string | undefined> {
+    const booking = await this.prisma.db.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        status: true,
+        masterProfile: { select: { user: { select: { id: true } } } },
+        clientProfile: { select: { user: { select: { id: true } } } },
+      },
+    });
+
+    const owns = booking !== null && booking.masterProfile.user.id === masterUserId;
+    if (!owns || booking.status !== BookingStatus.IN_PROGRESS) {
+      return undefined;
+    }
+
+    return booking.clientProfile.user.id;
+  }
+
+  private locationPayloadOf(payload: unknown): LocationPayload | undefined {
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      !('bookingId' in payload) ||
+      !('lat' in payload) ||
+      !('lng' in payload)
+    ) {
+      return undefined;
+    }
+
+    const candidate = payload as LocationPayload;
+    if (
+      typeof candidate.bookingId !== 'string' ||
+      typeof candidate.lat !== 'number' ||
+      typeof candidate.lng !== 'number'
+    ) {
+      return undefined;
+    }
+
+    return candidate;
   }
 
   private extractToken(socket: Socket): string | undefined {

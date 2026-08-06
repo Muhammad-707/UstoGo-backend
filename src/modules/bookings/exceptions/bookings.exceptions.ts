@@ -133,3 +133,14 @@ export class RescheduleLimitExceededException extends AppException {
     );
   }
 }
+
+/** 404. An unknown verification code, or a booking with no certificate (not COMPLETED). */
+export class CompletionCertificateNotFoundException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.COMPLETION_CERTIFICATE_NOT_FOUND,
+      'That completion certificate does not exist.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+}

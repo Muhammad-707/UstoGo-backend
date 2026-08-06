@@ -178,13 +178,14 @@ Admin mutations live under `/admin/categories` (§12).
 
 ## 7. Masters (public) — `/masters`
 
-| Method | Path                        | Auth   | Description                                                         |
-| ------ | --------------------------- | ------ | ------------------------------------------------------------------- |
-| GET    | `/masters`                  | Public | Search & filter. Returns approved, active, non-deleted masters only |
-| GET    | `/masters/:id`              | Public | Public profile projection                                           |
-| GET    | `/masters/:id/services`     | Public | Active services                                                     |
-| GET    | `/masters/:id/reviews`      | Public | Visible reviews + rating distribution                               |
-| GET    | `/masters/:id/availability` | Public | Computed slots; `from`, `to` (≤ 31 days), `serviceId`               |
+| Method | Path                        | Auth   | Description                                                                                                                           |
+| ------ | --------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/masters`                  | Public | Search & filter. Returns approved, active, non-deleted masters only                                                                   |
+| GET    | `/masters/:id`              | Public | Public profile projection                                                                                                             |
+| GET    | `/masters/:id/services`     | Public | Active services                                                                                                                       |
+| GET    | `/masters/:id/reviews`      | Public | Visible reviews + rating distribution                                                                                                 |
+| GET    | `/masters/:id/availability` | Public | Computed slots; `from`, `to` (≤ 31 days), `serviceId`                                                                                 |
+| GET    | `/masters/leaderboard`      | Public | Top masters by rating, with earned badges (`TOP_RATED`/`MOST_BOOKED`/`FAST_RESPONDER`/`RISING_STAR`); optional `cityId`, `categoryId` |
 
 **`GET /masters` query parameters**
 
@@ -199,45 +200,61 @@ Admin mutations live under `/admin/categories` (§12).
 | `hasCertificates`      | boolean    |                                                                                      |
 | `sort`                 | enum       | `rating:desc` (default), `reviews:desc`, `price:asc`, `price:desc`, `createdAt:desc` |
 
-Response items expose: `id`, `displayName`, `avatarUrl`, `bio` (truncated), `cityName`, `categories[]`, `ratingAverage`, `ratingCount`, `completedBookingsCount`, `priceFrom`, `hasCertificates`, `portfolioImageFileIds[]` (B-45, ≤ 20, display order). **Never** email, phone or address.
+Response items expose: `id`, `displayName`, `avatarUrl`, `bio` (truncated), `cityName`, `categories[]`, `ratingAverage`, `ratingCount`, `completedBookingsCount`, `priceFrom`, `hasCertificates`, `portfolioImageFileIds[]` (B-45, ≤ 20, display order), `isFastResponder` (avg accept latency ≤ 30 min over ≥ 5 completed bookings). **Never** email, phone or address.
+
+`POST /masters/:id/view` (CLIENT) records a profile view for `GET /masters/me/recently-viewed` (§8) — idempotent, bumps `viewedAt`.
 
 ---
 
 ## 8. Master self-service — `/masters/me`
 
-| Method                | Path                              | Description                                                      |
-| --------------------- | --------------------------------- | ---------------------------------------------------------------- |
-| GET                   | `/masters/me`                     | Own full profile including moderation state and rejection reason |
-| PATCH                 | `/masters/me`                     | Update professional fields                                       |
-| POST                  | `/masters/me/submit`              | Submit for review → `PENDING`                                    |
-| POST                  | `/masters/me/resubmit`            | After rejection → `PENDING`                                      |
-| GET/POST/DELETE       | `/masters/me/categories`          | Attach / detach leaf categories                                  |
-| GET/POST/DELETE       | `/masters/me/certificates`        | Manage certificates                                              |
-| GET/POST/DELETE       | `/masters/me/portfolio`           | Manage work-showcase photos (B-45), ≤ 20                         |
-| PUT                   | `/masters/me/portfolio/order`     | Reorder portfolio images                                         |
-| GET/POST/PATCH/DELETE | `/masters/me/services`            | Service CRUD                                                     |
-| GET                   | `/masters/me/schedule`            | Weekly schedule                                                  |
-| PUT                   | `/masters/me/schedule`            | Atomic replacement of the weekly schedule                        |
-| GET/POST/DELETE       | `/masters/me/schedule/exceptions` | Date-specific overrides                                          |
-| GET                   | `/masters/me/stats`               | Bookings by status, rating, completion rate                      |
+| Method                | Path                                         | Description                                                       |
+| --------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| GET                   | `/masters/me`                                | Own full profile including moderation state and rejection reason  |
+| PATCH                 | `/masters/me`                                | Update professional fields                                        |
+| POST                  | `/masters/me/submit`                         | Submit for review → `PENDING`                                     |
+| POST                  | `/masters/me/resubmit`                       | After rejection → `PENDING`                                       |
+| GET/POST/DELETE       | `/masters/me/categories`                     | Attach / detach leaf categories                                   |
+| GET/POST/DELETE       | `/masters/me/certificates`                   | Manage certificates                                               |
+| GET/POST/DELETE       | `/masters/me/portfolio`                      | Manage work-showcase photos (B-45), ≤ 20                          |
+| PUT                   | `/masters/me/portfolio/order`                | Reorder portfolio images                                          |
+| GET/POST/PATCH/DELETE | `/masters/me/services`                       | Service CRUD                                                      |
+| GET                   | `/masters/me/schedule`                       | Weekly schedule                                                   |
+| PUT                   | `/masters/me/schedule`                       | Atomic replacement of the weekly schedule                         |
+| GET/POST/DELETE       | `/masters/me/schedule/exceptions`            | Date-specific overrides                                           |
+| GET                   | `/masters/me/stats`                          | Bookings by status, rating, completion rate                       |
+| GET/POST/PATCH/DELETE | `/masters/me/quick-replies`                  | B-35: canned chat replies, ≤ 20                                   |
+| PATCH                 | `/masters/me/instant-book`                   | B-24: opt in/out of auto-accepting eligible bookings              |
+| GET                   | `/masters/me/pricing-suggestion?categoryId=` | Market-rate price suggestion (own city, falls back category-wide) |
+| GET                   | `/masters/me/recently-viewed`                | **CLIENT only** — the caller's recently viewed master profiles    |
 
-All are `@Roles(MASTER)`. Service and schedule mutations additionally require `MasterApprovedGuard` in `PENDING` or `APPROVED` state.
+All (except `recently-viewed`) are `@Roles(MASTER)`. Service and schedule mutations additionally require `MasterApprovedGuard` in `PENDING` or `APPROVED` state.
 
 ---
 
 ## 9. Bookings — `/bookings`
 
-| Method | Path                       | Role                | Description                                     |
-| ------ | -------------------------- | ------------------- | ----------------------------------------------- |
-| POST   | `/bookings`                | CLIENT              | Create → 201, status `PENDING`                  |
-| GET    | `/bookings`                | CLIENT, MASTER      | Own bookings; filters `status`, `from`, `to`    |
-| GET    | `/bookings/:id`            | participants, ADMIN | Detail + status history                         |
-| POST   | `/bookings/:id/accept`     | MASTER              | `PENDING → ACCEPTED`                            |
-| POST   | `/bookings/:id/reject`     | MASTER              | `PENDING → REJECTED`, `{ reason }`              |
-| POST   | `/bookings/:id/cancel`     | CLIENT, MASTER      | → `CANCELLED_BY_*`; reason required for masters |
-| POST   | `/bookings/:id/reschedule` | CLIENT              | B-51: move `scheduledAt`, once, ≥24h out        |
-| POST   | `/bookings/:id/start`      | MASTER              | `ACCEPTED → IN_PROGRESS`                        |
-| POST   | `/bookings/:id/complete`   | MASTER              | `IN_PROGRESS → COMPLETED`                       |
+| Method | Path                                    | Role                | Description                                                |
+| ------ | --------------------------------------- | ------------------- | ---------------------------------------------------------- |
+| POST   | `/bookings`                             | CLIENT              | Create → 201, status `PENDING`                             |
+| GET    | `/bookings`                             | CLIENT, MASTER      | Own bookings; filters `status`, `from`, `to`               |
+| GET    | `/bookings/:id`                         | participants, ADMIN | Detail + status history                                    |
+| POST   | `/bookings/:id/accept`                  | MASTER              | `PENDING → ACCEPTED`                                       |
+| POST   | `/bookings/:id/reject`                  | MASTER              | `PENDING → REJECTED`, `{ reason }`                         |
+| POST   | `/bookings/:id/cancel`                  | CLIENT, MASTER      | → `CANCELLED_BY_*`; reason required for masters            |
+| POST   | `/bookings/:id/reschedule`              | CLIENT              | B-51: move `scheduledAt`, once, ≥24h out                   |
+| POST   | `/bookings/:id/start`                   | MASTER              | `ACCEPTED → IN_PROGRESS`                                   |
+| POST   | `/bookings/:id/complete`                | MASTER              | `IN_PROGRESS → COMPLETED`; issues a completion certificate |
+| GET    | `/bookings/:id/attachments/:fileId/url` | participants, ADMIN | B-54: signed URL for an attached photo                     |
+| GET    | `/bookings/:id/receipt.pdf`             | participants, ADMIN | PDF receipt; `409 BOOKING_NOT_COMPLETED` otherwise         |
+| GET    | `/bookings/:id/certificate`             | participants, ADMIN | The QR-verifiable completion certificate                   |
+| GET    | `/certificates/verify/:code`            | Public              | Verify a certificate by its code, no auth needed           |
+| GET    | `/bookings/me/schedule.ics`             | MASTER              | .ics export of the next 180 days' work                     |
+| GET    | `/bookings/me/schedule-optimizer?date=` | MASTER              | Nearest-neighbor visiting-order suggestion                 |
+
+`POST /bookings` also accepts `attachmentKeys` (B-54, up to 5 confirmed `File` ids — photos of the problem) — the master's own instant-book eligibility (B-24: opted in via `PATCH /masters/me/instant-book` and `reliabilityScore >= 90`) can additionally auto-accept the booking at creation, skipping `PENDING` entirely.
+
+**Socket.io namespace `/bookings`** — JWT in the handshake, one room per user. `booking:update` (`{ bookingId, status }`) relays every lifecycle transition. `location:update` (client→server, master only) carries `{ bookingId, lat, lng }`; the gateway validates the sender owns an `IN_PROGRESS` booking before relaying `{ bookingId, lat, lng, updatedAt }` to that booking's client — "on my way" live tracking, ephemeral, never persisted.
 
 **Create request**
 
@@ -290,16 +307,34 @@ A client's saved-for-later master list — no relation to bookings or reviews.
 
 ---
 
+## 10b. Quotes — `/quotes` (B-44)
+
+A client's pre-booking price inquiry — "how much would this cost?" — independent of `Booking`.
+
+| Method | Path                  | Role                | Description                                          |
+| ------ | --------------------- | ------------------- | ---------------------------------------------------- |
+| POST   | `/quotes`             | CLIENT              | `{ masterId, serviceId?, description }` → `PENDING`  |
+| GET    | `/quotes`             | CLIENT, MASTER      | Own quotes (sent or received), paginated, `?status=` |
+| GET    | `/quotes/:id`         | participants, ADMIN | Detail                                               |
+| POST   | `/quotes/:id/respond` | MASTER              | `{ estimatedPrice, priceType, note? }` → `RESPONDED` |
+| POST   | `/quotes/:id/decline` | MASTER              | `{ reason }` → `DECLINED`                            |
+
+**Errors:** `404 QUOTE_NOT_FOUND`, `409 QUOTE_ALREADY_RESPONDED`, `404 MASTER_NOT_FOUND`, `422 SERVICE_INVALID`, `409 MASTER_UNAVAILABLE`.
+
+---
+
 ## 11. Notifications & Chat
 
 ### `/notifications`
 
-| Method | Path                          | Description           |
-| ------ | ----------------------------- | --------------------- |
-| GET    | `/notifications`              | Paginated, `?isRead=` |
-| GET    | `/notifications/unread-count` | `{ count }`           |
-| PATCH  | `/notifications/:id/read`     | 204                   |
-| PATCH  | `/notifications/read-all`     | 204                   |
+| Method | Path                          | Description                                                                                                   |
+| ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| GET    | `/notifications`              | Paginated, `?isRead=`                                                                                         |
+| GET    | `/notifications/unread-count` | `{ count }`                                                                                                   |
+| PATCH  | `/notifications/:id/read`     | 204                                                                                                           |
+| PATCH  | `/notifications/read-all`     | 204                                                                                                           |
+| GET    | `/notifications/preferences`  | B-36: every `NotificationType` → enabled (default `true`)                                                     |
+| PATCH  | `/notifications/preferences`  | `{ preferences: [{ type, enabled }] }` — only push/in-app "type" gating exists in v1, no push/SMS channel yet |
 
 ### `/conversations` (Phase 5)
 

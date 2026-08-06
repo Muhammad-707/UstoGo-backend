@@ -47,6 +47,10 @@ const build = (
     booking: txBooking,
     bookingStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     masterProfile: { update: jest.fn().mockResolvedValue({}) },
+    completionCertificate: { create: jest.fn().mockResolvedValue({}) },
+    $queryRaw: jest
+      .fn()
+      .mockResolvedValue([{ avgMinutes: null, completed: 0n, cancelledByMaster: 0n }]),
   };
 
   const prisma = {

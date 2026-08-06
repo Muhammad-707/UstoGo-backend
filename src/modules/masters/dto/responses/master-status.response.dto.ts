@@ -14,6 +14,12 @@ export class MasterStatusResponseDto {
   @ApiPropertyOptional({ nullable: true })
   rejectionReason!: string | null;
 
+  @ApiPropertyOptional({ nullable: true, description: 'B-15 — null until any resolved booking.' })
+  reliabilityScore!: string | null;
+
+  @ApiProperty({ description: 'B-24 — opted in to auto-accepting eligible bookings.' })
+  instantBookEnabled!: boolean;
+
   static fromEntity(entity: MasterProfile): MasterStatusResponseDto {
     const dto = new MasterStatusResponseDto();
 
@@ -21,6 +27,8 @@ export class MasterStatusResponseDto {
     dto.approvalStatus = entity.approvalStatus;
     dto.isActive = entity.isActive;
     dto.rejectionReason = entity.rejectionReason;
+    dto.reliabilityScore = entity.reliabilityScore?.toFixed(2) ?? null;
+    dto.instantBookEnabled = entity.instantBookEnabled;
 
     return dto;
   }

@@ -18,13 +18,58 @@ import type { NotificationsQueryDto } from '../dto/requests/notifications-query.
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Written by the event listeners; never called with another user's id. */
+  /**
+   * Written by the event listeners; never called with another user's id.
+   *
+   * B-36 — a per-type preference row with `enabled = false` suppresses the write
+   * entirely (absence of a row means "enabled", the default). Returns `null` in that
+   * case; every listener already discards the return value, so this is additive.
+   */
   async create(
     userId: string,
     type: NotificationType,
     payload: Record<string, unknown>,
-  ): Promise<Notification> {
+  ): Promise<Notification | null> {
+    const preference = await this.prisma.db.notificationPreference.findUnique({
+      where: { userId_type: { userId, type } },
+      select: { enabled: true },
+    });
+    if (preference?.enabled === false) {
+      return null;
+    }
+
     return this.prisma.db.notification.create({ data: { userId, type, payload } });
+  }
+
+  /** B-36 — every type, defaulting to enabled where the caller has no override row. */
+  async listPreferences(userId: string): Promise<Record<NotificationType, boolean>> {
+    const overrides = await this.prisma.db.notificationPreference.findMany({
+      where: { userId },
+      select: { type: true, enabled: true },
+    });
+    const overrideByType = new Map(overrides.map((row) => [row.type, row.enabled]));
+
+    return Object.fromEntries(
+      Object.values(NotificationType).map((type) => [type, overrideByType.get(type) ?? true]),
+    ) as Record<NotificationType, boolean>;
+  }
+
+  /** Upserts one row per `(userId, type)` — idempotent, last write wins. */
+  async updatePreferences(
+    userId: string,
+    preferences: { type: NotificationType; enabled: boolean }[],
+  ): Promise<Record<NotificationType, boolean>> {
+    await Promise.all(
+      preferences.map((pref) =>
+        this.prisma.db.notificationPreference.upsert({
+          where: { userId_type: { userId, type: pref.type } },
+          create: { userId, type: pref.type, enabled: pref.enabled },
+          update: { enabled: pref.enabled },
+        }),
+      ),
+    );
+
+    return this.listPreferences(userId);
   }
 
   async list(

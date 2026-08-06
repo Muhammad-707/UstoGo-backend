@@ -104,4 +104,11 @@ export class MasterPublicResponseDto {
       'unset or when `whatsappEnabled` is false.',
   })
   whatsappPhone!: string | null;
+
+  @ApiProperty({
+    description:
+      'True when this master accepts bookings quickly (avg <= 30 min) and has a ' +
+      'track record (>= 5 completed bookings) — a search/trust signal, not raw stats.',
+  })
+  isFastResponder!: boolean;
 }

@@ -34,6 +34,12 @@ export class DashboardReviewsDto {
   @ApiProperty() averageRating!: number;
 }
 
+export class DashboardCancellationReasonDto {
+  @ApiProperty({ example: 'PRICE_TOO_HIGH', nullable: true, description: 'null = no code given' })
+  code!: string | null;
+  @ApiProperty() count!: number;
+}
+
 export class DashboardTopCategoryDto {
   @ApiProperty({ format: 'uuid' }) categoryId!: string;
   @ApiProperty() name!: string;
@@ -52,6 +58,8 @@ export class DashboardResponseDto {
   @ApiProperty({ type: DashboardMastersDto }) masters!: DashboardMastersDto;
   @ApiProperty({ type: DashboardBookingsDto }) bookings!: DashboardBookingsDto;
   @ApiProperty({ type: DashboardRatesDto }) rates!: DashboardRatesDto;
+  @ApiProperty({ type: [DashboardCancellationReasonDto] })
+  cancellationReasons!: DashboardCancellationReasonDto[];
   @ApiProperty({ type: DashboardReviewsDto }) reviews!: DashboardReviewsDto;
   @ApiProperty({ type: [DashboardTopCategoryDto] }) topCategories!: DashboardTopCategoryDto[];
   @ApiProperty({ type: [DashboardSeriesPointDto] }) series!: DashboardSeriesPointDto[];

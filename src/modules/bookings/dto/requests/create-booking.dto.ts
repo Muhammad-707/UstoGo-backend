@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDateString,
   IsOptional,
   IsString,
@@ -12,6 +14,9 @@ import {
 import { IsSafeText } from '@common/validators/is-safe-text.validator';
 
 import { BookingAddressDto } from './booking-address.dto';
+
+/** B-54: at most this many photos on a single booking request. */
+export const MAX_BOOKING_ATTACHMENTS = 5;
 
 /**
  * `POST /bookings` (FR-7.1). `scheduledAt` is only format-validated here
@@ -43,4 +48,17 @@ export class CreateBookingDto {
   @MaxLength(1000)
   @IsSafeText()
   note?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    format: 'uuid',
+    description:
+      'B-54: up to 5 of the caller’s own confirmed File ids (photos of the problem), ' +
+      'not raw storage keys — resolved ownership-scoped the same way chat attachments are.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_BOOKING_ATTACHMENTS)
+  @IsUUID('4', { each: true })
+  attachmentKeys?: string[];
 }

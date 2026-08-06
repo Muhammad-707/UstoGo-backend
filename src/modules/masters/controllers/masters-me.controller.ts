@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiCreatedResponse,
@@ -23,19 +24,27 @@ import { UserRole } from '@prisma/client';
 
 import { ApiAuth } from '@common/decorators/api-auth.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentLocale } from '@common/decorators/locale.decorator';
 import { ErrorResponseDto } from '@common/dto/error-response.dto';
 import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
+import type { Locale } from '@common/utils/locale.util';
 
 import { AttachCategoryDto } from '../dto/requests/attach-category.dto';
 import { CreateCertificateDto } from '../dto/requests/create-certificate.dto';
 import { CreatePortfolioImageDto } from '../dto/requests/create-portfolio-image.dto';
+import { PricingSuggestionQueryDto } from '../dto/requests/pricing-suggestion-query.dto';
 import { ReorderPortfolioDto } from '../dto/requests/reorder-portfolio.dto';
 import { SetAvailabilityDto } from '../dto/requests/set-availability.dto';
+import { SetInstantBookDto } from '../dto/requests/set-instant-book.dto';
 import { CertificateResponseDto } from '../dto/responses/certificate.response.dto';
 import { MasterNpsResponseDto } from '../dto/responses/master-nps.response.dto';
+import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 import { MasterStatusResponseDto } from '../dto/responses/master-status.response.dto';
 import { PortfolioImageResponseDto } from '../dto/responses/portfolio-image.response.dto';
+import { PricingSuggestionResponseDto } from '../dto/responses/pricing-suggestion.response.dto';
 import { MastersService } from '../services/masters.service';
+import { PricingSuggestionService } from '../services/pricing-suggestion.service';
+import { RecentlyViewedService } from '../services/recently-viewed.service';
 
 const VALIDATION_FAILED = { description: 'VALIDATION_FAILED', type: ErrorResponseDto };
 const NOT_FOUND = { description: 'MASTER_NOT_FOUND', type: ErrorResponseDto };
@@ -43,7 +52,11 @@ const NOT_FOUND = { description: 'MASTER_NOT_FOUND', type: ErrorResponseDto };
 @ApiTags('Master Cabinet')
 @Controller('masters/me')
 export class MastersMeController {
-  constructor(private readonly masters: MastersService) {}
+  constructor(
+    private readonly masters: MastersService,
+    private readonly recentlyViewed: RecentlyViewedService,
+    private readonly pricingSuggestion: PricingSuggestionService,
+  ) {}
 
   @Post('submit')
   @HttpCode(HttpStatus.OK)
@@ -79,6 +92,25 @@ export class MastersMeController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<MasterStatusResponseDto> {
     const master = await this.masters.setAvailability(user.id, dto.isActive);
+
+    return MasterStatusResponseDto.fromEntity(master);
+  }
+
+  @Patch('instant-book')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({
+    summary: 'Opt in/out of auto-accepting bookings (B-24)',
+    description:
+      'Enabling this alone does not make bookings auto-accept — the master also ' +
+      'needs a qualifying `reliabilityScore` (see `GET .../nps` sibling stats). ' +
+      'Both are checked at booking-creation time.',
+  })
+  @ApiOkResponse({ type: MasterStatusResponseDto })
+  async setInstantBook(
+    @Body() dto: SetInstantBookDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MasterStatusResponseDto> {
+    const master = await this.masters.setInstantBook(user.id, dto.enabled);
 
     return MasterStatusResponseDto.fromEntity(master);
   }
@@ -214,5 +246,39 @@ export class MastersMeController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
     await this.masters.removePortfolioImage(user.id, imageId);
+  }
+
+  @Get('pricing-suggestion')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({
+    summary: 'A market-rate price suggestion for a category (B-41-adjacent)',
+    description:
+      'Drawn from other masters’ active service prices in the caller’s own city, ' +
+      'falling back to a category-wide sample when the city has too few listings.',
+  })
+  @ApiOkResponse({ type: PricingSuggestionResponseDto })
+  @ApiNotFoundResponse({ description: 'CATEGORY_NOT_FOUND', type: ErrorResponseDto })
+  async pricingSuggestionFor(
+    @Query() query: PricingSuggestionQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PricingSuggestionResponseDto> {
+    return this.pricingSuggestion.suggest(user.id, query.categoryId);
+  }
+
+  @Get('recently-viewed')
+  @ApiAuth(UserRole.CLIENT)
+  @ApiOperation({
+    summary: 'The caller’s recently viewed master profiles',
+    description:
+      'CLIENT only — the one route on this "Master Cabinet" controller a client ' +
+      'calls, kept here rather than a new controller so it stays registered ahead ' +
+      "of the `masters/:id` wildcard (see MastersModule's route-order note).",
+  })
+  @ApiOkResponse({ type: MasterPublicResponseDto, isArray: true })
+  async recentlyViewedMasters(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentLocale() locale: Locale,
+  ): Promise<MasterPublicResponseDto[]> {
+    return this.recentlyViewed.list(user.id, locale);
   }
 }

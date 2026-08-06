@@ -6,6 +6,7 @@ import { AuthNotificationsListener } from './listeners/auth-notifications.listen
 import { BookingNotificationsListener } from './listeners/booking-notifications.listener';
 import { MasterNotificationsListener } from './listeners/master-notifications.listener';
 import { MessageNotificationsListener } from './listeners/message-notifications.listener';
+import { QuoteNotificationsListener } from './listeners/quote-notifications.listener';
 import { ReviewNotificationsListener } from './listeners/review-notifications.listener';
 import { NotificationsService } from './services/notifications.service';
 
@@ -23,6 +24,7 @@ import { NotificationsService } from './services/notifications.service';
     MasterNotificationsListener,
     ReviewNotificationsListener,
     MessageNotificationsListener,
+    QuoteNotificationsListener,
   ],
   exports: [NotificationsService],
 })

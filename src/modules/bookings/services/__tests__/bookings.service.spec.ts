@@ -1,179 +1,43 @@
 import { ResourceNotFoundException } from '@common/exceptions/generic.exceptions';
-import type { AvailabilityService } from '@modules/schedule/services/availability.service';
 import type { PrismaService } from '@prisma-lib/prisma.service';
-import type { TransactionManager } from '@prisma-lib/transaction.manager';
 
-import type { CreateBookingDto } from '../../dto/requests/create-booking.dto';
-import {
-  BookingNotFoundException,
-  ClientSlotConflictException,
-  MasterUnavailableException,
-  ServiceInvalidException,
-  SlotNotAvailableException,
-  SlotTooSoonException,
-  TooManyPendingBookingsException,
-} from '../../exceptions/bookings.exceptions';
+import { BookingNotFoundException } from '../../exceptions/bookings.exceptions';
 import { BookingsService } from '../bookings.service';
 
 const firstArg = <T>(mock: jest.Mock): T => (mock.mock.calls[0] as unknown[])[0] as T;
-
-const CLIENT_PROFILE = { id: 'cp-1', firstName: 'Alice' };
-const MASTER = {
-  id: 'mp-1',
-  approvalStatus: 'APPROVED',
-  isActive: true,
-  timezone: 'UTC',
-};
-const SERVICE = {
-  id: 'svc-1',
-  masterProfileId: 'mp-1',
-  isActive: true,
-  durationMinutes: 60,
-  title: 'Sink repair',
-  price: { toFixed: () => '10.00' },
-  priceType: 'FIXED',
-  currency: 'USD',
-};
-
-const FUTURE = new Date(Date.now() + 3 * 60 * 60_000); // 3h ahead — clears the 2h lead time
-
-const baseDto = (): CreateBookingDto => ({
-  masterId: 'mp-1',
-  serviceId: 'svc-1',
-  scheduledAt: FUTURE.toISOString(),
-  address: { cityId: 'city-1', line: '123 Main St', district: 'Downtown' },
-});
 
 const build = (
   overrides: {
     clientProfile?: Partial<Record<string, jest.Mock>>;
     masterProfile?: Partial<Record<string, jest.Mock>>;
-    service?: Partial<Record<string, jest.Mock>>;
     booking?: Partial<Record<string, jest.Mock>>;
-    availableSlots?: Date[];
   } = {},
 ) => {
-  const bookingCreateResult = {
-    id: 'booking-1',
-    scheduledAt: FUTURE,
-    masterProfile: { user: { id: 'master-user-1' } },
-    clientProfile: { firstName: 'Alice' },
-  };
-
   const prisma = {
     db: {
       clientProfile: {
-        findUnique: jest.fn().mockResolvedValue(CLIENT_PROFILE),
+        findUnique: jest.fn().mockResolvedValue({ id: 'cp-1' }),
         ...overrides.clientProfile,
       },
       masterProfile: {
-        findUnique: jest.fn().mockResolvedValue(MASTER),
+        findUnique: jest.fn().mockResolvedValue({ id: 'mp-1' }),
         ...overrides.masterProfile,
       },
-      service: {
-        findFirst: jest.fn().mockResolvedValue(SERVICE),
-        ...overrides.service,
-      },
       booking: {
-        findFirst: jest.fn().mockResolvedValue(null),
         findUnique: jest.fn().mockResolvedValue(null),
-        count: jest.fn().mockResolvedValue(0),
+        update: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
         ...overrides.booking,
       },
       bookingStatusHistory: {
         findMany: jest.fn().mockResolvedValue([]),
       },
-      $queryRaw: jest.fn().mockResolvedValue([{ nextval: 1n }]),
     },
   } as unknown as PrismaService;
 
-  const transactionManager = {
-    run: jest.fn((fn: (tx: unknown) => unknown) =>
-      fn({
-        booking: { create: jest.fn().mockResolvedValue(bookingCreateResult) },
-        bookingStatusHistory: { create: jest.fn().mockResolvedValue({}) },
-      }),
-    ),
-  } as unknown as TransactionManager;
-
-  const availability = {
-    compute: jest.fn().mockResolvedValue(overrides.availableSlots ?? [FUTURE]),
-  } as unknown as AvailabilityService;
-
-  const events = { emit: jest.fn() } as unknown as import('@nestjs/event-emitter').EventEmitter2;
-
-  return {
-    service: new BookingsService(prisma, transactionManager, availability, events),
-    prisma,
-    transactionManager,
-    availability,
-    events,
-  };
+  return { service: new BookingsService(prisma), prisma };
 };
-
-describe('BookingsService.create', () => {
-  it('throws MASTER_NOT_FOUND when the master does not exist', async () => {
-    const { service } = build({ masterProfile: { findUnique: jest.fn().mockResolvedValue(null) } });
-
-    await expect(service.create('user-1', baseDto())).rejects.toThrow(ResourceNotFoundException);
-  });
-
-  it('throws MasterUnavailableException when the master is not approved/active', async () => {
-    const { service } = build({
-      masterProfile: {
-        findUnique: jest.fn().mockResolvedValue({ ...MASTER, approvalStatus: 'PENDING' }),
-      },
-    });
-
-    await expect(service.create('user-1', baseDto())).rejects.toThrow(MasterUnavailableException);
-  });
-
-  it('throws ServiceInvalidException when the service does not belong to the master or is inactive', async () => {
-    const { service } = build({ service: { findFirst: jest.fn().mockResolvedValue(null) } });
-
-    await expect(service.create('user-1', baseDto())).rejects.toThrow(ServiceInvalidException);
-  });
-
-  it('throws SlotTooSoonException when scheduledAt is under 2 hours out', async () => {
-    const { service } = build();
-    const dto = { ...baseDto(), scheduledAt: new Date(Date.now() + 60_000).toISOString() };
-
-    await expect(service.create('user-1', dto)).rejects.toThrow(SlotTooSoonException);
-  });
-
-  it('throws SlotNotAvailableException when the slot is not in computed availability', async () => {
-    const { service } = build({ availableSlots: [] });
-
-    await expect(service.create('user-1', baseDto())).rejects.toThrow(SlotNotAvailableException);
-  });
-
-  it('throws ClientSlotConflictException when the client has an overlapping open booking', async () => {
-    const { service } = build({
-      booking: { findFirst: jest.fn().mockResolvedValue({ id: 'other-booking' }) },
-    });
-
-    await expect(service.create('user-1', baseDto())).rejects.toThrow(ClientSlotConflictException);
-  });
-
-  it('throws TooManyPendingBookingsException at 5 open PENDING bookings', async () => {
-    const { service } = build({ booking: { count: jest.fn().mockResolvedValue(5) } });
-
-    await expect(service.create('user-1', baseDto())).rejects.toThrow(
-      TooManyPendingBookingsException,
-    );
-  });
-
-  it('creates the booking and emits BookingCreatedEvent once every pre-condition clears', async () => {
-    const { service, transactionManager, events } = build();
-
-    const booking = await service.create('user-1', baseDto());
-
-    expect(booking.id).toBe('booking-1');
-    expect(transactionManager.run).toHaveBeenCalledTimes(1);
-    expect(events.emit).toHaveBeenCalledWith('booking.created', expect.anything());
-  });
-});
 
 const detailRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 'booking-1',

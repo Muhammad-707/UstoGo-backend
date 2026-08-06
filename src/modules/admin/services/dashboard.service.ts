@@ -6,6 +6,7 @@ import { PrismaService } from '@prisma-lib/prisma.service';
 import { isValidDashboardRange, resolveDashboardRange } from '../domain/dashboard-range.util';
 import type { DashboardQueryDto } from '../dto/requests/dashboard-query.dto';
 import type {
+  DashboardCancellationReasonDto,
   DashboardResponseDto,
   DashboardSeriesPointDto,
   DashboardTopCategoryDto,
@@ -69,6 +70,7 @@ export class DashboardService {
       reviews,
       topCategories,
       series,
+      cancellationReasons,
     ] = await Promise.all([
       this.countUsers(),
       this.countMasters(),
@@ -80,6 +82,7 @@ export class DashboardService {
       this.aggregateReviews(from, to),
       this.topCategoriesByBookingVolume(from, to),
       this.dailySeries(from, to),
+      this.groupCancellationReasons(from, to),
     ]);
 
     return {
@@ -89,6 +92,7 @@ export class DashboardService {
       reviews,
       topCategories,
       series,
+      cancellationReasons,
     };
   }
 
@@ -126,6 +130,22 @@ export class DashboardService {
     });
 
     return Object.fromEntries(rows.map((row) => [row.status, row._count._all]));
+  }
+
+  /** Structured cancellation reasons — `code: null` covers rows given only free text. */
+  private async groupCancellationReasons(
+    from: Date,
+    to: Date,
+  ): Promise<DashboardCancellationReasonDto[]> {
+    const rows = await this.prisma.db.booking.groupBy({
+      by: ['cancellationReasonCode'],
+      where: { createdAt: { gte: from, lte: to }, status: { in: CANCELLED_STATUSES } },
+      _count: { _all: true },
+    });
+
+    return rows
+      .map((row) => ({ code: row.cancellationReasonCode, count: row._count._all }))
+      .sort((a, b) => b.count - a.count);
   }
 
   private async aggregateReviews(from: Date, to: Date): Promise<DashboardResponseDto['reviews']> {

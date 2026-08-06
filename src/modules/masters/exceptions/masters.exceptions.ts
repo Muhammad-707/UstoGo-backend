@@ -3,7 +3,7 @@ import { HttpStatus } from '@nestjs/common';
 import { ERROR_CODE } from '@common/constants/error-codes.constant';
 import { AppException } from '@common/exceptions/app.exception';
 
-import { PORTFOLIO_IMAGE_LIMIT } from '../constants/masters.constants';
+import { PORTFOLIO_IMAGE_LIMIT, QUICK_REPLY_LIMIT } from '../constants/masters.constants';
 
 /** 404. */
 export class MasterNotFoundException extends AppException {
@@ -71,6 +71,28 @@ export class CertificateAlreadyVerifiedException extends AppException {
       ERROR_CODE.CERTIFICATE_ALREADY_VERIFIED,
       'That certificate has already been verified.',
       HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** 404. B-35. */
+export class QuickReplyNotFoundException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.QUICK_REPLY_NOT_FOUND,
+      'That quick reply does not exist.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+}
+
+/** 422. B-35: a handful of canned replies, not an unlimited list. */
+export class QuickReplyLimitExceededException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.QUICK_REPLY_LIMIT_EXCEEDED,
+      `A master may have at most ${String(QUICK_REPLY_LIMIT)} quick replies.`,
+      HttpStatus.UNPROCESSABLE_ENTITY,
     );
   }
 }

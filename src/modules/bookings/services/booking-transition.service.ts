@@ -1,18 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActorType, BookingStatus, Prisma, UserRole } from '@prisma/client';
+import {
+  ActorType,
+  BookingStatus,
+  type CancellationReasonCode,
+  Prisma,
+  UserRole,
+} from '@prisma/client';
 
 import { PrismaService } from '@prisma-lib/prisma.service';
 import { TransactionManager } from '@prisma-lib/transaction.manager';
 
 import { appendBookingHistory } from './booking-history.util';
 import { BOOKING_DETAIL_INCLUDE, type BookingDetailRow } from './booking-includes';
+import {
+  recomputeAvgAcceptLatency,
+  recomputeReliabilityScore,
+} from './master-stats-recompute.util';
 import { clientProfileIdFor, masterProfileIdFor } from './profile-lookup.util';
 import {
   EARLY_START_WINDOW_MINUTES,
   LATE_CANCELLATION_WINDOW_MINUTES,
 } from '../constants/booking.constants';
 import { BookingStateMachine } from '../domain/booking-state-machine';
+import { generateVerificationCode } from '../domain/verification-code.util';
 import {
   BOOKING_EVENT,
   BookingAcceptedEvent,
@@ -95,6 +106,8 @@ export class BookingTransitionService {
           actorUserId: masterUserId,
         });
 
+        await recomputeAvgAcceptLatency(tx, masterProfileId);
+
         return updated;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -155,11 +168,13 @@ export class BookingTransitionService {
     return booking;
   }
 
-  /** FR-7.3 — client or master; reason mandatory for the master. */
+  /** FR-7.3 — client or master; reason mandatory for the master. `reasonCode` is
+   *  always optional — additive analytics, not a business rule. */
   async cancel(
     caller: { userId: string; role: UserRole },
     bookingId: string,
     reason: string | undefined,
+    reasonCode?: CancellationReasonCode,
   ): Promise<BookingDetailRow> {
     const actorType = caller.role === UserRole.CLIENT ? ActorType.CLIENT : ActorType.MASTER;
     const targetStatus =
@@ -187,6 +202,7 @@ export class BookingTransitionService {
           cancelledByType: actorType,
           isLateCancellation: this.isLateCancellation(existing),
           ...(reason !== undefined ? { cancellationReason: reason } : {}),
+          ...(reasonCode !== undefined ? { cancellationReasonCode: reasonCode } : {}),
         },
         include: BOOKING_DETAIL_INCLUDE,
       });
@@ -200,6 +216,12 @@ export class BookingTransitionService {
         actorUserId: caller.userId,
         ...(reason !== undefined ? { reason } : {}),
       });
+
+      // A client walking away is not the master's fault; only a master-caused
+      // cancellation counts against their reliability score.
+      if (actorType === ActorType.MASTER) {
+        await recomputeReliabilityScore(tx, existing.masterProfileId);
+      }
 
       return updated;
     });
@@ -308,6 +330,14 @@ export class BookingTransitionService {
         toStatus: BookingStatus.COMPLETED,
         actorType: ActorType.MASTER,
         actorUserId: masterUserId,
+      });
+
+      await recomputeReliabilityScore(tx, masterProfileId);
+
+      // A verifiable proof-of-completion, issued the moment the booking becomes
+      // COMPLETED — see CompletionCertificate's own doc comment in schema.prisma.
+      await tx.completionCertificate.create({
+        data: { bookingId: existing.id, verificationCode: generateVerificationCode() },
       });
 
       return updated;

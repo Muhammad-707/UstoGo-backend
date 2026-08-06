@@ -98,6 +98,25 @@ export class MastersService {
     });
   }
 
+  /**
+   * B-24 — opt-in only. Eligibility (`reliabilityScore` above the threshold) is
+   * computed elsewhere and enforced at booking-creation time, not here: toggling
+   * this on ahead of qualifying is harmless, since `BookingsService.create` checks
+   * both before auto-accepting.
+   */
+  async setInstantBook(userId: string, enabled: boolean): Promise<MasterProfile> {
+    const master = await this.getByUserId(userId);
+
+    if (master.approvalStatus !== ApprovalStatus.APPROVED) {
+      throw new InvalidApprovalTransitionException();
+    }
+
+    return this.prisma.db.masterProfile.update({
+      where: { userId },
+      data: { instantBookEnabled: enabled },
+    });
+  }
+
   async listCategoryIds(userId: string): Promise<string[]> {
     const master = await this.getByUserId(userId);
     const rows = await this.prisma.db.masterCategory.findMany({

@@ -25,13 +25,17 @@ import { CreateBookingDto } from '../dto/requests/create-booking.dto';
 import { ListBookingsQueryDto } from '../dto/requests/list-bookings-query.dto';
 import { RejectBookingDto } from '../dto/requests/reject-booking.dto';
 import { RescheduleBookingDto } from '../dto/requests/reschedule-booking.dto';
+import { ScheduleOptimizerQueryDto } from '../dto/requests/schedule-optimizer-query.dto';
 import { BookingDetailResponseDto } from '../dto/responses/booking-detail.response.dto';
 import { BookingResponseDto } from '../dto/responses/booking.response.dto';
 import { MasterStatsResponseDto } from '../dto/responses/master-stats.response.dto';
+import { ScheduleOptimizerResponseDto } from '../dto/responses/schedule-optimizer.response.dto';
+import { BookingCreationService } from '../services/booking-creation.service';
 import { BookingRescheduleService } from '../services/booking-reschedule.service';
 import { BookingStatsService } from '../services/booking-stats.service';
 import { BookingTransitionService } from '../services/booking-transition.service';
 import { BookingsService } from '../services/bookings.service';
+import { ScheduleOptimizerService } from '../services/schedule-optimizer.service';
 
 const BOOKING_NOT_FOUND = { description: 'BOOKING_NOT_FOUND', type: ErrorResponseDto };
 
@@ -40,9 +44,11 @@ const BOOKING_NOT_FOUND = { description: 'BOOKING_NOT_FOUND', type: ErrorRespons
 export class BookingsController {
   constructor(
     private readonly bookings: BookingsService,
+    private readonly creation: BookingCreationService,
     private readonly transitions: BookingTransitionService,
     private readonly reschedules: BookingRescheduleService,
     private readonly bookingStats: BookingStatsService,
+    private readonly scheduleOptimizer: ScheduleOptimizerService,
   ) {}
 
   @Post()
@@ -61,14 +67,14 @@ export class BookingsController {
     description: 'Client-generated value; replaying it returns the original response.',
   })
   @ApiCreatedResponse({ type: BookingResponseDto })
-  @ApiNotFoundResponse({ description: 'MASTER_NOT_FOUND', type: ErrorResponseDto })
+  @ApiNotFoundResponse({ description: 'MASTER_NOT_FOUND | FILE_NOT_FOUND', type: ErrorResponseDto })
   @ApiUnprocessableEntityResponse({
     description: 'SERVICE_INVALID | SLOT_TOO_SOON',
     type: ErrorResponseDto,
   })
   @ApiConflictResponse({
     description:
-      'MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | ' +
+      'MASTER_UNAVAILABLE | SLOT_NOT_AVAILABLE | CLIENT_SLOT_CONFLICT | FILE_NOT_CONFIRMED | ' +
       'IDEMPOTENCY_KEY_REUSED | IDEMPOTENCY_KEY_IN_PROGRESS',
     type: ErrorResponseDto,
   })
@@ -77,7 +83,7 @@ export class BookingsController {
     @Body() dto: CreateBookingDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<BookingResponseDto> {
-    const booking = await this.bookings.create(user.id, dto);
+    const booking = await this.creation.create(user.id, dto);
     return BookingResponseDto.fromEntity(booking, user.role);
   }
 
@@ -111,6 +117,22 @@ export class BookingsController {
   @ApiOkResponse({ type: MasterStatsResponseDto })
   async stats(@CurrentUser() user: AuthenticatedUser): Promise<MasterStatsResponseDto> {
     return this.bookingStats.getMasterStats(user.id);
+  }
+
+  @Get('me/schedule-optimizer')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({
+    summary: 'Suggest a travel-minimising visiting order for a day’s bookings',
+    description:
+      'Nearest-neighbor route over that day’s ACCEPTED/IN_PROGRESS bookings with ' +
+      'coordinates. Read-only — reorders how the day is read, never reschedules.',
+  })
+  @ApiOkResponse({ type: ScheduleOptimizerResponseDto })
+  async scheduleOptimizerFor(
+    @Query() query: ScheduleOptimizerQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ScheduleOptimizerResponseDto> {
+    return this.scheduleOptimizer.optimizeDay(user.id, query.date);
   }
 
   @Post(':id/whatsapp-click')
@@ -196,6 +218,7 @@ export class BookingsController {
       { userId: user.id, role: user.role },
       id,
       dto.reason,
+      dto.reasonCode,
     );
     return BookingResponseDto.fromEntity(booking, user.role);
   }

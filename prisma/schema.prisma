@@ -59,6 +59,15 @@ enum PriceType {
   @@map("price_type")
 }
 
+/// B-44. A client's pre-booking price inquiry to a master.
+enum QuoteStatus {
+  PENDING
+  RESPONDED
+  DECLINED
+
+  @@map("quote_status")
+}
+
 enum BookingStatus {
   PENDING
   ACCEPTED
@@ -71,6 +80,22 @@ enum BookingStatus {
   CANCELLED_BY_ADMIN
 
   @@map("booking_status")
+}
+
+/// Structured cancellation reasons, alongside the existing free-text
+/// `Booking.cancellationReason` — lets the admin dashboard bucket *why*, not just
+/// *how many*.
+enum CancellationReasonCode {
+  CHANGED_MIND
+  FOUND_ANOTHER_PROVIDER
+  PRICE_TOO_HIGH
+  SCHEDULING_CONFLICT
+  NO_LONGER_NEEDED
+  UNRESPONSIVE_OTHER_PARTY
+  EMERGENCY
+  OTHER
+
+  @@map("cancellation_reason_code")
 }
 
 enum ActorType {
@@ -101,6 +126,9 @@ enum NotificationType {
   BOOKING_REMINDER
   MESSAGE_RECEIVED
   SYSTEM_ANNOUNCEMENT
+  QUOTE_REQUESTED
+  QUOTE_RESPONDED
+  QUOTE_DECLINED
 
   @@map("notification_type")
 }
@@ -146,6 +174,7 @@ enum FilePurpose {
   MESSAGE_ATTACHMENT
   CATEGORY_ICON
   PORTFOLIO_IMAGE
+  BOOKING_ATTACHMENT
 
   @@map("file_purpose")
 }
@@ -216,6 +245,7 @@ model User {
   auditLogs               AuditLog[]
   verifiedCertificates    Certificate[]            @relation("CertificateVerifiedBy")
   notifications           Notification[]
+  notificationPreferences NotificationPreference[]
   hiddenReviews           Review[]                 @relation("ReviewHiddenBy")
   messages                Message[]
   createdBanners          Banner[]
@@ -256,6 +286,8 @@ model ClientProfile {
   conversations   Conversation[]
   favorites       Favorite[]
   savedAddresses  SavedAddress[]
+  quotes          Quote[]
+  recentlyViewed  RecentlyViewedMaster[]
   referredClients ClientProfile[]  @relation("ClientReferral")
   rewardsEarned   ReferralReward[] @relation("ReferralRewardReferrer")
   rewardsReceived ReferralReward[] @relation("ReferralRewardReferred")
@@ -370,6 +402,19 @@ model MasterProfile {
   ratingAverage          Decimal                  @default(0.00) @map("rating_average") @db.Decimal(3, 2)
   ratingCount            Int                      @default(0) @map("rating_count")
   completedBookingsCount Int                      @default(0) @map("completed_bookings_count")
+  /// Denormalised, recomputed inside the same transaction as every `accept()`
+  /// (DATABASE.md §3.3's contract) — never incrementally. Feeds the public
+  /// "fast responder" badge; null until the master's first acceptance.
+  avgAcceptLatencyMinutes Decimal?                @map("avg_accept_latency_minutes") @db.Decimal(7, 1)
+  /// B-15/B-24. Recomputed the same way as `avgAcceptLatencyMinutes` — inside the
+  /// transaction that causes the change (a completion or a master-caused
+  /// cancellation), never incrementally. `100 * completed / (completed +
+  /// cancelledByMaster)`; null until the master has any resolved bookings.
+  reliabilityScore        Decimal?                 @map("reliability_score") @db.Decimal(5, 2)
+  /// B-24. Opt-in: a trusted master (see `reliabilityScore`) still has to choose
+  /// instant-book, since it changes how they work — a booking arrives already
+  /// ACCEPTED instead of waiting for their decision.
+  instantBookEnabled      Boolean                  @default(false) @map("instant_book_enabled")
   createdAt              DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt              DateTime?                @map("deleted_at") @db.Timestamptz(3)
@@ -400,6 +445,9 @@ model MasterProfile {
   reviewReplies      ReviewReply[]
   conversations      Conversation[]
   favoritedBy        Favorite[]
+  quotes             Quote[]
+  quickReplies       QuickReply[]
+  viewedBy           RecentlyViewedMaster[]
 
   @@index([approvalStatus, isActive])
   @@index([cityId])
@@ -502,6 +550,41 @@ model PortfolioImage {
   @@map("portfolio_images")
 }
 
+/// B-35. A master's own reusable canned replies for chat ("I'm 15 minutes late",
+/// "Price confirmed") — sent by copying `text` into a normal `POST
+/// .../messages` body; this model only owns the CRUD for the list itself.
+model QuickReply {
+  id              String    @id @default(uuid()) @db.Uuid
+  masterProfileId String    @map("master_profile_id") @db.Uuid
+  text            String    @db.VarChar(300)
+  sortOrder       Int       @default(0) @map("sort_order")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+
+  @@index([masterProfileId, deletedAt, sortOrder])
+  @@map("quick_replies")
+}
+
+/// A client's browsing history of master profiles — one row per (client, master) pair,
+/// `viewedAt` bumped on every subsequent view rather than inserting a new row each
+/// time, so the table stays bounded by "distinct masters ever viewed" instead of
+/// growing with every page load.
+model RecentlyViewedMaster {
+  id              String   @id @default(uuid()) @db.Uuid
+  clientProfileId String   @map("client_profile_id") @db.Uuid
+  masterProfileId String   @map("master_profile_id") @db.Uuid
+  viewedAt        DateTime @default(now()) @map("viewed_at") @db.Timestamptz(3)
+
+  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([clientProfileId, masterProfileId])
+  @@index([clientProfileId, viewedAt])
+  @@map("recently_viewed_masters")
+}
+
 /// §5.2. Unique per (masterProfileId, categoryId); attaching an already-attached
 /// category is idempotent at the service layer rather than a 409, since the caller's
 /// intent — "this category should be attached" — is already satisfied.
@@ -538,6 +621,7 @@ model Service {
   masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
   category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   bookings      Booking[]
+  quotes        Quote[]
 
   @@index([masterProfileId, isActive])
   @@index([categoryId, isActive])
@@ -727,6 +811,7 @@ model File {
   certificates       Certificate[]
   portfolioImages    PortfolioImage[]
   messageAttachments MessageAttachment[]
+  bookingAttachments BookingAttachment[]
   banners            Banner[]
 
   @@index([uploadedByUserId])
@@ -839,6 +924,7 @@ model Booking {
   completedAt           DateTime?     @map("completed_at") @db.Timestamptz(3)
   cancelledAt           DateTime?     @map("cancelled_at") @db.Timestamptz(3)
   cancellationReason    String?       @map("cancellation_reason") @db.VarChar(500)
+  cancellationReasonCode CancellationReasonCode? @map("cancellation_reason_code")
   cancelledByType       ActorType?    @map("cancelled_by_type")
   isLateCancellation    Boolean       @default(false) @map("is_late_cancellation")
   /// B-51: a client may move a PENDING/ACCEPTED booking once, >=24h before its current
@@ -856,8 +942,10 @@ model Booking {
   service        Service                @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   city           City?                  @relation(fields: [cityId], references: [id], onDelete: SetNull)
   history        BookingStatusHistory[]
+  attachments    BookingAttachment[]
   review         Review?
   referralReward ReferralReward?
+  certificate    CompletionCertificate?
 
   @@index([masterProfileId, status, scheduledAt])
   @@index([clientProfileId, status, scheduledAt])
@@ -883,6 +971,39 @@ model BookingStatusHistory {
 
   @@index([bookingId, createdAt])
   @@map("booking_status_history")
+}
+
+/// B-54. Photos the client attaches when requesting a booking (e.g. of a broken
+/// pipe) so the master can see the problem before accepting. Same shape as
+/// `MessageAttachment` — `fileId` resolved ownership-scoped via
+/// `FilesService.getAttachable`, never a raw client-supplied storage key.
+model BookingAttachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  bookingId String   @map("booking_id") @db.Uuid
+  fileId    String   @map("file_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  file    File    @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@map("booking_attachments")
+}
+
+/// A verifiable proof-of-completion for one booking, issued automatically the moment
+/// it reaches COMPLETED (`BookingTransitionService.complete`). `verificationCode` is
+/// the payload a QR code encodes — rendering the QR image itself is a frontend
+/// concern (any client-side QR library can encode a URL); this model and
+/// `GET /certificates/verify/:code` are what make the code mean something.
+model CompletionCertificate {
+  id               String   @id @default(uuid()) @db.Uuid
+  bookingId        String   @unique @map("booking_id") @db.Uuid
+  verificationCode String   @unique @map("verification_code") @db.VarChar(20)
+  issuedAt         DateTime @default(now()) @map("issued_at") @db.Timestamptz(3)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("completion_certificates")
 }
 
 // ---------------------------------------------------------------------------
@@ -961,6 +1082,22 @@ model Notification {
   @@index([userId, isRead, createdAt(sort: Desc)])
   @@index([createdAt])
   @@map("notifications")
+}
+
+/// B-36 (per-type slice — no push/SMS channel exists yet to gate independently, see
+/// STATUS.md's judgment-call log). Absence of a row means "enabled" (the default);
+/// only an explicit `enabled = false` row suppresses `NotificationsService.create`.
+model NotificationPreference {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  enabled   Boolean          @default(true)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@map("notification_preferences")
 }
 
 // ---------------------------------------------------------------------------
@@ -1087,4 +1224,33 @@ model Report {
   @@index([reportedUserId, status])
   @@index([status, createdAt])
   @@map("reports")
+}
+
+/// B-44. A client's pre-booking price inquiry — "how much would this cost?" — before
+/// committing to `POST /bookings`. Independent of `Booking`; a client who gets an
+/// estimate still books normally, since `Service.price` (not this row) is what a
+/// booking's frozen price snapshot comes from (CLAUDE.md's "editing a service never
+/// mutates existing bookings" invariant applies the same way in reverse here).
+model Quote {
+  id              String       @id @default(uuid()) @db.Uuid
+  clientProfileId String       @map("client_profile_id") @db.Uuid
+  masterProfileId String       @map("master_profile_id") @db.Uuid
+  serviceId       String?      @map("service_id") @db.Uuid
+  description     String       @db.VarChar(1000)
+  status          QuoteStatus  @default(PENDING)
+  estimatedPrice  Decimal?     @map("estimated_price") @db.Decimal(12, 2)
+  priceType       PriceType?   @map("price_type")
+  masterNote      String?      @map("master_note") @db.VarChar(1000)
+  declineReason   String?      @map("decline_reason") @db.VarChar(500)
+  respondedAt     DateTime?    @map("responded_at") @db.Timestamptz(3)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  masterProfile MasterProfile @relation(fields: [masterProfileId], references: [id], onDelete: Cascade)
+  service       Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([clientProfileId, createdAt])
+  @@index([masterProfileId, status, createdAt])
+  @@map("quotes")
 }

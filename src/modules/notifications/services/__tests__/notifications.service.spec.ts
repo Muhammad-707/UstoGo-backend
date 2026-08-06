@@ -6,6 +6,7 @@ import { NotificationsService } from '../notifications.service';
 const build = (
   overrides: {
     notification?: Partial<Record<string, jest.Mock>>;
+    notificationPreference?: Partial<Record<string, jest.Mock>>;
     user?: Partial<Record<string, jest.Mock>>;
   } = {},
 ) => {
@@ -18,6 +19,12 @@ const build = (
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         createMany: jest.fn().mockResolvedValue({ count: 2 }),
         ...overrides.notification,
+      },
+      notificationPreference: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+        upsert: jest.fn().mockResolvedValue({}),
+        ...overrides.notificationPreference,
       },
       user: {
         findMany: jest.fn().mockResolvedValue([{ id: 'u-1' }, { id: 'u-2' }]),
@@ -35,7 +42,7 @@ describe('NotificationsService', () => {
 
     const notification = await service.create('user-1', 'BOOKING_CREATED', { bookingId: 'b-1' });
 
-    expect(notification.id).toBe('n-1');
+    expect(notification?.id).toBe('n-1');
     expect(prisma.db.notification.create).toHaveBeenCalledWith({
       data: { userId: 'user-1', type: 'BOOKING_CREATED', payload: { bookingId: 'b-1' } },
     });

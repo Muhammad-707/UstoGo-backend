@@ -2,6 +2,10 @@ import { Prisma } from '@prisma/client';
 
 import { localize, type Locale } from '@common/utils/locale.util';
 
+import {
+  FAST_RESPONDER_MIN_BOOKINGS,
+  FAST_RESPONDER_THRESHOLD_MINUTES,
+} from '../constants/masters.constants';
 import { stockAvatarUrlFor, stockBannerUrlFor } from '../constants/stock-media.constants';
 import { MasterPublicResponseDto } from '../dto/responses/master-public.response.dto';
 
@@ -44,6 +48,7 @@ export const MASTER_PUBLIC_SELECT = {
     orderBy: { sortOrder: 'asc' },
     select: { fileId: true },
   },
+  avgAcceptLatencyMinutes: true,
 } satisfies Prisma.MasterProfileSelect;
 
 export type MasterRow = Prisma.MasterProfileGetPayload<{ select: typeof MASTER_PUBLIC_SELECT }>;
@@ -52,6 +57,11 @@ const BIO_PREVIEW_LENGTH = 200;
 
 const toDecimalOrNull = (value: Prisma.Decimal | null | undefined): number | null =>
   value === null || value === undefined ? null : Number(value);
+
+export const computeIsFastResponder = (row: MasterRow): boolean =>
+  row.avgAcceptLatencyMinutes !== null &&
+  Number(row.avgAcceptLatencyMinutes) <= FAST_RESPONDER_THRESHOLD_MINUTES &&
+  row.completedBookingsCount >= FAST_RESPONDER_MIN_BOOKINGS;
 
 export const toMasterPublicDto = (
   row: MasterRow,
@@ -99,6 +109,7 @@ export const toMasterPublicDto = (
   // but only while the master keeps it enabled.
   dto.whatsappEnabled = row.whatsappEnabled;
   dto.whatsappPhone = row.whatsappEnabled ? row.whatsappPhone : null;
+  dto.isFastResponder = computeIsFastResponder(row);
 
   return dto;
 };

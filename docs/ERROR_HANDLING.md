@@ -148,6 +148,8 @@ Codes are unique across the API and are exported as a single const object consum
 | `MASTER_NOT_READY_FOR_APPROVAL` | 409    | No category or no active service (BR-15)        |
 | `INVALID_APPROVAL_TRANSITION`   | 409    | e.g. approving an already-approved master       |
 | `REASON_REQUIRED`               | 422    | Rejection/cancellation without a reason         |
+| `QUICK_REPLY_NOT_FOUND`         | 404    | B-35                                            |
+| `QUICK_REPLY_LIMIT_EXCEEDED`    | 422    | B-35: at most 20 canned replies                 |
 
 ### Categories & services
 
@@ -174,19 +176,27 @@ Codes are unique across the API and are exported as a single const object consum
 
 ### Bookings
 
-| Code                         | Status | Meaning                                            |
-| ---------------------------- | ------ | -------------------------------------------------- |
-| `BOOKING_NOT_FOUND`          | 404    | Also returned when the caller is not a participant |
-| `SLOT_NOT_AVAILABLE`         | 409    | Outside availability or already taken              |
-| `SLOT_TOO_SOON`              | 422    | Less than the 2-hour lead time                     |
-| `BOOKING_OVERLAP`            | 409    | Lost the race at acceptance                        |
-| `CLIENT_SLOT_CONFLICT`       | 409    | Client already has a booking in that window        |
-| `TOO_MANY_PENDING_BOOKINGS`  | 429    | More than 5 open requests                          |
-| `ILLEGAL_BOOKING_TRANSITION` | 409    | Not permitted by the state machine                 |
-| `TOO_EARLY_TO_START`         | 422    | Earlier than 30 minutes before the slot            |
-| `BOOKING_NOT_COMPLETED`      | 409    | Review attempted on a non-completed booking        |
-| `RESCHEDULE_WINDOW_CLOSED`   | 422    | Less than 24h before the booking's current slot    |
-| `RESCHEDULE_LIMIT_EXCEEDED`  | 409    | Booking has already been rescheduled once (B-51)   |
+| Code                               | Status | Meaning                                                 |
+| ---------------------------------- | ------ | ------------------------------------------------------- |
+| `BOOKING_NOT_FOUND`                | 404    | Also returned when the caller is not a participant      |
+| `SLOT_NOT_AVAILABLE`               | 409    | Outside availability or already taken                   |
+| `SLOT_TOO_SOON`                    | 422    | Less than the 2-hour lead time                          |
+| `BOOKING_OVERLAP`                  | 409    | Lost the race at acceptance                             |
+| `CLIENT_SLOT_CONFLICT`             | 409    | Client already has a booking in that window             |
+| `TOO_MANY_PENDING_BOOKINGS`        | 429    | More than 5 open requests                               |
+| `ILLEGAL_BOOKING_TRANSITION`       | 409    | Not permitted by the state machine                      |
+| `TOO_EARLY_TO_START`               | 422    | Earlier than 30 minutes before the slot                 |
+| `BOOKING_NOT_COMPLETED`            | 409    | Review attempted on a non-completed booking             |
+| `RESCHEDULE_WINDOW_CLOSED`         | 422    | Less than 24h before the booking's current slot         |
+| `RESCHEDULE_LIMIT_EXCEEDED`        | 409    | Booking has already been rescheduled once (B-51)        |
+| `COMPLETION_CERTIFICATE_NOT_FOUND` | 404    | Unknown verification code, or booking not yet COMPLETED |
+
+### Quotes (B-44)
+
+| Code                      | Status | Meaning                                             |
+| ------------------------- | ------ | --------------------------------------------------- |
+| `QUOTE_NOT_FOUND`         | 404    |                                                     |
+| `QUOTE_ALREADY_RESPONDED` | 409    | A `PENDING` quote may be responded to/declined once |
 
 ### Reviews
 

@@ -14,6 +14,9 @@ export const EARLY_START_WINDOW_MINUTES = 30;
 export const REASON_MIN_LENGTH = 10;
 export const REASON_MAX_LENGTH = 500;
 
+/** B-15/B-24 — a master needs at least this reliability score, opted in, to auto-accept. */
+export const INSTANT_BOOK_MIN_SCORE = 90;
+
 /**
  * B-51: a client may reschedule a PENDING/ACCEPTED booking once, and only while its
  * current slot is at least this many hours away — mirrors `BACKLOG.md`'s own framing

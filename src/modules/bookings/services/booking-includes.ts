@@ -19,6 +19,10 @@ export const BOOKING_DETAIL_INCLUDE = {
       user: { select: { id: true, phone: true } },
     },
   },
+  // B-54: photos the client attached when requesting the booking. `file.key` is
+  // carried only so `BookingsService.getAttachmentUrl` can sign a read URL without a
+  // second query — never surfaced on the response DTO itself.
+  attachments: { select: { fileId: true, file: { select: { key: true } } } },
 } satisfies Prisma.BookingInclude;
 
 export const BOOKING_LIST_INCLUDE = BOOKING_DETAIL_INCLUDE;
