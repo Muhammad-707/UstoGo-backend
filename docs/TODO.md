@@ -1,6 +1,6 @@
 # TODO — UstoGo Backend
 
-**Last updated:** 2026-08-07
+**Last updated:** 2026-08-08
 **Active phase:** Phase 6 — Hardening & Launch (Phases 1–5 complete). Post-1.0.0: P0 (WhatsApp) landed 2026-08-03; production DB sync confirmed, observability/security hardening pass (Sentry, Redis health check, helmet/compression) and a Render deploy-pipeline fix landed 2026-08-05.
 
 Working agreement: tasks are executed top to bottom. A task is checked only when it is complete per the Definition of Done in `ROADMAP.md`. Anything discovered mid-task that is out of scope goes to `BACKLOG.md`, never into a `TODO` comment in code.
@@ -283,6 +283,10 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] Live GPS relay: `/bookings` namespace `location:update`
 - [x] Seven new migrations, all additive; full unit (981) + e2e (220) suites green; `lint`/`typecheck`/`build` green
 - [ ] Frontend: all fourteen — tracked as separate frontend tasks (QR image rendering, leaderboard UI, live map for GPS relay, etc.)
+
+### Post-1.0.0, 2026-08-08: deployment currency resolved (D-3)
+
+- [x] `SERVICE_CURRENCY` default changed `USD` → `TJS` (`env.schema.ts`, `.env.example`, `.env`) — no migration, `CatalogueConfig.currency` reads the env var at service-creation time; `STATUS.md` D-3 marked resolved
 
 ## 📌 Standing Rules
 

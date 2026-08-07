@@ -1,6 +1,6 @@
 # Project Status — UstoGo Backend
 
-**Last updated:** 2026-08-07
+**Last updated:** 2026-08-08
 **Current phase:** Phase 6 — Hardening & Launch, **complete** (v1.0.0 tagged without an external penetration test — an explicit, recorded decision, not an oversight; see §6 and `CHANGELOG.md`). Post-1.0.0 P0 (WhatsApp contact) landed 2026-08-03; production DB sync confirmed and an observability/security hardening pass (Sentry, Redis readiness check, helmet/compression, the `search_vector` migration-drift fix, a Render deploy-pipeline fix) landed 2026-08-05.
 **Version:** 1.0.0
 **Overall progress:** ▓▓▓▓▓▓▓▓▓▓ 100% of what is implementable in-repo (the full client journey — search → book → accept → complete → review → message — works end to end, double-booking is provably impossible, an admin can see the whole platform's health in one call, every account gets a verification email, admins can require 2FA, every device is listable/revocable, retried mutations are safe, personal data is exportable and deletion is anonymised, and access tokens are RS256)
@@ -230,13 +230,13 @@ Known e2e flakes, not regressions, both consequences of the same fire-and-forget
 
 ## 7. Open Decisions
 
-| #   | Question                                                        | Owner     | Needed by                    |
-| --- | --------------------------------------------------------------- | --------- | ---------------------------- |
-| D-1 | Deployment target (managed container platform vs. VPS + Docker) | Tech lead | Phase 1 CI setup             |
-| D-2 | Transactional email provider                                    | Tech lead | Phase 1 (`MailModule`)       |
-| D-3 | Deployment currency and ISO code                                | Product   | Phase 2 (`Service.currency`) |
-| D-4 | Initial city list and category taxonomy content                 | Product   | Phase 2 seed                 |
-| D-5 | Redis: managed instance vs. self-hosted                         | Tech lead | Production deployment        |
+| #   | Question                                                            | Owner     | Needed by                    |
+| --- | ------------------------------------------------------------------- | --------- | ---------------------------- |
+| D-1 | Deployment target (managed container platform vs. VPS + Docker)     | Tech lead | Phase 1 CI setup             |
+| D-2 | Transactional email provider                                        | Tech lead | Phase 1 (`MailModule`)       |
+| D-3 | ~~Deployment currency and ISO code~~ — resolved 2026-08-08: **TJS** | Product   | Phase 2 (`Service.currency`) |
+| D-4 | Initial city list and category taxonomy content                     | Product   | Phase 2 seed                 |
+| D-5 | Redis: managed instance vs. self-hosted                             | Tech lead | Production deployment        |
 
 None of these block starting Phase 1; each has a documented default (`docker-compose` local equivalents) that carries the work forward.
 
@@ -283,6 +283,8 @@ This shipped (commit `ddd2c20`) with unit coverage only (`referrals.service.spec
 `GET /admin/masters` (API.md §12) has been implemented: `AdminMastersController` gained a filterable, paginated listing — `approvalStatus`, `status`, `cityId`, `categoryId`, `search` — returning every master regardless of approval/active state via a new `AdminMasterListItemResponseDto` that, unlike the public projection, includes `email`/`phone`. It had been documented alongside F-04's moderation actions but was never wired up; this closes that gap.
 
 **`v1.0.0` shipped 2026-07-30.** Phase 6 — Hardening & Launch is complete: email verification, admin two-factor authentication, the device/session list, idempotency keys, personal data export/anonymised deletion, the RS256 migration, the backup restore rehearsal and the production runbook are all done. The external penetration test was explicitly not performed before this tag (`CHANGELOG.md` records the decision) — scheduling it against a deployed environment and remediating whatever it finds is the first post-1.0.0 item.
+
+**Deployment currency resolved to TJS, closing D-3 (2026-08-08).** `SERVICE_CURRENCY`'s Zod default (`env.schema.ts`) moves from the launch-time `USD` placeholder to `TJS` (Tajik somoni) — the product decision D-3 had been waiting on since Phase 2. `CatalogueConfig.currency` stamps every newly created `Service` (and, through the frozen-snapshot pattern, every `Booking` made against it); nothing else in the schema reads currency, so this is a one-line config change with no migration. `.env.example` and the local `.env` both updated so a fresh clone matches. Note for whoever deploys next: `prisma/seed/masters.seed.ts` had already been hardcoding `'TJS'` on every demo service since it was written — the env default was the one place still saying `USD`, not an active second currency in play anywhere.
 
 Detailed task list: `TODO.md`.
 
