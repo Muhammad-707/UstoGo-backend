@@ -243,13 +243,16 @@ describe('MastersService portfolio images (B-45)', () => {
     expect(files.getAttachable).toHaveBeenCalledWith('file-1', 'user-1', 'PORTFOLIO_IMAGE');
   });
 
-  it('assigns sortOrder from the current count', async () => {
+  it('assigns sortOrder from the current live count, excluding soft-deleted images', async () => {
     const { service, portfolioImageDelegate } = build({
       portfolioImage: { count: jest.fn().mockResolvedValue(3) },
     });
 
     await service.addPortfolioImage('user-1', { fileId: 'file-1' });
 
+    expect(portfolioImageDelegate.count).toHaveBeenCalledWith({
+      where: { masterProfileId: 'mp-1', deletedAt: null },
+    });
     expect(portfolioImageDelegate.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ sortOrder: 3 }) }),
     );
@@ -274,14 +277,14 @@ describe('MastersService portfolio images (B-45)', () => {
     });
   });
 
-  it('lists portfolio images ordered for the caller', async () => {
+  it('lists live portfolio images ordered for the caller', async () => {
     const { service, portfolioImageDelegate } = build();
 
     await service.listPortfolioImages('user-1');
 
     expect(portfolioImageDelegate.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { masterProfileId: 'mp-1' },
+        where: { masterProfileId: 'mp-1', deletedAt: null },
         orderBy: { sortOrder: 'asc' },
       }),
     );

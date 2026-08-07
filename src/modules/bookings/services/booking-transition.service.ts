@@ -11,6 +11,7 @@ import {
 import { PrismaService } from '@prisma-lib/prisma.service';
 import { TransactionManager } from '@prisma-lib/transaction.manager';
 
+import { isLateCancellation } from './booking-cancellation.util';
 import { appendBookingHistory } from './booking-history.util';
 import { BOOKING_DETAIL_INCLUDE, type BookingDetailRow } from './booking-includes';
 import {
@@ -18,10 +19,7 @@ import {
   recomputeReliabilityScore,
 } from './master-stats-recompute.util';
 import { clientProfileIdFor, masterProfileIdFor } from './profile-lookup.util';
-import {
-  EARLY_START_WINDOW_MINUTES,
-  LATE_CANCELLATION_WINDOW_MINUTES,
-} from '../constants/booking.constants';
+import { EARLY_START_WINDOW_MINUTES } from '../constants/booking.constants';
 import { BookingStateMachine } from '../domain/booking-state-machine';
 import { generateVerificationCode } from '../domain/verification-code.util';
 import {
@@ -200,7 +198,7 @@ export class BookingTransitionService {
           status: targetStatus,
           cancelledAt: new Date(),
           cancelledByType: actorType,
-          isLateCancellation: this.isLateCancellation(existing),
+          isLateCancellation: isLateCancellation(existing),
           ...(reason !== undefined ? { cancellationReason: reason } : {}),
           ...(reasonCode !== undefined ? { cancellationReasonCode: reasonCode } : {}),
         },
@@ -229,13 +227,6 @@ export class BookingTransitionService {
     this.emitCancelled(booking, actorType, reason ?? null);
 
     return booking;
-  }
-
-  private isLateCancellation(existing: { status: BookingStatus; scheduledAt: Date }): boolean {
-    return (
-      existing.status === BookingStatus.ACCEPTED &&
-      existing.scheduledAt.getTime() - Date.now() <= LATE_CANCELLATION_WINDOW_MINUTES * 60_000
-    );
   }
 
   private emitCancelled(

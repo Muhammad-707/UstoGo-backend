@@ -185,7 +185,7 @@ export class MastersService {
     const master = await this.getByUserId(userId);
 
     return this.prisma.db.portfolioImage.findMany({
-      where: { masterProfileId: master.id },
+      where: { masterProfileId: master.id, deletedAt: null },
       orderBy: { sortOrder: 'asc' },
     });
   }
@@ -194,7 +194,7 @@ export class MastersService {
     const master = await this.getByUserId(userId);
 
     const count = await this.prisma.db.portfolioImage.count({
-      where: { masterProfileId: master.id },
+      where: { masterProfileId: master.id, deletedAt: null },
     });
     if (count >= PORTFOLIO_IMAGE_LIMIT) {
       throw new PortfolioLimitExceededException();
