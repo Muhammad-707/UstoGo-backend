@@ -9,17 +9,53 @@ export type MappedPrismaError = {
   readonly message: string;
 };
 
+type UniqueTargetRule = {
+  /**
+   * Restricts the rule to one Prisma model. On PostgreSQL, `error.meta.target` for a
+   * P2002 is the bare column name array (e.g. `["slug"]`), not the constraint name —
+   * so two models sharing a column name (`Category.slug` and `ProductCategory.slug`)
+   * are otherwise indistinguishable from the target string alone. Checked first, ahead
+   * of any model-agnostic rule matching the same target.
+   */
+  readonly model?: string;
+  readonly target: RegExp;
+  readonly code: ErrorCode;
+  readonly message: string;
+};
+
 /**
  * Unique-constraint targets mapped to the code a client can act on. Prisma reports the
- * index or column names it violated; `uq_users_email_active` and a bare `email` both
- * mean the same thing to a caller.
+ * violated column name(s); `uq_users_email_active` and a bare `email` both mean the
+ * same thing to a caller.
  */
-const UNIQUE_TARGET_CODES: ReadonlyArray<readonly [RegExp, ErrorCode, string]> = [
-  [/email/i, ERROR_CODE.EMAIL_ALREADY_EXISTS, 'That email address is already registered.'],
-  [/phone/i, ERROR_CODE.PHONE_ALREADY_EXISTS, 'That phone number is already registered.'],
-  [/booking_id/i, ERROR_CODE.REVIEW_ALREADY_EXISTS, 'This booking already has a review.'],
-  [/review_id/i, ERROR_CODE.REPLY_ALREADY_EXISTS, 'This review already has a reply.'],
-  [/slug/i, ERROR_CODE.CATEGORY_SLUG_TAKEN, 'That slug is already taken.'],
+const UNIQUE_TARGET_CODES: readonly UniqueTargetRule[] = [
+  {
+    target: /email/i,
+    code: ERROR_CODE.EMAIL_ALREADY_EXISTS,
+    message: 'That email address is already registered.',
+  },
+  {
+    target: /phone/i,
+    code: ERROR_CODE.PHONE_ALREADY_EXISTS,
+    message: 'That phone number is already registered.',
+  },
+  {
+    target: /booking_id/i,
+    code: ERROR_CODE.REVIEW_ALREADY_EXISTS,
+    message: 'This booking already has a review.',
+  },
+  {
+    target: /review_id/i,
+    code: ERROR_CODE.REPLY_ALREADY_EXISTS,
+    message: 'This review already has a reply.',
+  },
+  {
+    model: 'ProductCategory',
+    target: /slug/i,
+    code: ERROR_CODE.PRODUCT_CATEGORY_SLUG_TAKEN,
+    message: 'That slug is already taken.',
+  },
+  { target: /slug/i, code: ERROR_CODE.CATEGORY_SLUG_TAKEN, message: 'That slug is already taken.' },
 ];
 
 /** PostgreSQL SQLSTATE for an exclusion-constraint violation. */
@@ -38,12 +74,15 @@ const targetOf = (error: Prisma.PrismaClientKnownRequestError): string => {
 
 const mapUniqueViolation = (error: Prisma.PrismaClientKnownRequestError): MappedPrismaError => {
   const target = targetOf(error);
-  const match = UNIQUE_TARGET_CODES.find(([pattern]) => pattern.test(target));
+  const modelName = error.meta?.modelName;
+  const match = UNIQUE_TARGET_CODES.find(
+    (rule) => (rule.model === undefined || rule.model === modelName) && rule.target.test(target),
+  );
 
   return {
     status: HttpStatus.CONFLICT,
-    code: match?.[1] ?? ERROR_CODE.CONFLICT,
-    message: match?.[2] ?? 'That value is already in use.',
+    code: match?.code ?? ERROR_CODE.CONFLICT,
+    message: match?.message ?? 'That value is already in use.',
   };
 };
 

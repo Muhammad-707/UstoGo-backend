@@ -27,6 +27,7 @@ module.exports = {
         'banners',
         'audit',
         'idempotency',
+        'marketplace',
         'admin',
         'common',
         'config',

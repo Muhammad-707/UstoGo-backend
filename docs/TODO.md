@@ -296,6 +296,18 @@ would ship its admin routes unaudited and need a retrofit.
 - [x] Unit tests (`payment-confirmation.util.spec.ts`, `booking-payment.service.spec.ts`) and e2e tests (`test/e2e/booking-payment.e2e-spec.ts` — 8 cases: full price, tip, underpay+note, underpay-without-note 422, double-confirm 409, not-completed 409, stranger 404, wrong-role 403)
 - [ ] Frontend: payment-confirmation prompt after a completed booking — tracked as a separate frontend task
 
+### Post-1.0.0, 2026-08-08: marketplace (construction materials shop, client request)
+
+- [x] `ProductCategory` (flat), `Product`/`ProductImage`, `ProductLike`, `CartItem`, `Order`/`OrderItem` (migration `20260808150000_add_marketplace`), `order_status` enum, new `AuditAction` values
+- [x] Public `GET /product-categories`, `GET /products`/`GET /products/:id` (active-only, `categoryId`/`search` filters)
+- [x] `ADMIN`-only audited CRUD: `admin/product-categories`, `admin/products` (soft delete both)
+- [x] `CLIENT`-only wishlist (`GET/POST/DELETE /wishlist/:productId`, idempotent) and cart (`GET /cart`, `POST /cart/items`, `PATCH /cart/items/:productId`, `DELETE /cart/items/:productId`, quantity capped at 99)
+- [x] `POST /orders/checkout` — mocked payment (no card data collected, `status` is `PAID` on creation), `@Idempotent()`, deactivated cart lines silently excluded and left in the cart; `GET /orders`, `GET /orders/:id` (owner-only, 404 not 403)
+- [x] `admin/orders` listing, detail, `POST admin/orders/:id/cancel` (audited, `409 ORDER_ALREADY_CANCELLED` on a second attempt)
+- [x] Unit tests for every service (`product-categories`, `products`, `product-likes`, `cart`, `checkout`, `orders`) and e2e coverage (`test/e2e/marketplace.e2e-spec.ts` — categories, products, wishlist, cart, checkout incl. the deactivated-product-exclusion and idempotency-replay cases, admin orders; each protected route carries its authz matrix)
+- [x] Fixed while closing out this feature (all real, request-breaking, not test bugs): `POST /cart/items` was silently returning 201 instead of its documented 200 (`@HttpCode` missing); `PRODUCT_CATEGORY_SLUG_TAKEN` never actually fired because Postgres reports a P2002 target as the bare column name, not the table/constraint name — `prisma-exception.mapper.ts` now disambiguates via `error.meta.modelName`; `test/helpers/test-app.factory.ts`'s shared `truncateAll` was missing all seven new tables, leaking rows across e2e tests
+- [ ] Frontend: shop browsing, cart, checkout, wishlist, admin catalogue management — tracked as a separate frontend task
+
 ## 📌 Standing Rules
 
 - No `TODO` comments in merged code — they belong here or in `BACKLOG.md`

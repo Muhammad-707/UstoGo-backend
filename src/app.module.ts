@@ -24,6 +24,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { FilesModule } from './modules/files/files.module';
 import { IdempotencyModule } from './modules/idempotency/idempotency.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { MastersModule } from './modules/masters/masters.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
@@ -107,6 +108,7 @@ import { StorageModule } from './shared/storage/storage.module';
     ReportsModule,
     ReferralsModule,
     QuotesModule,
+    MarketplaceModule,
     AdminModule,
     JobsModule,
   ],

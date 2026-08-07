@@ -36,6 +36,17 @@ describe('mapPrismaError', () => {
       );
     });
 
+    // Postgres reports P2002's target as the bare column name, so `Category.slug` and
+    // `ProductCategory.slug` are indistinguishable from the target string alone —
+    // `modelName` (also on `error.meta`) is what disambiguates them.
+    it('maps a slug conflict on ProductCategory distinctly from Category', () => {
+      const mapped = mapPrismaError(
+        known('P2002', { target: ['slug'], modelName: 'ProductCategory' }),
+      );
+
+      expect(mapped?.code).toBe(ERROR_CODE.PRODUCT_CATEGORY_SLUG_TAKEN);
+    });
+
     it('falls back to a generic conflict for an unrecognised target', () => {
       expect(mapPrismaError(known('P2002', { target: 'something_else' }))?.code).toBe(
         ERROR_CODE.CONFLICT,
