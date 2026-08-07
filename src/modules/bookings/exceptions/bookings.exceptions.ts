@@ -134,6 +134,28 @@ export class RescheduleLimitExceededException extends AppException {
   }
 }
 
+/** 409. A COMPLETED booking's payment may be confirmed by the client once. */
+export class PaymentAlreadyConfirmedException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.PAYMENT_ALREADY_CONFIRMED,
+      'Payment for this booking has already been confirmed.',
+      HttpStatus.CONFLICT,
+    );
+  }
+}
+
+/** 422. `paidAmount` is less than the agreed price — a note explaining why is required. */
+export class PaymentNoteRequiredException extends AppException {
+  constructor() {
+    super(
+      ERROR_CODE.PAYMENT_NOTE_REQUIRED,
+      'A note is required when the amount paid is less than the agreed price.',
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+  }
+}
+
 /** 404. An unknown verification code, or a booking with no certificate (not COMPLETED). */
 export class CompletionCertificateNotFoundException extends AppException {
   constructor() {

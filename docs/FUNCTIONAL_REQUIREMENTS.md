@@ -271,6 +271,20 @@ Runs every 10 minutes. Selects `PENDING` bookings with `scheduledAt < now()`, tr
 - `GET /api/v1/bookings/:id` — participants and admins only → else `404` (not `403`, to avoid leaking existence).
 - Client contact fields (`phone`, exact `address`) appear in the master's view only when the status is `ACCEPTED`, `IN_PROGRESS` or `COMPLETED`. Before that, the address is truncated to district level.
 
+### FR-7.7 Payment confirmation
+
+`POST /api/v1/bookings/:id/confirm-payment` with `paidAmount`, `note?` — client, owner only (else `404`), `COMPLETED` only, once.
+
+Payments stay off-platform (`PROJECT_OVERVIEW.md` — money moves directly between client and master; ADR-8 defers in-platform payments/escrow). This endpoint does not move money — it records what the client says already changed hands, the same way a review records satisfaction:
+
+- Booking must be `COMPLETED` → `409 BOOKING_NOT_COMPLETED`
+- Not already confirmed → `409 PAYMENT_ALREADY_CONFIRMED`
+- `paidAmount` < the booking's frozen `price` snapshot → `note` (10–500 chars) is required → else `422 PAYMENT_NOTE_REQUIRED`. This lets a client record paying less than agreed and say why (poor quality, lateness).
+- `paidAmount` = `price` → paid in full, no note required.
+- `paidAmount` > `price` → the excess is a tip; no note required.
+
+Sets `paidAmount`, `paymentNote`, `paymentConfirmedAt`; notifies the master (`PAYMENT_CONFIRMED`).
+
 ---
 
 ## 8. Reviews

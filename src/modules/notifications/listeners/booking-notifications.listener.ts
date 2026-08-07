@@ -9,6 +9,7 @@ import {
   type BookingCompletedEvent,
   type BookingCreatedEvent,
   type BookingExpiredEvent,
+  type BookingPaymentConfirmedEvent,
   type BookingReminderEvent,
   type BookingRejectedEvent,
   type BookingRescheduledEvent,
@@ -109,6 +110,17 @@ export class BookingNotificationsListener {
       bookingId: event.bookingId,
       previousScheduledAt: event.previousScheduledAt.toISOString(),
       scheduledAt: event.scheduledAt.toISOString(),
+    });
+  }
+
+  @OnEvent(BOOKING_EVENT.PAYMENT_CONFIRMED)
+  async onPaymentConfirmed(event: BookingPaymentConfirmedEvent): Promise<void> {
+    await this.notifications.create(event.notifyUserId, NotificationType.PAYMENT_CONFIRMED, {
+      bookingId: event.bookingId,
+      paidAmount: event.paidAmount,
+      price: event.price,
+      currency: event.currency,
+      note: event.note,
     });
   }
 }

@@ -14,6 +14,7 @@ export const BOOKING_EVENT = Object.freeze({
   EXPIRED: 'booking.expired',
   REMINDER: 'booking.reminder',
   RESCHEDULED: 'booking.rescheduled',
+  PAYMENT_CONFIRMED: 'booking.payment_confirmed',
 } as const);
 
 export class BookingCreatedEvent {
@@ -93,5 +94,17 @@ export class BookingRescheduledEvent {
     readonly notifyUserId: string,
     readonly previousScheduledAt: Date,
     readonly scheduledAt: Date,
+  ) {}
+}
+
+export class BookingPaymentConfirmedEvent {
+  constructor(
+    readonly bookingId: string,
+    /** The master — the client is always the actor for a payment confirmation. */
+    readonly notifyUserId: string,
+    readonly paidAmount: string,
+    readonly price: string,
+    readonly currency: string,
+    readonly note: string | null,
   ) {}
 }

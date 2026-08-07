@@ -14,6 +14,7 @@ import { BookingAttachmentsService } from './services/booking-attachments.servic
 import { BookingCreationService } from './services/booking-creation.service';
 import { BookingIcsExportService } from './services/booking-ics-export.service';
 import { BookingJobsService } from './services/booking-jobs.service';
+import { BookingPaymentService } from './services/booking-payment.service';
 import { BookingReceiptService } from './services/booking-receipt.service';
 import { BookingRescheduleService } from './services/booking-reschedule.service';
 import { BookingStatsService } from './services/booking-stats.service';
@@ -40,6 +41,7 @@ import { ScheduleOptimizerService } from './services/schedule-optimizer.service'
     BookingCreationService,
     BookingTransitionService,
     BookingRescheduleService,
+    BookingPaymentService,
     BookingAttachmentsService,
     BookingIcsExportService,
     BookingReceiptService,
@@ -55,6 +57,7 @@ import { ScheduleOptimizerService } from './services/schedule-optimizer.service'
     BookingCreationService,
     BookingTransitionService,
     BookingRescheduleService,
+    BookingPaymentService,
     BookingAttachmentsService,
     BookingIcsExportService,
     BookingReceiptService,

@@ -68,6 +68,7 @@ enum NotificationType {
   BOOKING_CANCELLED
   BOOKING_EXPIRED
   BOOKING_RESCHEDULED
+  PAYMENT_CONFIRMED
   MASTER_APPROVED
   MASTER_REJECTED
   MASTER_DEACTIVATED
@@ -322,6 +323,9 @@ Unique `(masterProfileId, date)`. CHECK: if `isDayOff = false` then both times a
 | `cancelledByType`                                       | `ActorType`               |                                                                              |
 | `isLateCancellation`                                    | boolean                   | default `false`                                                              |
 | `rescheduleCount`                                       | integer                   | default `0`; capped at 1 (B-51)                                              |
+| `paidAmount`                                            | Decimal(12,2)?            | client-recorded, off-platform (FR-7.7); CHECK `>= 0`; null until confirmed   |
+| `paymentNote`                                           | varchar(500)?             | required when `paidAmount < price` (FR-7.7)                                  |
+| `paymentConfirmedAt`                                    | timestamptz?              | set once, by the client, only from `COMPLETED`                               |
 | timestamps + `deletedAt`                                |                           |                                                                              |
 
 Related: `BookingAttachment` (B-54, up to 5 client-uploaded photos per booking, same ownership-scoped `fileId` resolution as `MessageAttachment`) and `CompletionCertificate` (below) both hang off `Booking` 1:many / 1:1.

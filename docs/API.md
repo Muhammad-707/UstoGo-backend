@@ -246,6 +246,7 @@ All (except `recently-viewed`) are `@Roles(MASTER)`. Service and schedule mutati
 | POST   | `/bookings/:id/reschedule`              | CLIENT              | B-51: move `scheduledAt`, once, ≥24h out                   |
 | POST   | `/bookings/:id/start`                   | MASTER              | `ACCEPTED → IN_PROGRESS`                                   |
 | POST   | `/bookings/:id/complete`                | MASTER              | `IN_PROGRESS → COMPLETED`; issues a completion certificate |
+| POST   | `/bookings/:id/confirm-payment`         | CLIENT              | FR-7.7: record what was actually paid, off-platform, once  |
 | GET    | `/bookings/:id/attachments/:fileId/url` | participants, ADMIN | B-54: signed URL for an attached photo                     |
 | GET    | `/bookings/:id/receipt.pdf`             | participants, ADMIN | PDF receipt; `409 BOOKING_NOT_COMPLETED` otherwise         |
 | GET    | `/bookings/:id/certificate`             | participants, ADMIN | The QR-verifiable completion certificate                   |

@@ -116,6 +116,7 @@ enum NotificationType {
   BOOKING_CANCELLED
   BOOKING_EXPIRED
   BOOKING_RESCHEDULED
+  PAYMENT_CONFIRMED
   MASTER_REGISTERED
   MASTER_APPROVED
   MASTER_REJECTED
@@ -933,6 +934,14 @@ model Booking {
   /// Set once on the client's first click of the master's WhatsApp link (P0) — the
   /// analytics signal that a client actually reached out off-platform.
   whatsappLinkClickedAt DateTime?     @map("whatsapp_link_clicked_at") @db.Timestamptz(3)
+  /// Client-recorded confirmation of what was actually paid, off-platform (ADR-8/BR:
+  /// payments are not processed in-platform — this records the outcome of a cash/bank
+  /// transfer that already happened, it never moves money itself). Client-only, once,
+  /// only from COMPLETED. `paidAmount < price` requires `paymentNote` — a service-level
+  /// rule, since the DTO validating the request body cannot see `price`.
+  paidAmount             Decimal?      @map("paid_amount") @db.Decimal(12, 2)
+  paymentNote            String?       @map("payment_note") @db.VarChar(500)
+  paymentConfirmedAt     DateTime?     @map("payment_confirmed_at") @db.Timestamptz(3)
   createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt             DateTime?     @map("deleted_at") @db.Timestamptz(3)

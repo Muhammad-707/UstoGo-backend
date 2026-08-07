@@ -21,6 +21,7 @@ import type { AuthenticatedUser } from '@common/types/authenticated-user.type';
 import { Idempotent } from '@modules/idempotency/decorators/idempotent.decorator';
 
 import { CancelBookingDto } from '../dto/requests/cancel-booking.dto';
+import { ConfirmBookingPaymentDto } from '../dto/requests/confirm-booking-payment.dto';
 import { CreateBookingDto } from '../dto/requests/create-booking.dto';
 import { ListBookingsQueryDto } from '../dto/requests/list-bookings-query.dto';
 import { RejectBookingDto } from '../dto/requests/reject-booking.dto';
@@ -31,6 +32,7 @@ import { BookingResponseDto } from '../dto/responses/booking.response.dto';
 import { MasterStatsResponseDto } from '../dto/responses/master-stats.response.dto';
 import { ScheduleOptimizerResponseDto } from '../dto/responses/schedule-optimizer.response.dto';
 import { BookingCreationService } from '../services/booking-creation.service';
+import { BookingPaymentService } from '../services/booking-payment.service';
 import { BookingRescheduleService } from '../services/booking-reschedule.service';
 import { BookingStatsService } from '../services/booking-stats.service';
 import { BookingTransitionService } from '../services/booking-transition.service';
@@ -47,6 +49,7 @@ export class BookingsController {
     private readonly creation: BookingCreationService,
     private readonly transitions: BookingTransitionService,
     private readonly reschedules: BookingRescheduleService,
+    private readonly payments: BookingPaymentService,
     private readonly bookingStats: BookingStatsService,
     private readonly scheduleOptimizer: ScheduleOptimizerService,
   ) {}
@@ -282,6 +285,33 @@ export class BookingsController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<BookingResponseDto> {
     const booking = await this.transitions.complete(user.id, id);
+    return BookingResponseDto.fromEntity(booking, user.role);
+  }
+
+  @Post(':id/confirm-payment')
+  @HttpCode(HttpStatus.OK)
+  @ApiAuth(UserRole.CLIENT)
+  @ApiOperation({
+    summary: 'Confirm what was actually paid for a completed booking',
+    description:
+      'Client-owner only, once, COMPLETED only. Payments stay off-platform (ADR-8) — ' +
+      'this records the outcome of a cash/bank transfer that already happened, not a ' +
+      'payment itself. paidAmount below the agreed price requires a note explaining why; ' +
+      'above it is recorded as a tip.',
+  })
+  @ApiOkResponse({ type: BookingResponseDto })
+  @ApiNotFoundResponse(BOOKING_NOT_FOUND)
+  @ApiUnprocessableEntityResponse({ description: 'PAYMENT_NOTE_REQUIRED', type: ErrorResponseDto })
+  @ApiConflictResponse({
+    description: 'BOOKING_NOT_COMPLETED | PAYMENT_ALREADY_CONFIRMED',
+    type: ErrorResponseDto,
+  })
+  async confirmPayment(
+    @Param('id') id: string,
+    @Body() dto: ConfirmBookingPaymentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<BookingResponseDto> {
+    const booking = await this.payments.confirm(user.id, id, dto);
     return BookingResponseDto.fromEntity(booking, user.role);
   }
 }

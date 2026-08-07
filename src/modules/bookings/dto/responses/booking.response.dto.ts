@@ -37,6 +37,9 @@ export type BookingWithParties = {
   cancelledByType: ActorType | null;
   isLateCancellation: boolean;
   rescheduleCount: number;
+  paidAmount: { toFixed: (n: number) => string } | null;
+  paymentNote: string | null;
+  paymentConfirmedAt: Date | null;
   createdAt: Date;
   masterProfile: {
     displayName: string;
@@ -172,6 +175,21 @@ export class BookingResponseDto {
   @ApiProperty({ description: 'B-51: 0 until rescheduled once; capped at 1 in v1.' })
   rescheduleCount!: number;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'What the client says they actually paid, off-platform. Null until confirmed.',
+  })
+  paidAmount!: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Required when paidAmount was less than price.',
+  })
+  paymentNote!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentConfirmedAt!: string | null;
+
   @ApiProperty({
     type: [String],
     format: 'uuid',
@@ -221,6 +239,7 @@ export class BookingResponseDto {
 
     applyContactFields(dto, booking, discloseContact);
     applyLifecycleTimestamps(dto, booking);
+    applyPaymentFields(dto, booking);
 
     return dto;
   }
@@ -246,4 +265,11 @@ const applyLifecycleTimestamps = (dto: BookingResponseDto, booking: BookingWithP
   dto.startedAt = booking.startedAt?.toISOString() ?? null;
   dto.completedAt = booking.completedAt?.toISOString() ?? null;
   dto.cancelledAt = booking.cancelledAt?.toISOString() ?? null;
+};
+
+/** Split out of `fromEntity` for the same reason as `applyContactFields`. */
+const applyPaymentFields = (dto: BookingResponseDto, booking: BookingWithParties): void => {
+  dto.paidAmount = booking.paidAmount?.toFixed(2) ?? null;
+  dto.paymentNote = booking.paymentNote;
+  dto.paymentConfirmedAt = booking.paymentConfirmedAt?.toISOString() ?? null;
 };

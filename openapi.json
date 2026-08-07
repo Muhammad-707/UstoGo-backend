@@ -2840,6 +2840,54 @@
         ]
       }
     },
+    "/masters/me/status": {
+      "get": {
+        "description": "A pure read — `submit`/`resubmit`/`availability`/`instant-book` all return this same shape as a side effect of the mutation they perform, but nothing previously let a master fetch it without triggering one of those.",
+        "operationId": "status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterStatusResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: MASTER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The caller’s current approval/availability status, reliability score and instant-book setting",
+        "tags": [
+          "Master Cabinet"
+        ]
+      }
+    },
     "/masters/me/submit": {
       "post": {
         "operationId": "submit",
@@ -6875,6 +6923,103 @@
           }
         ],
         "summary": "Complete a booking",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/confirm-payment": {
+      "post": {
+        "description": "Client-owner only, once, COMPLETED only. Payments stay off-platform (ADR-8) — this records the outcome of a cash/bank transfer that already happened, not a payment itself. paidAmount below the agreed price requires a note explaining why; above it is recorded as a tip.",
+        "operationId": "confirmPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBookingPaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | TOKEN_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN — requires role: CLIENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BOOKING_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "BOOKING_NOT_COMPLETED | PAYMENT_ALREADY_CONFIRMED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "PAYMENT_NOTE_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Confirm what was actually paid for a completed booking",
         "tags": [
           "Bookings"
         ]
@@ -13722,6 +13867,20 @@
             "type": "number",
             "description": "B-51: 0 until rescheduled once; capped at 1 in v1."
           },
+          "paidAmount": {
+            "type": "object",
+            "nullable": true,
+            "description": "What the client says they actually paid, off-platform. Null until confirmed."
+          },
+          "paymentNote": {
+            "type": "object",
+            "nullable": true,
+            "description": "Required when paidAmount was less than price."
+          },
+          "paymentConfirmedAt": {
+            "type": "object",
+            "nullable": true
+          },
           "attachmentFileIds": {
             "description": "B-54: File ids of photos attached at creation. Resolve a URL via GET /files/:id/url.",
             "type": "array",
@@ -14179,6 +14338,20 @@
             "type": "number",
             "description": "B-51: 0 until rescheduled once; capped at 1 in v1."
           },
+          "paidAmount": {
+            "type": "object",
+            "nullable": true,
+            "description": "What the client says they actually paid, off-platform. Null until confirmed."
+          },
+          "paymentNote": {
+            "type": "object",
+            "nullable": true,
+            "description": "Required when paidAmount was less than price."
+          },
+          "paymentConfirmedAt": {
+            "type": "object",
+            "nullable": true
+          },
           "attachmentFileIds": {
             "description": "B-54: File ids of photos attached at creation. Resolve a URL via GET /files/:id/url.",
             "type": "array",
@@ -14270,6 +14443,26 @@
           "scheduledAt"
         ]
       },
+      "ConfirmBookingPaymentDto": {
+        "type": "object",
+        "properties": {
+          "paidAmount": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 99999999.99,
+            "example": 150
+          },
+          "note": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 500,
+            "description": "Required when paidAmount is less than the agreed price."
+          }
+        },
+        "required": [
+          "paidAmount"
+        ]
+      },
       "CompletionCertificateResponseDto": {
         "type": "object",
         "properties": {
@@ -14331,6 +14524,7 @@
               "BOOKING_CANCELLED",
               "BOOKING_EXPIRED",
               "BOOKING_RESCHEDULED",
+              "PAYMENT_CONFIRMED",
               "MASTER_REGISTERED",
               "MASTER_APPROVED",
               "MASTER_REJECTED",
@@ -14391,6 +14585,7 @@
               "BOOKING_CANCELLED",
               "BOOKING_EXPIRED",
               "BOOKING_RESCHEDULED",
+              "PAYMENT_CONFIRMED",
               "MASTER_REGISTERED",
               "MASTER_APPROVED",
               "MASTER_REJECTED",
@@ -14458,6 +14653,7 @@
               "BOOKING_CANCELLED",
               "BOOKING_EXPIRED",
               "BOOKING_RESCHEDULED",
+              "PAYMENT_CONFIRMED",
               "MASTER_REGISTERED",
               "MASTER_APPROVED",
               "MASTER_REJECTED",

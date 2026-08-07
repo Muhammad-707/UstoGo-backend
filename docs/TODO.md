@@ -288,6 +288,14 @@ would ship its admin routes unaudited and need a retrofit.
 
 - [x] `SERVICE_CURRENCY` default changed `USD` → `TJS` (`env.schema.ts`, `.env.example`, `.env`) — no migration, `CatalogueConfig.currency` reads the env var at service-creation time; `STATUS.md` D-3 marked resolved
 
+### Post-1.0.0, 2026-08-08: booking payment confirmation (FR-7.7)
+
+- [x] `Booking.paidAmount`/`paymentNote`/`paymentConfirmedAt` (migration `20260808120000_add_booking_payment_confirmation`), `paid_amount >= 0` CHECK
+- [x] `POST /bookings/:id/confirm-payment` — client-owner only (404 for a stranger), `COMPLETED` only (`409 BOOKING_NOT_COMPLETED`), once (`409 PAYMENT_ALREADY_CONFIRMED`), `paidAmount < price` requires a note (`422 PAYMENT_NOTE_REQUIRED`)
+- [x] `PAYMENT_CONFIRMED` notification to the master via the existing post-commit event pattern
+- [x] Unit tests (`payment-confirmation.util.spec.ts`, `booking-payment.service.spec.ts`) and e2e tests (`test/e2e/booking-payment.e2e-spec.ts` — 8 cases: full price, tip, underpay+note, underpay-without-note 422, double-confirm 409, not-completed 409, stranger 404, wrong-role 403)
+- [ ] Frontend: payment-confirmation prompt after a completed booking — tracked as a separate frontend task
+
 ## 📌 Standing Rules
 
 - No `TODO` comments in merged code — they belong here or in `BACKLOG.md`
