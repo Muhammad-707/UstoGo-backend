@@ -238,6 +238,16 @@ would ship its admin routes unaudited and need a retrofit.
 
 ---
 
+### Post-1.0.0, 2026-08-06: referral codes and reward ledger (MASTER_PROMPT.md §6.4, BACKLOG.md B-52)
+
+- [x] `ClientProfile.referralCode`/`referredByClientProfileId` (migration `20260806100000_add_referrals`), new `ReferralReward` ledger table with a `@unique` `referredClientProfileId` as the concurrency guard against a double payout
+- [x] `GET /me/referral` — lazily generates the caller's own code on first read (no backfill needed for existing rows), returns `referredCount`/`rewardCount`/`totalBonus`
+- [x] `POST /auth/register/client` accepts `referralCode` (resolved before the transaction; an unknown or stale code is silently ignored, never a reason to fail registration)
+- [x] `ReferralRewardListener` — awards the referrer on the referred client's first `COMPLETED` booking, via `BOOKING_EVENT.COMPLETED`, same never-called-directly precedent as every other `NotificationsModule`-style listener
+- [x] Unit tests (`referrals.service.spec.ts`, `referral-reward.listener.spec.ts`) landed with the feature; **e2e coverage was missing until 2026-08-07** — `test/e2e/referrals.e2e-spec.ts` now covers the authz matrix, stable code generation, registration-time linking, the silently-ignored-unknown-code path, and the full register → refer → book → complete → reward journey (polled, since the listener is fire-and-forget the same way `AuditInterceptor` is). This entry itself was also missing from `TODO.md`/`STATUS.md`/`CHANGELOG.md` until now — a documentation-drift gap, not a code gap; `BACKLOG.md` B-52 is marked done in the same pass.
+
+---
+
 ### Post-1.0.0, 2026-08-06: multiple saved addresses (BACKLOG.md B-50)
 
 - [x] `SavedAddress` model (`20260806140000_add_saved_addresses`) — labeled, reusable client addresses; `ClientProfile.defaultAddress` untouched

@@ -25,6 +25,7 @@ export type ClientRegistration = {
   lastName: string;
   phone?: string;
   cityId?: string;
+  referralCode?: string;
 };
 
 export const clientRegistration = (
