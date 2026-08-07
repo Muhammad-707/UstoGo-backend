@@ -5,6 +5,7 @@ import {
   anyCityId,
   createAdmin,
   createApprovedMaster,
+  createClient,
   createPendingMaster,
 } from '../helpers/auth.helper';
 import { createTestApp, truncateAll, type TestApp } from '../helpers/test-app.factory';
@@ -105,6 +106,42 @@ describe('Masters (e2e)', () => {
 
     expect(hidden.body.whatsappEnabled).toBe(false);
     expect(hidden.body.whatsappPhone).toBeNull();
+  });
+
+  it('GET /masters/me/status reads approval/reliability/instant-book without mutating anything', async () => {
+    const cityId = await anyCityId(app.prisma);
+    const master = await createApprovedMaster(app, cityId);
+
+    const before = await request(app.server)
+      .get('/api/v1/masters/me/status')
+      .set('Authorization', `Bearer ${master.accessToken}`)
+      .expect(200);
+
+    expect(before.body).toMatchObject({
+      approvalStatus: 'APPROVED',
+      isActive: true,
+      reliabilityScore: null,
+      instantBookEnabled: false,
+    });
+
+    const toggled = await request(app.server)
+      .patch('/api/v1/masters/me/instant-book')
+      .set('Authorization', `Bearer ${master.accessToken}`)
+      .send({ enabled: true })
+      .expect(200);
+    expect(toggled.body.instantBookEnabled).toBe(true);
+
+    const after = await request(app.server)
+      .get('/api/v1/masters/me/status')
+      .set('Authorization', `Bearer ${master.accessToken}`)
+      .expect(200);
+    expect(after.body.instantBookEnabled).toBe(true);
+
+    const client = await createClient(app);
+    await request(app.server)
+      .get('/api/v1/masters/me/status')
+      .set('Authorization', `Bearer ${client.accessToken}`)
+      .expect(403);
   });
 
   it('rejects a pending master with a reason and blocks re-approval without resubmit', async () => {

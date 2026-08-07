@@ -208,25 +208,26 @@ Response items expose: `id`, `displayName`, `avatarUrl`, `bio` (truncated), `cit
 
 ## 8. Master self-service — `/masters/me`
 
-| Method                | Path                                         | Description                                                       |
-| --------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
-| GET                   | `/masters/me`                                | Own full profile including moderation state and rejection reason  |
-| PATCH                 | `/masters/me`                                | Update professional fields                                        |
-| POST                  | `/masters/me/submit`                         | Submit for review → `PENDING`                                     |
-| POST                  | `/masters/me/resubmit`                       | After rejection → `PENDING`                                       |
-| GET/POST/DELETE       | `/masters/me/categories`                     | Attach / detach leaf categories                                   |
-| GET/POST/DELETE       | `/masters/me/certificates`                   | Manage certificates                                               |
-| GET/POST/DELETE       | `/masters/me/portfolio`                      | Manage work-showcase photos (B-45), ≤ 20                          |
-| PUT                   | `/masters/me/portfolio/order`                | Reorder portfolio images                                          |
-| GET/POST/PATCH/DELETE | `/masters/me/services`                       | Service CRUD                                                      |
-| GET                   | `/masters/me/schedule`                       | Weekly schedule                                                   |
-| PUT                   | `/masters/me/schedule`                       | Atomic replacement of the weekly schedule                         |
-| GET/POST/DELETE       | `/masters/me/schedule/exceptions`            | Date-specific overrides                                           |
-| GET                   | `/masters/me/stats`                          | Bookings by status, rating, completion rate                       |
-| GET/POST/PATCH/DELETE | `/masters/me/quick-replies`                  | B-35: canned chat replies, ≤ 20                                   |
-| PATCH                 | `/masters/me/instant-book`                   | B-24: opt in/out of auto-accepting eligible bookings              |
-| GET                   | `/masters/me/pricing-suggestion?categoryId=` | Market-rate price suggestion (own city, falls back category-wide) |
-| GET                   | `/masters/me/recently-viewed`                | **CLIENT only** — the caller's recently viewed master profiles    |
+| Method                | Path                                         | Description                                                                                                                                                                                    |
+| --------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET                   | `/masters/me`                                | Own full profile including moderation state and rejection reason                                                                                                                               |
+| PATCH                 | `/masters/me`                                | Update professional fields                                                                                                                                                                     |
+| POST                  | `/masters/me/submit`                         | Submit for review → `PENDING`                                                                                                                                                                  |
+| POST                  | `/masters/me/resubmit`                       | After rejection → `PENDING`                                                                                                                                                                    |
+| GET/POST/DELETE       | `/masters/me/categories`                     | Attach / detach leaf categories                                                                                                                                                                |
+| GET/POST/DELETE       | `/masters/me/certificates`                   | Manage certificates                                                                                                                                                                            |
+| GET/POST/DELETE       | `/masters/me/portfolio`                      | Manage work-showcase photos (B-45), ≤ 20                                                                                                                                                       |
+| PUT                   | `/masters/me/portfolio/order`                | Reorder portfolio images                                                                                                                                                                       |
+| GET/POST/PATCH/DELETE | `/masters/me/services`                       | Service CRUD                                                                                                                                                                                   |
+| GET                   | `/masters/me/schedule`                       | Weekly schedule                                                                                                                                                                                |
+| PUT                   | `/masters/me/schedule`                       | Atomic replacement of the weekly schedule                                                                                                                                                      |
+| GET/POST/DELETE       | `/masters/me/schedule/exceptions`            | Date-specific overrides                                                                                                                                                                        |
+| GET                   | `/masters/me/stats`                          | Bookings by status, rating, completion rate                                                                                                                                                    |
+| GET/POST/PATCH/DELETE | `/masters/me/quick-replies`                  | B-35: canned chat replies, ≤ 20                                                                                                                                                                |
+| GET                   | `/masters/me/status`                         | Approval/availability status, `reliabilityScore`, `instantBookEnabled` — a pure read of what `submit`/`resubmit`/`availability`/`instant-book` otherwise only return as a mutation side effect |
+| PATCH                 | `/masters/me/instant-book`                   | B-24: opt in/out of auto-accepting eligible bookings                                                                                                                                           |
+| GET                   | `/masters/me/pricing-suggestion?categoryId=` | Market-rate price suggestion (own city, falls back category-wide)                                                                                                                              |
+| GET                   | `/masters/me/recently-viewed`                | **CLIENT only** — the caller's recently viewed master profiles                                                                                                                                 |
 
 All (except `recently-viewed`) are `@Roles(MASTER)`. Service and schedule mutations additionally require `MasterApprovedGuard` in `PENDING` or `APPROVED` state.
 

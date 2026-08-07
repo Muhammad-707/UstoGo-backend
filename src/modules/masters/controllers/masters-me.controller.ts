@@ -58,6 +58,23 @@ export class MastersMeController {
     private readonly pricingSuggestion: PricingSuggestionService,
   ) {}
 
+  @Get('status')
+  @ApiAuth(UserRole.MASTER)
+  @ApiOperation({
+    summary:
+      'The caller’s current approval/availability status, reliability score and instant-book setting',
+    description:
+      'A pure read — `submit`/`resubmit`/`availability`/`instant-book` all return this ' +
+      'same shape as a side effect of the mutation they perform, but nothing previously ' +
+      'let a master fetch it without triggering one of those.',
+  })
+  @ApiOkResponse({ type: MasterStatusResponseDto })
+  async status(@CurrentUser() user: AuthenticatedUser): Promise<MasterStatusResponseDto> {
+    const master = await this.masters.getByUserId(user.id);
+
+    return MasterStatusResponseDto.fromEntity(master);
+  }
+
   @Post('submit')
   @HttpCode(HttpStatus.OK)
   @ApiAuth(UserRole.MASTER)
